@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Platinum.Application.Control;
 using Xunit;
 
