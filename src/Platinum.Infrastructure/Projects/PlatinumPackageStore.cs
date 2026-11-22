@@ -65,7 +65,7 @@ public sealed class PlatinumPackageStore : IProjectStore
         var document = await ReadXmlAsync<LayoutDocument>(archive, LayoutEntry, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         if (document.Levels is null || document.Pieces is null || document.Connections is null ||
-            document.Blocks is null || document.Sensors is null || document.Routes is null || document.GeometrySegments is null || document.Signals is null || document.Locomotives is null || document.ProtocolProfiles is null || document.Inspections is null)
+            document.Blocks is null || document.Sensors is null || document.Routes is null || document.GeometrySegments is null || document.Signals is null || document.Locomotives is null || document.ProtocolProfiles is null || document.Inspections is null || document.ProtectionProfiles is null || document.GroundMessages is null)
             throw new InvalidDataException("El document XML conté col·leccions nul·les.");
         var layout = document.ToDomain();
         Validate(layout);
@@ -75,10 +75,10 @@ public sealed class PlatinumPackageStore : IProjectStore
     private static void Validate(TrackLayout layout)
     {
         ArgumentNullException.ThrowIfNull(layout);
-        if (layout.Levels is null || layout.Pieces is null || layout.Connections is null || layout.Blocks is null || layout.Sensors is null || layout.Routes is null || layout.GeometrySegments is null || layout.Signals is null || layout.Locomotives is null || layout.ProtocolProfiles is null || layout.Inspections is null)
+        if (layout.Levels is null || layout.Pieces is null || layout.Connections is null || layout.Blocks is null || layout.Sensors is null || layout.Routes is null || layout.GeometrySegments is null || layout.Signals is null || layout.Locomotives is null || layout.ProtocolProfiles is null || layout.Inspections is null || layout.ProtectionProfiles is null || layout.GroundMessages is null)
             throw new InvalidDataException("El projecte conté col·leccions nul·les.");
         if (layout.Id == Guid.Empty || string.IsNullOrWhiteSpace(layout.Name) ||
-            layout.WidthMillimetres <= 0 || layout.HeightMillimetres <= 0 || layout.GridMillimetres <= 0)
+            layout.WidthMillimetres <= 0 || layout.HeightMillimetres <= 0 || layout.GridMillimetres <= 0 || layout.GameFuelPercent is < 0 or > 100)
             throw new InvalidDataException("El projecte conté identificadors, nom o dimensions invàlids.");
 
         static void EnsureUniqueIds<T>(IEnumerable<T> items, Func<T, Guid> idSelector, string collection)
@@ -101,6 +101,8 @@ public sealed class PlatinumPackageStore : IProjectStore
         EnsureUniqueIds(layout.Locomotives, x => x.Id, "locomotores");
         EnsureUniqueIds(layout.ProtocolProfiles, x => x.Id, "perfils de protocol");
         EnsureUniqueIds(layout.Inspections, x => x.Id, "inspeccions");
+        EnsureUniqueIds(layout.ProtectionProfiles, x => x.Id, "perfils de protecció");
+        EnsureUniqueIds(layout.GroundMessages, x => x.Id, "missatges tren-terra");
 
         var levelIds = layout.Levels.Select(x => x.Id).ToHashSet();
         var pieceIds = layout.Pieces.Select(x => x.Id).ToHashSet();
@@ -142,6 +144,11 @@ public sealed class PlatinumPackageStore : IProjectStore
         if (layout.Locomotives.Any(x => string.IsNullOrWhiteSpace(x.Name) || x.Address is < 1 or > 10239 ||
             string.IsNullOrWhiteSpace(x.Protocol) || !x.SimulationOnly))
             throw new InvalidDataException("Els perfils de locomotora han de tenir adreça vàlida i romandre en mode simulació.");
+        if (layout.ProtectionProfiles.Any(x => string.IsNullOrWhiteSpace(x.Name) || x.PermittedSpeedKmh < 0 ||
+            x.MaxSpeedKmh <= 0 || x.PermittedSpeedKmh > x.MaxSpeedKmh || x.ServiceBrakeDeceleration <= 0 || !x.SimulationOnly))
+            throw new InvalidDataException("Els perfils de protecció han de tenir valors físics plausibles i romandre en simulació.");
+        if (layout.GroundMessages.Any(x => string.IsNullOrWhiteSpace(x.Destination) || string.IsNullOrWhiteSpace(x.Message) || x.CreatedUtc == default))
+            throw new InvalidDataException("Hi ha missatges tren-terra invàlids.");
         if (layout.ProtocolProfiles.Any(x => string.IsNullOrWhiteSpace(x.Name) || string.IsNullOrWhiteSpace(x.Kind) ||
             string.IsNullOrWhiteSpace(x.Host) || x.Port is < 1 or > 65535 || x.PhysicalCommandsEnabled))
             throw new InvalidDataException("Els perfils de protocol han de tenir dades vàlides i les ordres físiques desactivades.");
@@ -201,6 +208,7 @@ public sealed class PlatinumPackageStore : IProjectStore
         public decimal WidthMillimetres { get; set; }
         public decimal HeightMillimetres { get; set; }
         public decimal GridMillimetres { get; set; }
+        public decimal GameFuelPercent { get; set; } = 100m;
         [XmlArray] public List<LevelDocument> Levels { get; set; } = [];
         [XmlArray] public List<PieceDocument> Pieces { get; set; } = [];
         [XmlArray] public List<GeometrySegmentDocument> GeometrySegments { get; set; } = [];
@@ -212,10 +220,12 @@ public sealed class PlatinumPackageStore : IProjectStore
         [XmlArray] public List<LocomotiveDocument> Locomotives { get; set; } = [];
         [XmlArray] public List<ProtocolProfileDocument> ProtocolProfiles { get; set; } = [];
         [XmlArray] public List<InspectionDocument> Inspections { get; set; } = [];
+        [XmlArray] public List<ProtectionProfileDocument> ProtectionProfiles { get; set; } = [];
+        [XmlArray] public List<GroundMessageDocument> GroundMessages { get; set; } = [];
 
         public static LayoutDocument From(TrackLayout x) => new()
         {
-            Id=x.Id, Name=x.Name, WidthMillimetres=x.WidthMillimetres, HeightMillimetres=x.HeightMillimetres, GridMillimetres=x.GridMillimetres,
+            Id=x.Id, Name=x.Name, WidthMillimetres=x.WidthMillimetres, HeightMillimetres=x.HeightMillimetres, GridMillimetres=x.GridMillimetres, GameFuelPercent=x.GameFuelPercent,
             Levels=x.Levels.Select(v=>new LevelDocument{Id=v.Id,Name=v.Name,ElevationMillimetres=v.ElevationMillimetres}).ToList(),
             Pieces=x.Pieces.Select(v=>new PieceDocument{Id=v.Id,CatalogueCode=v.CatalogueCode,X=v.X,Y=v.Y,RotationDegrees=v.RotationDegrees,LevelId=v.LevelId,GeometryStatus=v.GeometryStatus}).ToList(),
             GeometrySegments=x.GeometrySegments.Select(v=>new GeometrySegmentDocument{Id=v.Id,Kind=v.Kind,StartX=v.StartX,StartY=v.StartY,EndX=v.EndX,EndY=v.EndY,ControlX=v.ControlX,ControlY=v.ControlY,LevelId=v.LevelId}).ToList(),
@@ -226,11 +236,13 @@ public sealed class PlatinumPackageStore : IProjectStore
             Signals=x.Signals.Select(v=>new SignalDocument{Id=v.Id,Name=v.Name,Aspect=v.Aspect,ProtectedBlockId=v.ProtectedBlockId,PhysicallyVerified=v.PhysicallyVerified}).ToList(),
             Locomotives=x.Locomotives.Select(v=>new LocomotiveDocument{Id=v.Id,Name=v.Name,Address=v.Address,Protocol=v.Protocol,SimulationOnly=v.SimulationOnly}).ToList(),
             ProtocolProfiles=x.ProtocolProfiles.Select(v=>new ProtocolProfileDocument{Id=v.Id,Name=v.Name,Kind=v.Kind,Host=v.Host,Port=v.Port,PhysicalCommandsEnabled=v.PhysicalCommandsEnabled}).ToList(),
-            Inspections=x.Inspections.Select(v=>new InspectionDocument{Id=v.Id,Item=v.Item,OperatorDeclaredComplete=v.OperatorDeclaredComplete,Notes=v.Notes,CheckedUtc=v.CheckedUtc.ToString("O")}).ToList()
+            Inspections=x.Inspections.Select(v=>new InspectionDocument{Id=v.Id,Item=v.Item,OperatorDeclaredComplete=v.OperatorDeclaredComplete,Notes=v.Notes,CheckedUtc=v.CheckedUtc.ToString("O")}).ToList(),
+            ProtectionProfiles=x.ProtectionProfiles.Select(v=>new ProtectionProfileDocument{Id=v.Id,Name=v.Name,PermittedSpeedKmh=v.PermittedSpeedKmh,MaxSpeedKmh=v.MaxSpeedKmh,ServiceBrakeDeceleration=v.ServiceBrakeDeceleration,SimulationOnly=v.SimulationOnly}).ToList(),
+            GroundMessages=x.GroundMessages.Select(v=>new GroundMessageDocument{Id=v.Id,Destination=v.Destination,Message=v.Message,CreatedUtc=v.CreatedUtc.ToString("O")}).ToList()
         };
         public TrackLayout ToDomain() => new()
         {
-            Id=Id,Name=Name,WidthMillimetres=WidthMillimetres,HeightMillimetres=HeightMillimetres,GridMillimetres=GridMillimetres,
+            Id=Id,Name=Name,WidthMillimetres=WidthMillimetres,HeightMillimetres=HeightMillimetres,GridMillimetres=GridMillimetres,GameFuelPercent=GameFuelPercent,
             Levels=Levels.Select(v=>new TrackLevel(v.Id,v.Name,v.ElevationMillimetres)).ToList(),
             Pieces=Pieces.Select(v=>new TrackPiece(v.Id,v.CatalogueCode,v.X,v.Y,v.RotationDegrees,v.LevelId,string.IsNullOrWhiteSpace(v.GeometryStatus) ? "unverified" : v.GeometryStatus)).ToList(),
             GeometrySegments=GeometrySegments.Select(v=>new TrackGeometrySegment(v.Id,v.Kind,v.StartX,v.StartY,v.EndX,v.EndY,v.ControlX,v.ControlY,v.LevelId)).ToList(),
@@ -241,7 +253,9 @@ public sealed class PlatinumPackageStore : IProjectStore
             Signals=Signals.Select(v=>new SignalDefinition(v.Id,v.Name,v.Aspect,v.ProtectedBlockId,v.PhysicallyVerified)).ToList(),
             Locomotives=Locomotives.Select(v=>new LocomotiveProfile(v.Id,v.Name,v.Address,v.Protocol,v.SimulationOnly)).ToList(),
             ProtocolProfiles=ProtocolProfiles.Select(v=>new RailwayProtocolProfile(v.Id,v.Name,v.Kind,v.Host,v.Port,v.PhysicalCommandsEnabled)).ToList(),
-            Inspections=Inspections.Select(v=>new PhysicalInspectionRecord(v.Id,v.Item,v.OperatorDeclaredComplete,v.Notes,DateTimeOffset.Parse(v.CheckedUtc,System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind))).ToList()
+            Inspections=Inspections.Select(v=>new PhysicalInspectionRecord(v.Id,v.Item,v.OperatorDeclaredComplete,v.Notes,DateTimeOffset.Parse(v.CheckedUtc,System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind))).ToList(),
+            ProtectionProfiles=ProtectionProfiles.Select(v=>new TrainProtectionProfile(v.Id,v.Name,v.PermittedSpeedKmh,v.MaxSpeedKmh,v.ServiceBrakeDeceleration,v.SimulationOnly)).ToList(),
+            GroundMessages=GroundMessages.Select(v=>new TrainGroundMessage(v.Id,v.Destination,v.Message,DateTimeOffset.Parse(v.CreatedUtc,System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind))).ToList()
         };
     }
     public sealed class LevelDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public decimal ElevationMillimetres {get;set;} }
@@ -253,6 +267,8 @@ public sealed class PlatinumPackageStore : IProjectStore
     public sealed class RouteDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public bool Reserved {get;set;} [XmlArrayItem("BlockId")] public List<Guid> BlockIds {get;set;}=[]; }
     public sealed class SignalDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public string Aspect {get;set;}="unknown"; public Guid? ProtectedBlockId {get;set;} public bool PhysicallyVerified {get;set;} }
     public sealed class LocomotiveDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public int Address {get;set;} public string Protocol {get;set;}="simulation"; public bool SimulationOnly {get;set;}=true; }
+    public sealed class ProtectionProfileDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public decimal PermittedSpeedKmh {get;set;} public decimal MaxSpeedKmh {get;set;} public decimal ServiceBrakeDeceleration {get;set;} public bool SimulationOnly {get;set;}=true; }
+    public sealed class GroundMessageDocument { public Guid Id {get;set;} public string Destination {get;set;}=""; public string Message {get;set;}=""; public string CreatedUtc {get;set;}=""; }
     public sealed class ProtocolProfileDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public string Kind {get;set;}=""; public string Host {get;set;}=""; public int Port {get;set;} public bool PhysicalCommandsEnabled {get;set;} }
     public sealed class InspectionDocument { public Guid Id {get;set;} public string Item {get;set;}=""; public bool OperatorDeclaredComplete {get;set;} public string Notes {get;set;}=""; public string CheckedUtc {get;set;}=""; }
 }
