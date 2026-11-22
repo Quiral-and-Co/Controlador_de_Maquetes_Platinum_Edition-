@@ -17,7 +17,7 @@ Substituir JMRI com a motor intermediari. Platinum defineix els seus propis cont
 
 L'adaptador virtual no obre sockets ni ports sèrie. Les ordres no arriben a cap dispositiu físic. El perfil CS2 ja disposa d'un transport natiu de consulta, sense JMRI. CS3, Z21 i ECoS continuen pendents. L'adaptador CS2 encara no envia ordres físiques: només comprova la presència de la central.
 
-Abans d'habilitar una central real cal implementar el protocol corresponent, validar-ne els paquets amb documentació fiable i proves d'integració, afegir límits de velocitat i accessoris, supervisió de connexió, parada segura i interbloqueigs físics independents. Una parada d'emergència de programari no substitueix un circuit físic d'emergència.
+La porta de seguretat de Platinum no depèn de JMRI. Exigeix evidència runtime de central connectada, feedback saludable, circuit físic d'emergència verificat, watchdog saludable, interbloquejos saludables, reconeixement de l'operador i armament explícit. Tots els camps comencen a false. Abans d'habilitar una central real cal implementar el protocol corresponent, validar-ne els paquets amb documentació fiable i proves d'integració, afegir límits de velocitat i accessoris, supervisió de connexió, parada segura i interbloqueigs físics independents. Una parada d'emergència de programari no substitueix un circuit físic d'emergència.
 
 ## Compilació
 

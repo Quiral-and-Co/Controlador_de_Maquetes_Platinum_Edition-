@@ -8,6 +8,7 @@ using System.Windows.Media;
 using Platinum.Application.Control;
 using Platinum.Domain.Control;
 using Platinum.Infrastructure.Control;
+using Platinum.Domain.Layout;
 
 namespace Platinum.Presentation.Wpf;
 
@@ -17,13 +18,25 @@ namespace Platinum.Presentation.Wpf;
 /// </summary>
 public sealed class NativeOperationsView : UserControl
 {
+    private TrackLayout? _layout;
+    private ListBox? _dispatcherBlocksList;
+    private ListBox? _dispatcherRoutesList;
+    private ListBox? _signalsList;
+    private ComboBox? _signalBlockSelector;
+    private ListBox? _protocolProfilesList;
+    private ListBox? _locomotiveProfilesList;
+    private ListBox? _protectionProfilesList;
+    private ListBox? _groundMessagesList;
+    private Slider? _gameFuelSlider;
+    private TextBlock? _gameFuelReadout;
+    public event EventHandler? ProjectDataChanged;
+
     private readonly RailwayControlService _controlService = new(new LocalSimulationAdapter());
     private readonly RailwayAutomationEngine _automation = new();
     private MarklinCs2Adapter? _cs2Adapter;
     private readonly ObservableCollection<string> _blocks = [];
     private readonly HashSet<string> _occupied = new(StringComparer.OrdinalIgnoreCase);
     private readonly ObservableCollection<string> _routes = [];
-    private readonly ObservableCollection<string> _stations = [];
     private readonly ObservableCollection<string> _events = [];
     private readonly List<CheckBox> _validationChecks = [];
     private readonly TextBlock _dispatcherStatus = Status("Cap bloc creat.");
@@ -244,91 +257,254 @@ public sealed class NativeOperationsView : UserControl
         return Scroll(panel);
     }
 
+    public void SetLayout(TrackLayout layout)
+    {
+        _layout = layout ?? throw new ArgumentNullException(nameof(layout));
+        RefreshDispatcher();
+        RefreshSignalling();
+        RefreshProtocolProfiles();
+        RefreshLocomotives();
+        RefreshProtectionProfiles();
+        RefreshGroundMessages();
+        if (_gameFuelSlider is not null && _layout is not null) _gameFuelSlider.Value = (double)_layout.GameFuelPercent;
+        if (_gameFuelReadout is not null && _layout is not null) _gameFuelReadout.Text = $"Combustible virtual: {_layout.GameFuelPercent:0}%";
+    }
+
+    private void RefreshDispatcher()
+    {
+        if (_layout is null || _dispatcherBlocksList is null || _dispatcherRoutesList is null) return;
+        _dispatcherBlocksList.ItemsSource = _layout.Blocks
+            .Select(b => $"{(b.Occupied ? "● OCUPAT" : "○ LLIURE")} · {b.Name}")
+            .ToArray();
+        _dispatcherRoutesList.ItemsSource = _layout.Routes
+            .Select(r => $"{(r.Reserved ? "RESERVAT" : "NO RESERVAT")} · {r.Name} · {string.Join(" → ", r.BlockIds.Select(id => _layout.Blocks.FirstOrDefault(b => b.Id == id)?.Name ?? "?"))}")
+            .ToArray();
+    }
+
+    private void NotifyProjectChanged()
+    {
+        RefreshDispatcher();
+        RefreshSignalling();
+        RefreshProtocolProfiles();
+        RefreshLocomotives();
+        RefreshProtectionProfiles();
+        RefreshGroundMessages();
+        ProjectDataChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     private UIElement BuildDispatcher()
     {
         var root = TwoColumns();
-        var left = Panel("Blocs lògics");
+        var left = Panel("Blocs lògics del projecte");
         var name = new TextBox { Text = "Bloc nou", MinWidth = 180, Margin = new Thickness(0, 4, 0, 8) };
         var list = new ListBox { MinHeight = 180, Background = Brush("#FF111820"), Foreground = Brushes.White };
-        void Refresh() { var selected = list.SelectedIndex; list.ItemsSource = _blocks.Select(b => (_occupied.Contains(b) ? "● OCUPAT · " : "○ LLIURE · ") + b).ToList(); if (selected >= 0 && selected < list.Items.Count) list.SelectedIndex = selected; }
+        _dispatcherBlocksList = list;
         left.Children.Add(Label("Nom del bloc")); left.Children.Add(name);
-        left.Children.Add(Button("Afegir bloc", (_, _) =>
+        left.Children.Add(Button("Afegir bloc al projecte", (_, _) =>
         {
+            if (_layout is null) { _dispatcherStatus.Text = "No hi ha cap projecte actiu."; return; }
             var value = name.Text.Trim();
-            if (value.Length == 0 || _blocks.Contains(value)) return;
-            _blocks.Add(value); Refresh(); _dispatcherStatus.Text = $"Bloc «{value}» creat localment.";
+            if (value.Length == 0 || _layout.Blocks.Any(b => string.Equals(b.Name, value, StringComparison.OrdinalIgnoreCase)))
+            { _dispatcherStatus.Text = "Nom buit o bloc duplicat."; return; }
+            var level = _layout.Levels.FirstOrDefault();
+            if (level is null) { _dispatcherStatus.Text = "Crea primer un nivell al projecte."; return; }
+            _layout.Blocks.Add(new LogicalBlock(Guid.NewGuid(), value, level.Id, Array.Empty<Guid>()));
+            NotifyProjectChanged();
+            _dispatcherStatus.Text = $"Bloc «{value}» desat al projecte actiu.";
         }));
         left.Children.Add(list);
         left.Children.Add(Button("Canviar lliure / ocupat", (_, _) =>
         {
-            if (list.SelectedItem is not string selected) return;
+            if (_layout is null || list.SelectedItem is not string selected) return;
             var value = selected[(selected.IndexOf('·') + 1)..].Trim();
-            if (_occupied.Contains(value)) _occupied.Remove(value); else _occupied.Add(value);
-            Refresh(); _dispatcherStatus.Text = $"Estat local actualitzat: {value}.";
+            var index = _layout.Blocks.FindIndex(b => string.Equals(b.Name, value, StringComparison.OrdinalIgnoreCase));
+            if (index < 0) return;
+            _layout.Blocks[index] = _layout.Blocks[index] with { Occupied = !_layout.Blocks[index].Occupied };
+            NotifyProjectChanged();
+            _dispatcherStatus.Text = $"Ocupació de «{value}» actualitzada al projecte. És un estat lògic/manual, no una lectura de sensor.";
         }));
         left.Children.Add(_dispatcherStatus);
 
-        var right = Panel("Itineraris locals");
+        var right = Panel("Itineraris lògics del projecte");
         var routeName = new TextBox { Text = "Itinerari 1", Margin = new Thickness(0, 4, 0, 8) };
         var routeBlocks = new TextBox { Text = "", AcceptsReturn = true, MinHeight = 70, ToolTip = "Noms dels blocs separats per comes." };
-        var routeList = new ListBox { ItemsSource = _routes, MinHeight = 150, Background = Brush("#FF111820"), Foreground = Brushes.White };
+        var routeList = new ListBox { MinHeight = 150, Background = Brush("#FF111820"), Foreground = Brushes.White };
+        _dispatcherRoutesList = routeList;
         right.Children.Add(Label("Nom")); right.Children.Add(routeName); right.Children.Add(Label("Blocs (separats per comes)")); right.Children.Add(routeBlocks);
-        right.Children.Add(Button("Crear itinerari", (_, _) =>
+        right.Children.Add(Button("Crear itinerari al projecte", (_, _) =>
         {
-            var blocks = routeBlocks.Text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-            if (blocks.Length == 0 || blocks.Any(b => !_blocks.Contains(b))) { _dispatcherStatus.Text = "Itinerari rebutjat: indica blocs existents."; return; }
-            _routes.Add($"{routeName.Text.Trim()} · {string.Join(" → ", blocks)} · NO RESERVAT");
+            if (_layout is null) { _dispatcherStatus.Text = "No hi ha cap projecte actiu."; return; }
+            var value = routeName.Text.Trim();
+            var names = routeBlocks.Text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            var blocks = names.Select(n => _layout.Blocks.FirstOrDefault(b => string.Equals(b.Name, n, StringComparison.OrdinalIgnoreCase))).ToArray();
+            if (value.Length == 0 || _layout.Routes.Any(r => string.Equals(r.Name, value, StringComparison.OrdinalIgnoreCase)) ||
+                names.Length == 0 || blocks.Any(b => b is null) || blocks.Select(b => b!.Id).Distinct().Count() != blocks.Length)
+            { _dispatcherStatus.Text = "Itinerari rebutjat: nom únic i blocs existents sense duplicats."; return; }
+            _layout.Routes.Add(new RouteDefinition(Guid.NewGuid(), value, blocks.Select(b => b!.Id).ToArray()));
+            NotifyProjectChanged();
+            _dispatcherStatus.Text = $"Itinerari «{value}» desat al projecte.";
         }));
         right.Children.Add(routeList);
-        right.Children.Add(Button("Comprovar disponibilitat local", (_, _) =>
+        right.Children.Add(Button("Reservar itinerari lògic", (_, _) =>
         {
-            if (routeList.SelectedItem is not string route) return;
-            var parts = route.Split('·');
-            var names = parts.Length > 1 ? parts[1].Split('→', StringSplitOptions.TrimEntries) : Array.Empty<string>();
-            var conflicts = names.Where(_occupied.Contains).ToArray();
-            _dispatcherStatus.Text = conflicts.Length == 0 ? "Simulació: blocs disponibles. No és un enclavament." : "Blocs ocupats: " + string.Join(", ", conflicts);
+            if (_layout is null || routeList.SelectedItem is not string selected) return;
+            var namePart = selected.Split('·').Skip(1).FirstOrDefault()?.Trim();
+            var index = _layout.Routes.FindIndex(r => r.Name == namePart);
+            if (index < 0) return;
+            var route = _layout.Routes[index];
+            var blocks = route.BlockIds.Select(id => _layout.Blocks.FirstOrDefault(b => b.Id == id)).ToArray();
+            if (blocks.Any(b => b is null || b.Occupied || _layout.Routes.Any(other => other.Id != route.Id && other.Reserved && other.BlockIds.Contains(b!.Id))))
+            { _dispatcherStatus.Text = "Reserva rebutjada: hi ha blocs ocupats, inexistents o reservats."; return; }
+            _layout.Routes[index] = route with { Reserved = true };
+            NotifyProjectChanged();
+            _dispatcherStatus.Text = "Reserva lògica desada. No activa cap desviament ni senyal físic.";
         }));
+        right.Children.Add(Button("Alliberar reserva lògica", (_, _) =>
+        {
+            if (_layout is null || routeList.SelectedItem is not string selected) return;
+            var namePart = selected.Split('·').Skip(1).FirstOrDefault()?.Trim();
+            var index = _layout.Routes.FindIndex(r => r.Name == namePart);
+            if (index < 0) return;
+            _layout.Routes[index] = _layout.Routes[index] with { Reserved = false };
+            NotifyProjectChanged();
+            _dispatcherStatus.Text = "Reserva lògica alliberada.";
+        }));
+        right.Children.Add(Label("Les reserves i ocupacions són dades lògiques persistents. No constitueixen un enclavament certificat ni autoritzen sortides físiques."));
         AddColumn(root, left); AddColumn(root, right);
+        RefreshDispatcher();
         return root;
+    }
+
+    private void RefreshSignalling()
+    {
+        if (_layout is null) return;
+        if (_signalsList is not null)
+        {
+            var selectedId = (_signalsList.SelectedItem as SignalDefinition)?.Id;
+            _signalsList.ItemsSource = _layout.Signals.ToArray();
+            _signalsList.DisplayMemberPath = nameof(SignalDefinition.Name);
+            if (selectedId.HasValue)
+                _signalsList.SelectedItem = _layout.Signals.FirstOrDefault(x => x.Id == selectedId.Value);
+        }
+        if (_signalBlockSelector is not null)
+        {
+            var selectedId = (_signalBlockSelector.SelectedItem as LogicalBlock)?.Id;
+            _signalBlockSelector.ItemsSource = _layout.Blocks.ToArray();
+            _signalBlockSelector.DisplayMemberPath = nameof(LogicalBlock.Name);
+            if (selectedId.HasValue)
+                _signalBlockSelector.SelectedItem = _layout.Blocks.FirstOrDefault(x => x.Id == selectedId.Value);
+        }
     }
 
     private UIElement BuildSignalling()
     {
-        var panel = Panel("Senyalització ferroviària · simulador local");
-        var signal = new ComboBox { ItemsSource = new[] { "S1 · Entrada", "S2 · Sortida", "S3 · Bloqueig", "S4 · Maniobres" }, SelectedIndex = 0, Margin = new Thickness(0, 6, 0, 10) };
-        var aspect = new ComboBox { ItemsSource = new[] { "Desconegut", "Via lliure (simulat)", "Precaució (simulat)", "Parada (simulat)", "Maniobres (simulat)" }, SelectedIndex = 0, Margin = new Thickness(0, 6, 0, 10) };
-        panel.Children.Add(Label("Senyal")); panel.Children.Add(signal); panel.Children.Add(Label("Aspecte")); panel.Children.Add(aspect);
-        panel.Children.Add(Button("Aplicar aspecte al simulador", (_, _) => _signalStatus.Text = $"{signal.SelectedItem}: {aspect.SelectedItem}. Estat fictici, no enviat a cap senyal real."));
+        var panel = Panel("Senyalització ferroviària · aspectes lògics i simulats");
+        var signalName = new TextBox { Text = "S1 · Entrada", Margin = new Thickness(0, 6, 0, 8), Width = 280 };
+        var block = new ComboBox { Margin = new Thickness(0, 6, 0, 8), Width = 280 };
+        var aspect = new ComboBox
+        {
+            ItemsSource = new[] { "unknown", "stop", "caution", "proceed", "shunting" },
+            SelectedIndex = 0,
+            Margin = new Thickness(0, 6, 0, 10),
+            Width = 220
+        };
+        var list = new ListBox { MinHeight = 140, Background = Brush("#FF111820"), Foreground = Brushes.White };
+        _signalsList = list;
+        _signalBlockSelector = block;
+        list.SelectionChanged += (_, _) =>
+        {
+            if (list.SelectedItem is SignalDefinition selected)
+            {
+                aspect.SelectedItem = selected.Aspect;
+                block.SelectedItem = _layout?.Blocks.FirstOrDefault(x => x.Id == selected.ProtectedBlockId);
+                _signalStatus.Text = $"{selected.Name}: {selected.Aspect} · sortida física bloquejada.";
+            }
+        };
+        panel.Children.Add(Label("Nom del senyal")); panel.Children.Add(signalName);
+        panel.Children.Add(Label("Bloc protegit (opcional)")); panel.Children.Add(block);
+        panel.Children.Add(Button("Crear senyal al projecte", (_, _) =>
+        {
+            if (_layout is null) { _signalStatus.Text = "No hi ha projecte actiu."; return; }
+            var name = signalName.Text.Trim();
+            if (name.Length == 0 || _layout.Signals.Any(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))
+            { _signalStatus.Text = "Nom buit o senyal duplicat."; return; }
+            var protectedBlock = block.SelectedItem as LogicalBlock;
+            _layout.Signals.Add(new SignalDefinition(Guid.NewGuid(), name, "unknown", protectedBlock?.Id, false));
+            NotifyProjectChanged();
+            RefreshSignalling();
+            _signalStatus.Text = $"Senyal «{name}» creat al projecte. No hi ha cap sortida física.";
+        }));
+        panel.Children.Add(Label("Senyals del projecte")); panel.Children.Add(list);
+        panel.Children.Add(Label("Aspecte lògic")); panel.Children.Add(aspect);
+        panel.Children.Add(Button("Desar aspecte simulat", (_, _) =>
+        {
+            if (_layout is null || list.SelectedItem is not SignalDefinition selected) return;
+            var index = _layout.Signals.FindIndex(x => x.Id == selected.Id);
+            if (index < 0) return;
+            var value = aspect.SelectedItem?.ToString() ?? "unknown";
+            _layout.Signals[index] = _layout.Signals[index] with { Aspect = value, PhysicallyVerified = false };
+            NotifyProjectChanged();
+            RefreshSignalling();
+            _signalStatus.Text = $"{selected.Name}: aspecte «{value}» desat al projecte. No enviat a cap senyal real.";
+        }));
         panel.Children.Add(_signalStatus);
-        panel.Children.Add(Label("La representació ADIF/JMRI i l'enclavament real requereixen dades de camp, protocols i validació independents."));
+        panel.Children.Add(Label("La senyalització és una dada lògica del projecte. La indicació d'aspecte no controla descodificadors ni substitueix un enclavament ferroviari certificat."));
+        RefreshSignalling();
         return Scroll(panel);
+    }
+
+    private void RefreshProtocolProfiles()
+    {
+        if (_layout is null || _protocolProfilesList is null) return;
+        var selectedId = (_protocolProfilesList.SelectedItem as RailwayProtocolProfile)?.Id;
+        _protocolProfilesList.ItemsSource = _layout.ProtocolProfiles.ToArray();
+        _protocolProfilesList.DisplayMemberPath = nameof(RailwayProtocolProfile.Name);
+        if (selectedId.HasValue)
+            _protocolProfilesList.SelectedItem = _layout.ProtocolProfiles.FirstOrDefault(x => x.Id == selectedId.Value);
     }
 
     private UIElement BuildStations()
     {
-        var panel = Panel("Perfils de centrals digitals");
-        var manufacturer = new ComboBox { ItemsSource = new[] { "Märklin", "Roco", "ESU", "Uhlenbrock", "Z21", "DCC genèric" }, SelectedIndex = 0, Margin = new Thickness(0, 6, 0, 8) };
-        var model = new TextBox { Text = "CS2 / CS3 / model", Margin = new Thickness(0, 4, 0, 8) };
-        var host = new TextBox { Text = "192.168.1.50", Margin = new Thickness(0, 4, 0, 8) };
+        var panel = Panel("Perfils de protocols i centrals digitals");
+        var manufacturer = new ComboBox
+        {
+            ItemsSource = new[] { "Simulació", "Märklin CS2", "Märklin CS3", "Z21", "ESU ECoS", "DCC genèric" },
+            SelectedIndex = 0, Margin = new Thickness(0, 6, 0, 8)
+        };
+        var model = new TextBox { Text = "Central principal", Margin = new Thickness(0, 4, 0, 8) };
+        var host = new TextBox { Text = "127.0.0.1", Margin = new Thickness(0, 4, 0, 8) };
         var port = new TextBox { Text = "15731", Margin = new Thickness(0, 4, 0, 8) };
-        var profiles = new ListBox { ItemsSource = _stations, MinHeight = 130, Background = Brush("#FF111820"), Foreground = Brushes.White };
-        panel.Children.Add(Label("Fabricant")); panel.Children.Add(manufacturer); panel.Children.Add(Label("Model")); panel.Children.Add(model);
-        panel.Children.Add(Label("Host / IP")); panel.Children.Add(host); panel.Children.Add(Label("Port")); panel.Children.Add(port);
-        panel.Children.Add(Button("Desar perfil local", (_, _) =>
+        var profiles = new ListBox { MinHeight = 130, Background = Brush("#FF111820"), Foreground = Brushes.White };
+        _protocolProfilesList = profiles;
+        panel.Children.Add(Label("Protocol")); panel.Children.Add(manufacturer); panel.Children.Add(Label("Nom del perfil")); panel.Children.Add(model);
+        panel.Children.Add(Label("Host / IP (només configuració)")); panel.Children.Add(host); panel.Children.Add(Label("Port")); panel.Children.Add(port);
+        panel.Children.Add(Button("Desar perfil al projecte", (_, _) =>
         {
-            if (!int.TryParse(port.Text, out var p) || p is < 1 or > 65535) { _stationStatus.Text = "Port invàlid."; return; }
-            _stations.Add($"{manufacturer.SelectedItem} · {model.Text.Trim()} · {host.Text.Trim()}:{p} · NO CONNECTAT");
-            _stationStatus.Text = "Perfil desat en memòria d'aquesta sessió. No s'ha obert cap connexió.";
+            if (_layout is null) { _stationStatus.Text = "No hi ha projecte actiu."; return; }
+            var name = model.Text.Trim();
+            var kind = manufacturer.SelectedItem?.ToString() ?? "Simulació";
+            var address = host.Text.Trim();
+            if (name.Length == 0 || address.Length == 0 || !int.TryParse(port.Text, out var p) || p is < 1 or > 65535 ||
+                _layout.ProtocolProfiles.Any(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))
+            { _stationStatus.Text = "Nom duplicat/buit, host buit o port invàlid."; return; }
+            _layout.ProtocolProfiles.Add(new RailwayProtocolProfile(Guid.NewGuid(), name, kind, address, p, false));
+            NotifyProjectChanged();
+            RefreshProtocolProfiles();
+            _stationStatus.Text = $"Perfil «{name}» desat al projecte. Cap ordre física habilitada.";
         }));
-        panel.Children.Add(profiles);
-        panel.Children.Add(Button("Provar connexió nativa Märklin CS2 (ping)", async (_, _) =>
+        panel.Children.Add(Label("Perfils desats")); panel.Children.Add(profiles);
+        panel.Children.Add(Button("Provar connexió nativa Märklin CS2 (només ping)", async (_, _) =>
         {
+            if (manufacturer.SelectedItem?.ToString() != "Märklin CS2")
+            {
+                _stationStatus.Text = "Selecciona Märklin CS2 per fer la prova de presència.";
+                return;
+            }
             if (!int.TryParse(port.Text, out var commandPort) || commandPort is < 1 or > 65535)
             {
                 _stationStatus.Text = "Port CS2 invàlid. El valor habitual és 15731.";
                 return;
             }
-
             MarklinCs2Adapter? candidate = null;
             try
             {
@@ -337,14 +513,13 @@ public sealed class NativeOperationsView : UserControl
                     await _cs2Adapter.DisposeAsync();
                     _cs2Adapter = null;
                 }
-
                 var profile = new ControlStationProfile("Märklin CS2", ControlStationKind.MarklinCs2, host.Text.Trim(), commandPort);
                 candidate = (MarklinCs2Adapter)ControlStationAdapterFactory.Create(profile);
                 _stationStatus.Text = "Enviant consulta de presència a la CS2...";
                 await candidate.ConnectAsync();
                 _cs2Adapter = candidate;
                 candidate = null;
-                _stationStatus.Text = "CS2 DETECTADA · protocol CAN natiu · ping confirmat. Tracció i accessoris continuen bloquejats.";
+                _stationStatus.Text = "CS2 DETECTADA · ping confirmat. Tracció, accessoris i senyals continuen bloquejats.";
             }
             catch (Exception ex)
             {
@@ -362,42 +537,155 @@ public sealed class NativeOperationsView : UserControl
             _stationStatus.Text = "Adaptador CS2 desconnectat.";
         }));
         panel.Children.Add(_stationStatus);
-        panel.Children.Add(Label("La prova utilitza UDP 15731 (comandes) i 15730 (respostes). Només envia ping; no activa la via ni mou locomotores o desviaments."));
+        panel.Children.Add(Label("CS2: UDP 15731 (comandes) i 15730 (respostes). Aquesta prova només envia ping. CS3, Z21, ECoS i DCC genèric són perfils de configuració sense adaptador actiu. La propietat PhysicalCommandsEnabled queda sempre a false."));
+        RefreshProtocolProfiles();
         return Scroll(panel);
+    }
+
+    private void RefreshLocomotives()
+    {
+        if (_layout is null || _locomotiveProfilesList is null) return;
+        var selectedId = (_locomotiveProfilesList.SelectedItem as LocomotiveProfile)?.Id;
+        _locomotiveProfilesList.ItemsSource = _layout.Locomotives.ToArray();
+        _locomotiveProfilesList.DisplayMemberPath = nameof(LocomotiveProfile.Name);
+        if (selectedId.HasValue)
+            _locomotiveProfilesList.SelectedItem = _layout.Locomotives.FirstOrDefault(x => x.Id == selectedId.Value);
     }
 
     private UIElement BuildDmi()
     {
         var panel = Panel("DMI · cabina virtual de locomotora");
+        var name = new TextBox { Text = "Locomotora 1", Width = 260, Margin = new Thickness(0, 4, 0, 8) };
+        var address = new TextBox { Text = "3", Width = 120, Margin = new Thickness(0, 4, 0, 8) };
+        var protocol = new ComboBox
+        {
+            ItemsSource = new[] { "simulation", "Märklin CS2 (perfil)", "Märklin CS3 (perfil)", "Z21 (perfil)", "ESU ECoS (perfil)", "DCC genèric (perfil)" },
+            SelectedIndex = 0, Width = 260, Margin = new Thickness(0, 4, 0, 8)
+        };
+        var profiles = new ListBox { MinHeight = 100, Background = Brush("#FF111820"), Foreground = Brushes.White };
+        _locomotiveProfilesList = profiles;
+        profiles.SelectionChanged += (_, _) =>
+        {
+            if (profiles.SelectedItem is LocomotiveProfile selected)
+            {
+                name.Text = selected.Name;
+                address.Text = selected.Address.ToString();
+                protocol.SelectedItem = selected.Protocol;
+            }
+        };
+        panel.Children.Add(Label("Nom del perfil")); panel.Children.Add(name);
+        panel.Children.Add(Label("Adreça de locomotora")); panel.Children.Add(address);
+        panel.Children.Add(Label("Protocol (perfil, no connexió)")); panel.Children.Add(protocol);
+        panel.Children.Add(Button("Desar locomotora al projecte", (_, _) =>
+        {
+            if (_layout is null) { _dmiStatus.Text = "No hi ha projecte actiu."; return; }
+            if (name.Text.Trim().Length == 0 || !int.TryParse(address.Text, out var locoAddress) || locoAddress is < 1 or > 10239)
+            { _dmiStatus.Text = "Nom o adreça invàlids (1–10239)."; return; }
+            var existing = _layout.Locomotives.FindIndex(x => string.Equals(x.Name, name.Text.Trim(), StringComparison.OrdinalIgnoreCase));
+            var profile = new LocomotiveProfile(existing >= 0 ? _layout.Locomotives[existing].Id : Guid.NewGuid(),
+                name.Text.Trim(), locoAddress, protocol.SelectedItem?.ToString() ?? "simulation", true);
+            if (existing >= 0) _layout.Locomotives[existing] = profile; else _layout.Locomotives.Add(profile);
+            NotifyProjectChanged();
+            _dmiStatus.Text = $"Perfil «{profile.Name}» desat. Cabina en simulació.";
+        }));
+        panel.Children.Add(Label("Locomotores del projecte")); panel.Children.Add(profiles);
         var speed = new Slider { Minimum = 0, Maximum = 200, Value = 0, TickFrequency = 10, Margin = new Thickness(0, 10, 0, 10) };
+        var reverse = new CheckBox { Content = "Marxa enrere (simulada)", Foreground = Brushes.White, Margin = new Thickness(0, 4, 0, 8) };
+        var function = new ComboBox { ItemsSource = Enumerable.Range(0, 29).Select(x => $"F{x}"), SelectedIndex = 0, Width = 120, Margin = new Thickness(0, 4, 0, 8) };
+        var functionOn = new CheckBox { Content = "Funció activada (simulada)", Foreground = Brushes.White, Margin = new Thickness(0, 4, 0, 8) };
         var readout = Label("Velocitat simulada: 0 km/h");
-        speed.ValueChanged += (_, _) => { readout.Text = $"Velocitat simulada: {speed.Value:0} km/h"; _dmiStatus.Text = speed.Value > 0 ? "Cabina virtual activa. Cap ordre enviada." : "Locomotora virtual aturada."; };
-        panel.Children.Add(readout); panel.Children.Add(speed);
-        panel.Children.Add(Button("Parada virtual", (_, _) => { speed.Value = 0; _dmiStatus.Text = "Parada virtual aplicada. No és una parada d'emergència física."; }));
+        speed.ValueChanged += (_, _) =>
+        {
+            readout.Text = $"Velocitat simulada: {speed.Value:0} km/h";
+            _dmiStatus.Text = speed.Value > 0 ? "Cabina virtual activa. Cap ordre enviada." : "Locomotora virtual aturada.";
+        };
+        panel.Children.Add(Label("Regulador de velocitat")); panel.Children.Add(readout); panel.Children.Add(speed);
+        panel.Children.Add(reverse); panel.Children.Add(function); panel.Children.Add(functionOn);
+        panel.Children.Add(Button("Aplicar a simulació local", (_, _) =>
+        {
+            if (profiles.SelectedItem is not LocomotiveProfile selected)
+            { _dmiStatus.Text = "Selecciona una locomotora del projecte."; return; }
+            _dmiStatus.Text = $"{selected.Name} · {speed.Value:0} km/h · {(reverse.IsChecked == true ? "enrere" : "endavant")} · F{function.SelectedIndex}={(functionOn.IsChecked == true ? "ON" : "OFF")} · SIMULACIÓ, sense sortida física.";
+        }));
+        panel.Children.Add(Button("Parada virtual", (_, _) =>
+        {
+            speed.Value = 0;
+            _dmiStatus.Text = "Parada virtual aplicada. No és una parada d'emergència física.";
+        }));
         panel.Children.Add(_dmiStatus);
-        panel.Children.Add(Label("Les funcions F0–F28, direcció i regulador físic necessiten un adaptador de protocol verificat abans d'ús real."));
+        panel.Children.Add(Label("Els perfils i la cabina són locals. CS2 només permet prova de presència; cap protocol físic de tracció està habilitat."));
+        RefreshLocomotives();
         return Scroll(panel);
+    }
+
+    private void RefreshProtectionProfiles()
+    {
+        if (_layout is null || _protectionProfilesList is null) return;
+        var selectedId = (_protectionProfilesList.SelectedItem as TrainProtectionProfile)?.Id;
+        _protectionProfilesList.ItemsSource = _layout.ProtectionProfiles.ToArray();
+        _protectionProfilesList.DisplayMemberPath = nameof(TrainProtectionProfile.Name);
+        if (selectedId.HasValue)
+            _protectionProfilesList.SelectedItem = _layout.ProtectionProfiles.FirstOrDefault(x => x.Id == selectedId.Value);
     }
 
     private UIElement BuildProtection()
     {
         var panel = Panel("Protecció ferroviària · simulador educatiu");
+        var profileName = new TextBox { Text = "Perfil de prova", Width = 260, Margin = new Thickness(0, 4, 0, 8) };
+        var profiles = new ListBox { MinHeight = 90, Background = Brush("#FF111820"), Foreground = Brushes.White };
+        _protectionProfilesList = profiles;
         var permitted = new Slider { Minimum = 0, Maximum = 160, Value = 80, TickFrequency = 10, Margin = new Thickness(0, 8, 0, 8) };
         var actual = new Slider { Minimum = 0, Maximum = 200, Value = 0, TickFrequency = 10, Margin = new Thickness(0, 8, 0, 8) };
         var readout = Label("Velocitat 0 · límit 80 km/h");
+        profiles.SelectionChanged += (_, _) =>
+        {
+            if (profiles.SelectedItem is TrainProtectionProfile profile)
+            {
+                profileName.Text = profile.Name;
+                permitted.Value = (double)profile.PermittedSpeedKmh;
+                actual.Maximum = (double)profile.MaxSpeedKmh;
+                _protectionStatus.Text = $"Perfil {profile.Name} carregat · només simulació.";
+            }
+        };
         void Evaluate()
         {
             readout.Text = $"Velocitat {actual.Value:0} · límit {permitted.Value:0} km/h";
             _protectionStatus.Text = actual.Value > permitted.Value ? "FRENADA VIRTUAL: s'ha superat el límit." : "Supervisió virtual dins del límit.";
         }
         permitted.ValueChanged += (_, _) => Evaluate(); actual.ValueChanged += (_, _) => Evaluate();
-        panel.Children.Add(Label("Velocitat permesa")); panel.Children.Add(permitted);
-        panel.Children.Add(Label("Velocitat del tren simulat")); panel.Children.Add(actual);
-        panel.Children.Add(readout); panel.Children.Add(Button("Reconèixer avís", (_, _) => _protectionStatus.Text = "Avís reconegut en el simulador."));
+        panel.Children.Add(Label("Nom del perfil")); panel.Children.Add(profileName);
+        panel.Children.Add(Button("Desar perfil de protecció", (_, _) =>
+        {
+            if (_layout is null) { _protectionStatus.Text = "No hi ha projecte actiu."; return; }
+            var name = profileName.Text.Trim();
+            if (name.Length == 0 || permitted.Value < 0 || permitted.Value > actual.Maximum)
+            { _protectionStatus.Text = "Nom o límit de velocitat invàlid."; return; }
+            var index = _layout.ProtectionProfiles.FindIndex(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
+            var profile = new TrainProtectionProfile(index >= 0 ? _layout.ProtectionProfiles[index].Id : Guid.NewGuid(),
+                name, (decimal)permitted.Value, (decimal)actual.Maximum, 0.8m, true);
+            if (index >= 0) _layout.ProtectionProfiles[index] = profile; else _layout.ProtectionProfiles.Add(profile);
+            NotifyProjectChanged();
+            _protectionStatus.Text = $"Perfil «{name}» desat. Protecció només simulada.";
+        }));
+        panel.Children.Add(Label("Perfils del projecte")); panel.Children.Add(profiles);
+        panel.Children.Add(Label("Velocitat permesa (km/h)")); panel.Children.Add(permitted);
+        panel.Children.Add(Label("Velocitat del tren simulat (km/h)")); panel.Children.Add(actual);
+        panel.Children.Add(readout);
+        panel.Children.Add(Button("Reconèixer avís", (_, _) => _protectionStatus.Text = "Avís reconegut en el simulador."));
         panel.Children.Add(Button("Emergència virtual", (_, _) => { actual.Value = 0; _protectionStatus.Text = "Emergència virtual: velocitat simulada a zero."; }));
         panel.Children.Add(_protectionStatus);
-        panel.Children.Add(Label("No és ETCS/ASFA/LZB/PZB certificat ni controla frens reals."));
+        panel.Children.Add(Label("No és ETCS/ASFA/LZB/PZB certificat ni controla frens reals. La desacceleració del perfil és només un paràmetre didàctic."));
+        RefreshProtectionProfiles();
         return Scroll(panel);
+    }
+
+    private void RefreshGroundMessages()
+    {
+        if (_layout is null || _groundMessagesList is null) return;
+        _groundMessagesList.ItemsSource = _layout.GroundMessages
+            .OrderByDescending(x => x.CreatedUtc)
+            .Select(x => $"{x.CreatedUtc.LocalDateTime:yyyy-MM-dd HH:mm:ss} · {x.Destination}: {x.Message}")
+            .ToArray();
     }
 
     private UIElement BuildGround()
@@ -405,25 +693,39 @@ public sealed class NativeOperationsView : UserControl
         var panel = Panel("Terminal tren-terra · missatgeria local");
         var destination = new TextBox { Text = "Tren 001", Margin = new Thickness(0, 6, 0, 8) };
         var message = new TextBox { AcceptsReturn = true, MinHeight = 70, Text = "Missatge de prova", Margin = new Thickness(0, 4, 0, 8) };
-        var log = new ListBox { ItemsSource = _events, MinHeight = 150, Background = Brush("#FF111820"), Foreground = Brushes.White };
+        var log = new ListBox { MinHeight = 150, Background = Brush("#FF111820"), Foreground = Brushes.White };
+        _groundMessagesList = log;
         panel.Children.Add(Label("Destinatari")); panel.Children.Add(destination); panel.Children.Add(Label("Missatge")); panel.Children.Add(message);
-        panel.Children.Add(Button("Registrar missatge local", (_, _) =>
+        panel.Children.Add(Button("Desar missatge local al projecte", (_, _) =>
         {
-            if (message.Text.Trim().Length == 0) return;
-            _events.Add($"{DateTime.Now:HH:mm:ss} · {destination.Text.Trim()}: {message.Text.Trim()}");
-            _groundStatus.Text = "Missatge registrat localment. No s'ha transmès per ràdio.";
+            if (_layout is null) { _groundStatus.Text = "No hi ha projecte actiu."; return; }
+            if (destination.Text.Trim().Length == 0 || message.Text.Trim().Length == 0) return;
+            _layout.GroundMessages.Add(new TrainGroundMessage(Guid.NewGuid(), destination.Text.Trim(), message.Text.Trim(), DateTimeOffset.UtcNow));
+            NotifyProjectChanged();
+            _groundStatus.Text = "Missatge desat al projecte. No s'ha transmès per ràdio.";
         }));
         panel.Children.Add(log); panel.Children.Add(_groundStatus);
+        panel.Children.Add(Label("Terminal local: els missatges són registres de projecte, no transmissió tren-terra."));
+        RefreshGroundMessages();
         return Scroll(panel);
     }
 
     private UIElement BuildGame()
     {
         var panel = Panel("Märklin · Món de Jocs (simulació)");
-        var fuel = new Slider { Minimum = 0, Maximum = 100, Value = 65, TickFrequency = 5, Margin = new Thickness(0, 8, 0, 8) };
-        var readout = Label("Combustible virtual: 65%");
+        var fuel = new Slider { Minimum = 0, Maximum = 100, Value = 100, TickFrequency = 5, Margin = new Thickness(0, 8, 0, 8) };
+        var readout = Label("Combustible virtual: 100%");
+        _gameFuelSlider = fuel;
+        _gameFuelReadout = readout;
         fuel.ValueChanged += (_, _) => readout.Text = $"Combustible virtual: {fuel.Value:0}%";
         panel.Children.Add(readout); panel.Children.Add(fuel);
+        panel.Children.Add(Button("Desar estat de joc al projecte", (_, _) =>
+        {
+            if (_layout is null) { _gameStatus.Text = "No hi ha projecte actiu."; return; }
+            _layout.GameFuelPercent = (decimal)fuel.Value;
+            NotifyProjectChanged();
+            _gameStatus.Text = "Estat de joc desat al projecte. Simulació local.";
+        }));
         panel.Children.Add(Button("Reomplir dipòsit virtual", (_, _) => fuel.Value = 100));
         panel.Children.Add(_gameStatus);
         panel.Children.Add(Label("No llegeix ni escriu recursos mfx+ i no envia ordres a la CS2."));

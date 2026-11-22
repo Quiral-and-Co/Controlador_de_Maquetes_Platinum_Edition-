@@ -17,22 +17,6 @@ on:
       - '**.css'
       - '**.cjs'
       - 'tests/**'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'package.json'
-      - 'package-lock.json'
-      - 'README.md'
-      - 'docs/**'
-      - 'traffic-bridge.js'
-      - 'electron/**'
-      - '.github/workflows/windows-installer.yml'
-      - '**.js'
-      - '**.html'
-      - '**.css'
-      - '**.cjs'
-      - 'tests/**'
-
 permissions:
   contents: read
 

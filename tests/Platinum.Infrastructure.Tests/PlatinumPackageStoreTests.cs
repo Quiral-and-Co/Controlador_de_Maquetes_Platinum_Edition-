@@ -24,9 +24,13 @@ public sealed class PlatinumPackageStoreTests
                 Pieces = [new TrackPiece(pieceId, "24188", 120m, 240m, 90m, levelId, "partial"), new TrackPiece(secondPieceId, "24172", 300m, 240m, 0m, levelId, "confirmed")],
                 Connections = [connection],
                 GeometrySegments = [new TrackGeometrySegment(Guid.NewGuid(), TrackGeometryKind.Curve, 100m, 100m, 400m, 250m, 230m, 20m, levelId)],
-                Blocks = [new LogicalBlock(Guid.NewGuid(), "Bloc A", levelId, [pieceId])],
+                Blocks = [new LogicalBlock(Guid.NewGuid(), "Bloc A", levelId, [pieceId], true)],
                 Sensors = [new FeedbackSensor(Guid.NewGuid(), "CS2:S88:1", "Sensor 1")],
-                Routes = [new RouteDefinition(Guid.NewGuid(), "Ruta A", [])]
+                Routes = [new RouteDefinition(Guid.NewGuid(), "Ruta A", [], true)],
+                ProtocolProfiles = [new RailwayProtocolProfile(Guid.NewGuid(), "CS2 laboratori", "Märklin CS2", "192.168.1.50", 15731, false)],
+                ProtectionProfiles = [new TrainProtectionProfile(Guid.NewGuid(), "Prova 80", 80m, 160m, 0.8m, true)],
+                GroundMessages = [new TrainGroundMessage(Guid.NewGuid(), "Tren 001", "Missatge local", DateTimeOffset.Parse("2026-11-22T12:00:00Z"))],
+                GameFuelPercent = 65m
             };
 
             var store = new PlatinumPackageStore();
@@ -42,6 +46,13 @@ public sealed class PlatinumPackageStoreTests
             Assert.Equal(layout.GeometrySegments, loaded.GeometrySegments);
             Assert.Equal(layout.Blocks[0].PieceIds, loaded.Blocks[0].PieceIds);
             Assert.Equal(layout.Sensors[0].SystemName, loaded.Sensors[0].SystemName);
+            Assert.True(loaded.Blocks[0].Occupied);
+            Assert.True(loaded.Routes[0].Reserved);
+            Assert.Equal("Märklin CS2", loaded.ProtocolProfiles[0].Kind);
+            Assert.False(loaded.ProtocolProfiles[0].PhysicalCommandsEnabled);
+            Assert.Equal("Prova 80", loaded.ProtectionProfiles[0].Name);
+            Assert.Equal("Missatge local", loaded.GroundMessages[0].Message);
+            Assert.Equal(65m, loaded.GameFuelPercent);
 
             using var archive = ZipFile.OpenRead(path);
             Assert.NotNull(archive.GetEntry("manifest.xml"));
@@ -75,6 +86,20 @@ public sealed class PlatinumPackageStoreTests
         }
     }
     [Fact]
+    public async Task Save_RejectsProtocolProfilesWithPhysicalCommandsEnabled()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"platinum-unsafe-profile-{Guid.NewGuid():N}.platinum");
+        var layout = new TrackLayout
+        {
+            Levels = [new TrackLevel(Guid.NewGuid(), "Principal", 0m)],
+            ProtocolProfiles = [new RailwayProtocolProfile(Guid.NewGuid(), "Perfil físic", "Märklin CS2", "192.168.1.50", 15731, true)]
+        };
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => new PlatinumPackageStore().SaveAsync(layout, path));
+        Assert.False(File.Exists(path));
+    }
+
+    [Fact]
     public void PhysicalControlGate_DeniesCommandsByDefault()
     {
         var gate = new Platinum.Application.Safety.PhysicalControlGate();
@@ -89,10 +114,11 @@ public sealed class PlatinumPackageStoreTests
     {
         var gate = new Platinum.Application.Safety.PhysicalControlGate();
         var state = new Platinum.Domain.Safety.HardwareSafetyState(
-            JmriConnected: true,
             CommandStationConnected: true,
             FeedbackHealthy: true,
             EmergencyStopCircuitVerified: true,
+            WatchdogHealthy: true,
+            InterlocksHealthy: true,
             OperatorSafetyAcknowledged: true,
             PhysicalControlArmed: false);
 

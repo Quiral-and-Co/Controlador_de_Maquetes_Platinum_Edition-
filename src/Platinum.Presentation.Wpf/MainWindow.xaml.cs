@@ -14,14 +14,18 @@ public partial class MainWindow : Window
     private readonly ProjectService _projects = new(new PlatinumPackageStore());
     private TrackLayout _currentLayout = CreateNewLayout();
     private string? _currentPath;
+    private bool _isDirty;
     private List<CatalogueItem> _catalogueItems = [];
 
     public MainWindow()
     {
         InitializeComponent();
+        OperationsView.SetLayout(_currentLayout);
+        OperationsView.ProjectDataChanged += (_, _) => { _isDirty = true; UpdateProjectStatus(); StatusText.Text = "Dades del dispatcher modificades; desa el projecte per conservar-les."; };
         LoadCatalogue();
         TrackEditor.CataloguePiecePlaced += OnCataloguePiecePlaced;
         TrackEditor.ConnectionCreated += OnConnectionCreated;
+        TrackEditor.EditorDataChanged += OnEditorDataChanged;
         TrackEditor.SetActiveLevel(ActiveLevelId);
         TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
         TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
@@ -42,6 +46,8 @@ public partial class MainWindow : Window
     {
         _currentLayout = CreateNewLayout();
         _currentPath = null;
+        _isDirty = false;
+        OperationsView.SetLayout(_currentLayout);
         TrackEditor.SetActiveLevel(ActiveLevelId);
         TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
         TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
@@ -68,6 +74,8 @@ public partial class MainWindow : Window
         {
             _currentLayout = await _projects.LoadAsync(dialog.FileName);
             _currentPath = dialog.FileName;
+            _isDirty = false;
+            OperationsView.SetLayout(_currentLayout);
             if (_currentLayout.Levels.Count == 0) _currentLayout.Levels.Add(new TrackLevel(Guid.NewGuid(), "Nivell principal", 0m));
             TrackEditor.SetActiveLevel(ActiveLevelId);
             TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
@@ -112,6 +120,7 @@ public partial class MainWindow : Window
             _currentLayout.Connections.AddRange(TrackEditor.Connections);
             await _projects.SaveAsync(_currentLayout, path);
             _currentPath = path;
+            _isDirty = false;
             UpdateProjectStatus();
             StatusText.Text = "Projecte desat correctament.";
         }
@@ -233,6 +242,18 @@ public partial class MainWindow : Window
         StatusText.Text = $"Fes clic al plànol per col·locar {item.Ref} al nivell actiu.";
     }
 
+    private void OnEditorDataChanged(object? sender, EventArgs e)
+    {
+        _isDirty = true;
+        _currentLayout.GeometrySegments = TrackEditor.Segments.ToList();
+        _currentLayout.Pieces.Clear();
+        _currentLayout.Pieces.AddRange(TrackEditor.Pieces);
+        _currentLayout.Connections.Clear();
+        _currentLayout.Connections.AddRange(TrackEditor.Connections);
+        Sync3DEditor();
+        UpdateProjectStatus();
+    }
+
     private void OnConnectionCreated(TrackConnection connection)
     {
         if (!_currentLayout.Connections.Any(existing => existing.Id == connection.Id))
@@ -281,7 +302,7 @@ public partial class MainWindow : Window
 
     private void UpdateProjectStatus()
     {
-        ProjectStatus.Text = _currentPath is null ? "PROJECTE NO DESAT" : "PROJECTE DESAT";
+        ProjectStatus.Text = _currentPath is null || _isDirty ? "PROJECTE NO DESAT" : "PROJECTE DESAT";
         Title = $"Quiral Platinum — {_currentLayout.Name}";
     }
 }
