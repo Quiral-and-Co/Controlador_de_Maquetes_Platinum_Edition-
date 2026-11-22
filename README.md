@@ -12,13 +12,13 @@ dotnet run --project src/Platinum.Presentation.Wpf/Platinum.Presentation.Wpf.csp
 
 Consulta [la guia de migració WPF](docs/native-wpf-migration.md) per veure què ja s'ha portat i què queda pendent. Les pantalles noves de simulació són locals i no controlen maquinari real.
 
-**Motor de control propi:** s'ha iniciat la substitució de JMRI per serveis C# a `Platinum.Domain`, `Platinum.Application` i `Platinum.Infrastructure`. La interfície WPF ja disposa d'un panell connectat a una central virtual Platinum per provar locomotores, funcions, accessoris i aturada virtual. Els perfils Märklin CS2/CS3, Z21 i ECoS encara no tenen adaptadors físics implementats; no s'envien ordres reals. Vegeu [motor de control propi](docs/own-railway-control-engine.md).
+**Motor de control propi:** Platinum ja disposa de serveis C# i d'un adaptador de xarxa natiu per a Märklin CS2: CAN-over-Ethernet UDP, ports 15731/15730 i consulta de presència, sense JMRI/Java/WebSocket. Les ordres físiques continuen bloquejades fins a completar el mapa d'identificadors, la supervisió de seguretat i les proves amb maquinari. CS3, Z21 i ECoS continuen pendents. Vegeu [motor de control propi](docs/own-railway-control-engine.md) i [protocol natiu CS2](docs/native-marklin-cs2-protocol.md).
 
 ---
 
-# JMRI TC Gold Custom — 1.4.0
+# Codi heretat (referència de migració) — JMRI TC Gold Custom 1.4.0
 
-Aplicació d'escriptori i eines de planificació, diagnòstic i validació per a maquetes Märklin H0. La integració amb JMRI i el pont de circulacions tenen modes i límits de seguretat documentats; les funcions simulades no equivalen a protocols ferroviaris certificats ni a control físic validat.
+La secció següent descriu la implementació web/Electron anterior i es conserva com a referència funcional durant la migració. No forma part de l'executable WPF natiu i no s'ha d'utilitzar com a instrucció per configurar la nova aplicació. Les funcions pendents s'estan reimplementant en C#.
 
 ## Funcions disponibles
 
