@@ -11,6 +11,7 @@
     if(typeof worldPorts!=='function'||typeof syncRelations!=='function')throw new TypeError('Cal proporcionar els adaptadors de geometria i relacions del model.');
     
         if(!c||typeof c!=='object'||Array.isArray(c))throw Error('El projecte JSON ha de ser un objecte.');
+        c=JSON.parse(JSON.stringify(c));
         if(!Array.isArray(c.levels)||c.levels.length!==5)throw Error('El projecte ha de tenir exactament cinc nivells.');
         if(![2,3].includes(Number(c.schemaVersion)))throw Error(`Versió de model no admesa: ${c.schemaVersion}`);
         if(typeof c.name!=='string'||!c.name.trim())throw Error('El projecte ha de tenir un nom.');
