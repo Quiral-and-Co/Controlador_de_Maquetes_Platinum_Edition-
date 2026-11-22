@@ -27,7 +27,7 @@ public sealed class TrackEditorView : UserControl
     private bool _draggingSelection;
     private double _zoomFactor = 1d;
     private bool _snapToGrid = true;
-    private const decimal GridMillimetres = 10m;
+    private decimal _gridMillimetres = 10m;
 
     private enum Tool { Select, Straight, Curve, Turnout }
 
@@ -74,6 +74,13 @@ public sealed class TrackEditorView : UserControl
 
     public void SetActiveLevel(Guid levelId) => _levelId = levelId;
 
+    public void SetGridSize(decimal millimetres)
+    {
+        if (millimetres <= 0 || millimetres > 1000)
+            throw new ArgumentOutOfRangeException(nameof(millimetres), "La graella ha d'estar entre 0 i 1000 mm.");
+        _gridMillimetres = millimetres;
+    }
+
     public void LoadSegments(IEnumerable<TrackGeometrySegment>? segments)
     {
         _segments.Clear();
@@ -112,8 +119,8 @@ public sealed class TrackEditorView : UserControl
     private Point Snap(Point point)
     {
         if (!_snapToGrid) return point;
-        return new Point(Math.Round(point.X / (double)GridMillimetres) * (double)GridMillimetres,
-            Math.Round(point.Y / (double)GridMillimetres) * (double)GridMillimetres);
+        return new Point(Math.Round(point.X / (double)_gridMillimetres) * (double)_gridMillimetres,
+            Math.Round(point.Y / (double)_gridMillimetres) * (double)GridMillimetres);
     }
     private Point ToView(decimal x, decimal y) => new(((double)x + 80) * BaseScale, ((double)y + 80) * BaseScale);
 
