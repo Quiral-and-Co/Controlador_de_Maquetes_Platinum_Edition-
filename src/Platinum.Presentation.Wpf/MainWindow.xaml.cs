@@ -121,33 +121,55 @@ public partial class MainWindow : Window
 
     private async void CheckUpdates_Click(object sender, RoutedEventArgs e)
     {
-        StatusText.Text = "Consultant les versions publicades a GitHub…";
+        var service = new GitHubUpdateService();
+        StatusText.Text = "Comprovant actualitzacions a GitHub...";
         try
         {
-            var service = new GitHubUpdateService();
             var release = await service.GetLatestReleaseAsync();
             if (release is null)
             {
-                MessageBox.Show(this, "Encara no hi ha cap Release publicada al repositori. Quan es publiqui una versió amb un instal·lador .exe, apareixerà aquí.", "Actualitzacions", MessageBoxButton.OK, MessageBoxImage.Information);
-                StatusText.Text = "No hi ha cap Release publicada.";
+                MessageBox.Show(this, "No hi ha cap Release publicada. Les actualitzacions s'obtenen de les versions oficials del repositori.", "Actualitzacions", MessageBoxButton.OK, MessageBoxImage.Information);
+                StatusText.Text = "No hi ha versions publicades.";
                 return;
             }
+
             var current = typeof(MainWindow).Assembly.GetName().Version ?? new Version(0, 0);
             var latest = GitHubUpdateService.ParseVersion(release.Tag);
-            var isNewer = latest > current;
-            var message = release.Name + " (" + release.Tag + ")\n\n" +
-                (isNewer ? "Hi ha una versió més nova disponible.\n\n" : "Aquesta és la versió publicada més recent.\n\n") +
-                (release.Installer is null ? "La Release no conté cap instal·lador .exe. Consulta les notes a GitHub." : "Instal·lador .exe disponible a GitHub." ) +
-                (string.IsNullOrWhiteSpace(release.Notes) ? string.Empty : "\n\nNotes:\n" + release.Notes);
-            var answer = MessageBox.Show(this, message + "\n\nVols obrir la descàrrega oficial?", "Actualitzacions de Platinum", MessageBoxButton.YesNo, MessageBoxImage.Information);
-            if (answer == MessageBoxResult.Yes)
-                GitHubUpdateService.OpenOfficialUrl(isNewer && release.Installer is not null ? release.Installer : release.Page);
-            StatusText.Text = isNewer ? "Actualització disponible: " + release.Tag : "Versió més recent: " + release.Tag;
+            var newer = latest > current;
+            if (!newer)
+            {
+                MessageBox.Show(this, $"Platinum ja està actualitzat.\nVersió instal·lada: {current}\nVersió de GitHub: {release.Tag}", "Platinum actualitzat", MessageBoxButton.OK, MessageBoxImage.Information);
+                StatusText.Text = "Platinum està actualitzat.";
+                return;
+            }
+
+            if (release.Installer is null || release.Checksum is null)
+            {
+                MessageBox.Show(this, $"Hi ha una versió nova ({release.Tag}), però la Release encara no conté l'instal·lador verificable i el seu SHA-256.\n\n{release.Notes}", "Actualització pendent de publicació", MessageBoxButton.OK, MessageBoxImage.Warning);
+                StatusText.Text = "Versió nova detectada; instal·lador no publicat.";
+                return;
+            }
+
+            var confirm = MessageBox.Show(this,
+                $"Nova versió: {release.Name} ({release.Tag})\nVersió actual: {current}\n\nEs descarregarà l'instal·lador oficial, se'n verificarà el SHA-256 i s'iniciarà la instal·lació. Platinum es tancarà.\n\n{release.Notes}\n\nVols continuar?",
+                "Actualitzar Platinum des de GitHub", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (confirm != MessageBoxResult.Yes) return;
+
+            StatusText.Text = "Descarregant actualització oficial...";
+            var installer = await service.DownloadAndVerifyInstallerAsync(release);
+            StatusText.Text = "SHA-256 correcte. Iniciant instal·lador...";
+            GitHubUpdateService.StartInstaller(installer);
+            Application.Current.Shutdown();
+        }
+        catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            MessageBox.Show(this, "Has cancel·lat l'autorització de Windows. No s'ha instal·lat cap actualització.", "Actualització cancel·lada", MessageBoxButton.OK, MessageBoxImage.Information);
+            StatusText.Text = "Actualització cancel·lada.";
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, "No s'ha pogut consultar GitHub.\n\n" + ex.Message, "Error en cercar actualitzacions", MessageBoxButton.OK, MessageBoxImage.Warning);
-            StatusText.Text = "No s'ha pogut consultar GitHub.";
+            MessageBox.Show(this, "No s'ha pogut completar l'actualització. La instal·lació actual no s'ha modificat.\n\n" + ex.Message, "Error d'actualització", MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusText.Text = "Error en actualitzar des de GitHub.";
         }
     }
 
