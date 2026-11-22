@@ -12,6 +12,17 @@ dotnet run --project src/Platinum.Presentation.Wpf/Platinum.Presentation.Wpf.csp
 
 Consulta [la guia de migració WPF](docs/native-wpf-migration.md) per veure què ja s'ha portat i què queda pendent. Les pantalles noves de simulació són locals i no controlen maquinari real.
 
+## Actualitzacions automàtiques des de GitHub (WPF)
+
+La barra superior de Platinum inclou **Actualitzar des de GitHub**. L'aplicació consulta l'última GitHub Release, compara la versió de l'assembly, descarrega l'instal·lador oficial .exe, verifica el manifest SHA-256 i només després de la confirmació de l'usuari inicia l'instal·lador elevat de Windows. L'aplicació es tanca perquè Inno Setup pugui reemplaçar els fitxers. Si l'usuari cancel·la UAC o la verificació falla, no s'executa l'instal·lador.
+
+Les releases WPF es generen amb [wpf-release.yml](.github/workflows/wpf-release.yml):
+- En publicar un tag vMAJOR.MINOR.PATCH, GitHub Actions restaura i prova la solució, publica WPF self-contained per a Windows x64, crea l'instal·lador Inno Setup i adjunta l'EXE i el fitxer .sha256 a la GitHub Release.
+- També es pot iniciar manualment el workflow des de GitHub Actions indicant una versió. La release queda vinculada al commit seleccionat.
+- Fins que no hi hagi una GitHub Release amb aquests dos actius, el botó només pot informar de l'estat; no hi ha cap actualització instal·lable.
+
+La verificació SHA-256 detecta fitxers alterats o corruptes, però no substitueix la signatura Authenticode del fabricant. Abans de distribuir públicament, és recomanable signar l'instal·lador amb un certificat de codi.
+
 **Motor de control propi:** Platinum ja disposa de serveis C# i d'un adaptador de xarxa natiu per a Märklin CS2: CAN-over-Ethernet UDP, ports 15731/15730 i consulta de presència, sense JMRI/Java/WebSocket. Les ordres físiques continuen bloquejades fins a completar el mapa d'identificadors, la supervisió de seguretat i les proves amb maquinari. CS3, Z21 i ECoS continuen pendents. Vegeu [motor de control propi](docs/own-railway-control-engine.md) i [protocol natiu CS2](docs/native-marklin-cs2-protocol.md).
 
 ---
