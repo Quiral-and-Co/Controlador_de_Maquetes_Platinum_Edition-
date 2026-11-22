@@ -13,6 +13,7 @@
         <TextBlock Text="CATÀLEG MÄRKLIN C · H0" FontWeight="Bold" Margin="0,0,0,8"/>
         <TextBox x:Name="CatalogueSearch" Padding="6" Margin="0,0,0,8" ToolTip="Cerca per referència, nom o categoria" TextChanged="CatalogueSearch_TextChanged"/>
         <ListBox x:Name="CatalogueList" Height="250" Background="#FF111820" Foreground="#FFE9EDF2" BorderBrush="#FF394654" DisplayMemberPath="DisplayName" SelectionChanged="CatalogueList_SelectionChanged"/>
+        <Button x:Name="PlaceCatalogueButton" Content="Col·loca al nivell actiu" Padding="8,6" Margin="0,8,0,0" IsEnabled="False" Click="PlaceCatalogueButton_Click"/>
         <TextBlock x:Name="CatalogueDetails" Text="Selecciona una peça per consultar-ne les dades." TextWrapping="Wrap" Foreground="#FFB7C1CC" Margin="0,8,0,0"/>
         <TextBlock x:Name="CatalogueCount" Text="Catàleg no carregat" Foreground="#FFB7C1CC" Margin="0,6,0,0"/>
         <Separator Margin="0,14,0,8"/><TextBlock Text="ESTAT DEL SISTEMA" FontWeight="Bold" Margin="0,0,0,8"/><TextBlock Text="Projecte: gestionat pel fitxer .platinum"/><TextBlock Text="JMRI: desconnectat"/><TextBlock Text="Central digital: desconnectada"/><TextBlock Text="DCC: bloquejat" Foreground="#FFFFC65C"/><TextBlock Text="E-stop físic: no verificat" Foreground="#FFFFC65C" Margin="0,0,0,10"/><Separator/><TextBlock Text="La geometria editada és un plànol lògic. No equival a validació física ni habilita sortides de maquinari." TextWrapping="Wrap" Foreground="#FFB7C1CC" Margin="0,10,0,0"/></StackPanel></Border>
