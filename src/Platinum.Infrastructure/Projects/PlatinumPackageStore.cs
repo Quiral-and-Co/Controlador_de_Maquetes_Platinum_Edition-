@@ -29,7 +29,7 @@ public sealed class PlatinumPackageStore : IProjectStore
                 {
                     Format = "Quiral Platinum",
                     FormatVersion = TrackLayout.CurrentFormatVersion,
-                    CreatedUtc = DateTimeOffset.UtcNow
+                    CreatedUtc = DateTimeOffset.UtcNow.ToString("O")
                 }, cancellationToken);
                 await WriteXmlAsync(archive, LayoutEntry, LayoutDocument.From(layout), cancellationToken);
             }
@@ -93,7 +93,7 @@ public sealed class PlatinumPackageStore : IProjectStore
     {
         public string Format { get; set; } = "Quiral Platinum";
         public int FormatVersion { get; set; } = 1;
-        public DateTimeOffset CreatedUtc { get; set; }
+        public string CreatedUtc { get; set; } = "";
     }
 
     [XmlRoot("Layout")]
