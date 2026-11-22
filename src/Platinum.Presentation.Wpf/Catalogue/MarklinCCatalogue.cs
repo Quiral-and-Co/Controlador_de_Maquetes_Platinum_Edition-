@@ -24,31 +24,28 @@ public sealed record CatalogueItem(
     }.Where(x => x is not null));
 
     /// <summary>
-    /// Local endpoint coordinates in millimetres. "derived" means calculated
-    /// from explicit catalogue dimensions. "estimated" means topology is known
-    /// but endpoint coordinates still require a dimensioned drawing or measurement.
+    /// Connection endpoints in local millimetres. Derived coordinates use published
+    /// dimensions. Estimated coordinates describe a known topology where Märklin's
+    /// public dimensional data does not specify the exact moulded connector centres.
     /// </summary>
     public IReadOnlyList<CataloguePort> Ports
     {
         get
         {
-            if (Ref is "24671" or "24672" or "24771" or "24772")
+            if (IsCurvedTurnout)
                 return CurvedTurnoutPorts();
 
             if (Ref == "24630")
                 return ThreeWayTurnoutPorts();
 
-            if (Ref is "24640" or "24649" or "24740" or "24624" or "24720")
+            if (IsCrossingOrDoubleSlip)
                 return CrossingPorts();
 
-            if (Ref is "20611" or "20612" or "24611" or "24612" or "24711" or "24712")
+            if (IsStandardTurnout)
                 return StandardTurnoutPorts();
 
-            if (LengthMm is > 0 && (Type == "straight" || Ref is "24088" or "24922" or "24951" or "24994" or "24995" or "24997" or "20997"))
-            {
-                var half = LengthMm.Value / 2m;
-                return [new("A", -half, 0m, "derived"), new("B", half, 0m, "derived")];
-            }
+            if (IsKnownStraightSpecial)
+                return StraightPorts();
 
             if (RadiusMm is > 0 && AngleDeg is > 0 && Type == "curve")
                 return ArcPorts(RadiusMm.Value, AngleDeg.Value, "A", "B", "derived");
@@ -56,69 +53,101 @@ public sealed record CatalogueItem(
             if (Ref is "20977" or "24977" or "24978" or "20199" or "24001")
                 return [new("IN", -((LengthMm ?? 77.5m) / 2m), 0m, "estimated")];
 
-            // Turntables and packaged track sets require a radial/composite topology,
-            // so no artificial two-port geometry is assigned.
+            // Sets are compositions, not individual track pieces. Turntables need
+            // their configurable radial sockets; do not fabricate six port angles.
             return [];
         }
     }
 
+    private bool IsCurvedTurnout =>
+        Ref is "20672" or "24671" or "24672" or "24771" or "24772";
+
+    private bool IsStandardTurnout =>
+        Ref is "20611" or "20612" or "24611" or "24612" or "24711" or "24712";
+
+    private bool IsCrossingOrDoubleSlip =>
+        Ref is "24624" or "24640" or "24649" or "24720" or "24740";
+
+    private bool IsKnownStraightSpecial =>
+        Type == "straight" ||
+        Ref is "20997" or "24088" or "24922" or "24951" or "24994" or "24995" or "24997";
+
+    private IReadOnlyList<CataloguePort> StraightPorts()
+    {
+        var length = LengthMm ?? Ref switch
+        {
+            "24922" or "24951" => 180m,
+            "24994" or "24995" or "24997" or "20997" => 94.2m,
+            _ => 188.3m
+        };
+        var half = length / 2m;
+        return [new("A", -half, 0m, "derived"), new("B", half, 0m, "derived")];
+    }
+
     private IReadOnlyList<CataloguePort> CurvedTurnoutPorts()
     {
-        var innerRadius = Ref is "24771" or "24772" ? 515m : 360m;
-        var outerRadius = Ref is "24771" or "24772" ? 579.3m : 437.5m;
+        // C-track curved turnouts are two concentric 30-degree routes. Their
+        // four physical ends are distinct: inner A/B and outer A/B.
+        var slim = Ref is "24771" or "24772";
+        var innerRadius = slim ? 515m : 360m;       // R3 or R1
+        var outerRadius = slim ? 579.3m : 437.5m;   // R4 or R2
         var leftHand = Ref is "24671" or "24771";
         var direction = leftHand ? 1m : -1m;
-        const decimal nominalAngle = 30m;
-        var halfAngle = (double)nominalAngle * Math.PI / 360d;
-        var meanRadius = (innerRadius + outerRadius) / 2m;
+        const double angleDegrees = 30d;
+        var angle = angleDegrees * Math.PI / 180d;
         var ports = new List<CataloguePort>(4);
 
-        AddArcPair(ports, "INNER", innerRadius, meanRadius, halfAngle, direction);
-        AddArcPair(ports, "OUTER", outerRadius, meanRadius, halfAngle, direction);
+        AddConcentricArc(ports, "INNER", innerRadius, angle, direction);
+        AddConcentricArc(ports, "OUTER", outerRadius, angle, direction);
         return ports;
     }
 
-    private static void AddArcPair(
+    private static void AddConcentricArc(
         ICollection<CataloguePort> ports,
         string prefix,
         decimal radius,
-        decimal meanRadius,
-        double halfAngle,
+        double angle,
         decimal direction)
     {
         var r = (double)radius;
-        var mean = (double)meanRadius;
-        var x = (decimal)(r * Math.Sin(halfAngle));
-        var y = (decimal)((r - mean) * Math.Cos(halfAngle)) * direction;
-        ports.Add(new CataloguePort($"{prefix}_A", -x, y, "estimated"));
-        ports.Add(new CataloguePort($"{prefix}_B", x, y, "estimated"));
+        var endX = (decimal)(r * Math.Sin(angle));
+        var endY = (decimal)(direction * r * (1d - Math.Cos(angle)));
+
+        // The start/end positions follow the arc's own radius; the actual
+        // switch's connector centre offsets are still estimated pending CAD data.
+        ports.Add(new CataloguePort($"{prefix}_A", 0m, 0m, "estimated"));
+        ports.Add(new CataloguePort($"{prefix}_B", endX, endY, "estimated"));
     }
 
     private IReadOnlyList<CataloguePort> ThreeWayTurnoutPorts()
     {
-        // Topology: one common toe and three branch exits. The catalogue data
-        // does not yet contain all moulded endpoint offsets, so these are estimates.
-        const decimal halfLength = 188.3m / 2m;
-        var branchOffset = (decimal)(188.3d * Math.Sin(24.3d * Math.PI / 180d));
+        // 24630: one common toe and three exits. Published envelope is
+        // 188.3 mm with two 24.3-degree diverging routes. Exact frog offsets
+        // and the asymmetric exit positions are not published in the catalogue.
+        var halfLength = (LengthMm ?? 188.3m) / 2m;
+        var angle = (double)(AngleDeg ?? 24.3m) * Math.PI / 180d;
+        var radius = (double)(RadiusMm ?? 437.5m);
+        var branchX = (decimal)(radius * Math.Sin(angle));
+        var branchY = (decimal)(radius * (1d - Math.Cos(angle)));
         return [
             new("IN", -halfLength, 0m, "estimated"),
             new("STRAIGHT", halfLength, 0m, "estimated"),
-            new("LEFT", halfLength, branchOffset, "estimated"),
-            new("RIGHT", halfLength, -branchOffset, "estimated")
+            new("LEFT", branchX, branchY, "estimated"),
+            new("RIGHT", branchX, -branchY, "estimated")
         ];
     }
 
     private IReadOnlyList<CataloguePort> StandardTurnoutPorts()
     {
-        var length = Ref is "24711" or "24712" ? 236.1m : 188.3m;
-        var angle = AngleDeg ?? 24.3m;
-        var radius = RadiusMm ?? 437.5m;
+        var length = LengthMm ?? (Ref is "24711" or "24712" ? 236.1m : 188.3m);
+        var angle = AngleDeg ?? (Ref is "24711" or "24712" ? 12.1m : 24.3m);
+        var radius = RadiusMm ?? (Ref is "24711" or "24712" ? 1114.6m : 437.5m);
         var leftHand = Ref is "20611" or "24611" or "24711";
         var direction = leftHand ? 1d : -1d;
         var half = length / 2m;
-        var halfAngle = (double)angle * Math.PI / 360d;
-        var branchX = (decimal)(length * Math.Cos(halfAngle) / 2d);
-        var branchY = (decimal)(direction * radius * (1d - Math.Cos((double)angle * Math.PI / 180d)));
+        var radians = (double)angle * Math.PI / 180d;
+        var branchX = (decimal)(radius * Math.Sin(radians));
+        var branchY = (decimal)(direction * radius * (1d - Math.Cos(radians)));
         return [
             new("IN", -half, 0m, "estimated"),
             new("MAIN", half, 0m, "estimated"),
@@ -128,20 +157,22 @@ public sealed record CatalogueItem(
 
     private IReadOnlyList<CataloguePort> CrossingPorts()
     {
-        // Crossing angle is catalogued, but exact overall length/track-centre
-        // coordinates are not consistently present in this catalogue yet.
-        // Use a provisional nominal envelope and mark all four endpoints estimated.
-        var angle = AngleDeg ?? (Ref == "24649" ? 48.6m : Ref is "24740" or "24720" ? 12.1m : 24.3m);
-        var length = LengthMm ?? 188.3m;
+        var length = LengthMm ?? 0m;
+        var angle = AngleDeg ?? 0m;
+        if (length <= 0m || angle <= 0m)
+            return [];
+
+        // Each crossing road is a separate straight path. The four ends are
+        // calculated from the documented overall length and crossing angle.
         var half = (double)length / 2d;
         var radians = (double)angle * Math.PI / 180d;
         var dx = half * Math.Cos(radians);
         var dy = half * Math.Sin(radians);
         return [
-            new("A_IN", (decimal)-half, 0m, "estimated"),
-            new("A_OUT", (decimal)half, 0m, "estimated"),
-            new("B_IN", (decimal)-dx, (decimal)-dy, "estimated"),
-            new("B_OUT", (decimal)dx, (decimal)dy, "estimated")
+            new("A_IN", (decimal)-half, 0m, "derived"),
+            new("A_OUT", (decimal)half, 0m, "derived"),
+            new("B_IN", (decimal)-dx, (decimal)-dy, "derived"),
+            new("B_OUT", (decimal)dx, (decimal)dy, "derived")
         ];
     }
 
