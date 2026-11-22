@@ -156,6 +156,94 @@ public sealed class NativeOperationsView : UserControl
         return Scroll(panel);
     }
 
+
+    private UIElement BuildAutomation()
+    {
+        var panel = Panel("Enclavaments i automatització · motor Platinum");
+        var blockName = new TextBox { Text = "B1", Width = 180, Margin = new Thickness(0, 4, 0, 8) };
+        var blockList = new ListBox { MinHeight = 110, Background = Brush("#FF111820"), Foreground = Brushes.White };
+        var routeName = new TextBox { Text = "R1", Width = 180, Margin = new Thickness(0, 4, 0, 8) };
+        var routeBlocks = new TextBox { Text = "B1", Width = 280, Margin = new Thickness(0, 4, 0, 8) };
+        var routeList = new ListBox { MinHeight = 90, Background = Brush("#FF111820"), Foreground = Brushes.White };
+        var signalName = new TextBox { Text = "S1", Width = 180, Margin = new Thickness(0, 4, 0, 8) };
+        var protectedBlock = new TextBox { Text = "B1", Width = 180, Margin = new Thickness(0, 4, 0, 8) };
+        var status = Status("Motor propi preparat. Sortides físiques bloquejades.");
+        var audit = new ListBox { MinHeight = 110, Background = Brush("#FF111820"), Foreground = Brushes.White };
+
+        void Refresh()
+        {
+            blockList.ItemsSource = _automation.Blocks.Select(b =>
+                $"{b.Name} · {(b.Occupied ? "OCUPAT" : "LLIURE")} · {(b.ReservedBy ?? "SENSE RESERVA")}").ToArray();
+            routeList.ItemsSource = _automation.Routes.Select(r =>
+                $"{r.Name} · {string.Join(" → ", r.Blocks)} · {(r.Active ? "ACTIU" : "INACTIU")}").ToArray();
+            audit.ItemsSource = _automation.Events.Reverse().Select(e =>
+                $"{e.Timestamp.LocalDateTime:HH:mm:ss} · {e.Code} · {e.Message}").ToArray();
+        }
+
+        panel.Children.Add(Label("Crear bloc"));
+        panel.Children.Add(blockName);
+        panel.Children.Add(Button("Afegir bloc", (_, _) =>
+        {
+            try { _automation.AddBlock(blockName.Text); status.Text = "Bloc creat."; Refresh(); }
+            catch (Exception ex) { status.Text = ex.Message; }
+        }));
+        panel.Children.Add(blockList);
+        panel.Children.Add(Button("Canviar ocupació del bloc seleccionat", (_, _) =>
+        {
+            if (blockList.SelectedItem is not string selected) return;
+            var name = selected.Split('·')[0].Trim();
+            var block = _automation.Blocks.First(x => x.Name == name);
+            try { _automation.SetOccupancy(name, !block.Occupied); status.Text = "Ocupació actualitzada."; Refresh(); }
+            catch (Exception ex) { status.Text = ex.Message; }
+        }));
+
+        panel.Children.Add(Label("Itinerari · blocs separats per comes"));
+        panel.Children.Add(routeName);
+        panel.Children.Add(routeBlocks);
+        panel.Children.Add(Button("Reservar itinerari", (_, _) =>
+        {
+            try
+            {
+                _automation.ReserveRoute(routeName.Text,
+                    routeBlocks.Text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+                status.Text = "Itinerari reservat."; Refresh();
+            }
+            catch (Exception ex) { status.Text = "Reserva rebutjada: " + ex.Message; }
+        }));
+        panel.Children.Add(routeList);
+        panel.Children.Add(Button("Alliberar itinerari seleccionat", (_, _) =>
+        {
+            if (routeList.SelectedItem is not string selected) return;
+            try { _automation.ReleaseRoute(selected.Split('·')[0].Trim()); status.Text = "Itinerari alliberat."; Refresh(); }
+            catch (Exception ex) { status.Text = ex.Message; }
+        }));
+
+        panel.Children.Add(Label("Avaluar senyal protegint un bloc"));
+        panel.Children.Add(signalName);
+        panel.Children.Add(protectedBlock);
+        panel.Children.Add(Button("Calcular aspecte", (_, _) =>
+        {
+            try { status.Text = $"Senyal {signalName.Text}: {_automation.EvaluateSignal(signalName.Text, protectedBlock.Text)}"; Refresh(); }
+            catch (Exception ex) { status.Text = ex.Message; }
+        }));
+        panel.Children.Add(Button("ATURADA D'EMERGÈNCIA ENCLAVADA", (_, _) =>
+        {
+            _automation.TriggerEmergencyStop("Activada des de Platinum WPF");
+            status.Text = "Aturada enclavada. No es poden reservar itineraris."; Refresh();
+        }));
+        panel.Children.Add(Button("Reconèixer restabliment lògic", (_, _) =>
+        {
+            try { _automation.AcknowledgeEmergencyReset(true); status.Text = "Restabliment lògic reconegut; senyals a parada."; Refresh(); }
+            catch (Exception ex) { status.Text = ex.Message; }
+        }));
+        panel.Children.Add(status);
+        panel.Children.Add(Label("Motor lògic local. No és un enclavament ferroviari certificat i no comanda sortides físiques."));
+        panel.Children.Add(Label("Registre d'esdeveniments"));
+        panel.Children.Add(audit);
+        Refresh();
+        return Scroll(panel);
+    }
+
     private UIElement BuildDispatcher()
     {
         var root = TwoColumns();
