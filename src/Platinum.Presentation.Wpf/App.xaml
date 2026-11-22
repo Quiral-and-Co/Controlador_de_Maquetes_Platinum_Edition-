@@ -5,6 +5,12 @@
     <SolidColorBrush x:Key="DefaultTextBrush" Color="#FFFFFFFF"/>
 
     <!-- Text blanc per defecte a tota la interfície WPF fosca. -->
+    <Style TargetType="{x:Type TextBlock}">
+      <Setter Property="Foreground" Value="{StaticResource DefaultTextBrush}"/>
+    </Style>
+    <Style TargetType="{x:Type ComboBoxItem}">
+      <Setter Property="Foreground" Value="{StaticResource DefaultTextBrush}"/>
+    </Style>
     <Style TargetType="{x:Type Button}">
       <Setter Property="Foreground" Value="{StaticResource DefaultTextBrush}"/>
     </Style>
