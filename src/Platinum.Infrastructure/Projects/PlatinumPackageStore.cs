@@ -209,7 +209,7 @@ public sealed class PlatinumPackageStore : IProjectStore
             Sensors=x.Sensors.Select(v=>new SensorDocument{Id=v.Id,SystemName=v.SystemName,DisplayName=v.DisplayName,PhysicallyVerified=v.PhysicallyVerified}).ToList(),
             Routes=x.Routes.Select(v=>new RouteDocument{Id=v.Id,Name=v.Name,BlockIds=v.BlockIds.ToList()}).ToList(),
             BlockOccupancies=x.BlockOccupancies.Select(v=>new BlockOccupancyDocument{BlockId=v.BlockId,State=v.State}).ToList(),
-            RouteReservations=x.RouteReservations.Select(v=>new RouteReservationDocument{Id=v.Id,RouteId=v.RouteId,CreatedUtc=v.CreatedUtc}).ToList()
+            RouteReservations=x.RouteReservations.Select(v=>new RouteReservationDocument{Id=v.Id,RouteId=v.RouteId,CreatedUtc=v.CreatedUtc.ToString("O")}).ToList()
         };
         public TrackLayout ToDomain() => new()
         {
@@ -233,5 +233,5 @@ public sealed class PlatinumPackageStore : IProjectStore
     public sealed class SensorDocument { public Guid Id {get;set;} public string SystemName {get;set;}=""; public string DisplayName {get;set;}=""; public bool PhysicallyVerified {get;set;} }
     public sealed class RouteDocument { public Guid Id {get;set;} public string Name {get;set;}=""; [XmlArrayItem("BlockId")] public List<Guid> BlockIds {get;set;}=[]; }
     public sealed class BlockOccupancyDocument { public Guid BlockId {get;set;} public BlockOccupancyState State {get;set;} }
-    public sealed class RouteReservationDocument { public Guid Id {get;set;} public Guid RouteId {get;set;} public DateTimeOffset CreatedUtc {get;set;} }
+    public sealed class RouteReservationDocument { public Guid Id {get;set;} public Guid RouteId {get;set;} public string CreatedUtc {get;set;}=""; }
 }
