@@ -17,6 +17,7 @@ public sealed class TrackLayout
     public List<RouteDefinition> Routes { get; init; } = [];
     public List<SignalDefinition> Signals { get; init; } = [];
     public List<LocomotiveProfile> Locomotives { get; init; } = [];
+    public List<RailwayProtocolProfile> ProtocolProfiles { get; init; } = [];
     public List<PhysicalInspectionRecord> Inspections { get; init; } = [];
 }
 
@@ -30,3 +31,4 @@ public sealed record RouteDefinition(Guid Id, string Name, IReadOnlyList<Guid> B
 public sealed record SignalDefinition(Guid Id, string Name, string Aspect, Guid? ProtectedBlockId, bool PhysicallyVerified = false);
 public sealed record LocomotiveProfile(Guid Id, string Name, int Address, string Protocol, bool SimulationOnly = true);
 public sealed record PhysicalInspectionRecord(Guid Id, string Item, bool OperatorDeclaredComplete, string Notes, DateTimeOffset CheckedUtc);
+\n
