@@ -582,38 +582,57 @@ public sealed class TrackEditorView : UserControl
             "partial" => Color.FromRgb(240, 174, 82),
             _ => Color.FromRgb(165, 174, 184)
         };
-        var geometry = new GeometryGroup();
-        if (item?.Type == "curve")
+
+        var trackGeometry = new GeometryGroup();
+        if (item is not null)
         {
-            var figure = new PathFigure { StartPoint = new Point(origin.X - 18, origin.Y + 12), IsClosed = false };
-            figure.Segments.Add(new QuadraticBezierSegment(new Point(origin.X - 3, origin.Y - 20), new Point(origin.X + 20, origin.Y - 12), true));
-            geometry.Children.Add(new PathGeometry { Figures = new PathFigureCollection { figure } });
+            var ports = item.Ports.ToDictionary(port => port.Id, StringComparer.OrdinalIgnoreCase);
+            foreach (var route in item.TrackPaths)
+            {
+                if (!ports.TryGetValue(route.FromPort, out var from) ||
+                    !ports.TryGetValue(route.ToPort, out var to))
+                    continue;
+
+                var start = new Point((double)from.X * BaseScale, (double)from.Y * BaseScale);
+                var end = new Point((double)to.X * BaseScale, (double)to.Y * BaseScale);
+                var figure = new PathFigure { StartPoint = start, IsClosed = false };
+                if (route.Kind.Equals("quadratic", StringComparison.OrdinalIgnoreCase))
+                {
+                    var control = new Point((double)route.ControlX * BaseScale, (double)route.ControlY * BaseScale);
+                    figure.Segments.Add(new QuadraticBezierSegment(control, end, true));
+                }
+                else
+                {
+                    figure.Segments.Add(new LineSegment(end, true));
+                }
+                trackGeometry.Children.Add(new PathGeometry { Figures = new PathFigureCollection { figure } });
+            }
         }
-        else if (item?.Type == "turnout")
-        {
-            geometry.Children.Add(new LineGeometry(new Point(origin.X - 20, origin.Y + 12), new Point(origin.X + 20, origin.Y - 12)));
-            geometry.Children.Add(new LineGeometry(new Point(origin.X - 2, origin.Y + 2), new Point(origin.X + 20, origin.Y + 18)));
-        }
-        else if (item?.Type == "straight")
-        {
-            geometry.Children.Add(new LineGeometry(new Point(origin.X - 22, origin.Y), new Point(origin.X + 22, origin.Y)));
-        }
-        else
-        {
-            geometry.Children.Add(new RectangleGeometry(new Rect(origin.X - 12, origin.Y - 12, 24, 24)));
-        }
+
+        // For a terminal/unsupported special item with no centre-line route,
+        // retain a visible anchor glyph rather than inventing track geometry.
+        if (trackGeometry.Children.Count == 0)
+            trackGeometry.Children.Add(new EllipseGeometry(new Point(0, 0), 5, 5));
+
+        var radians = (double)piece.RotationDegrees * Math.PI / 180d;
+        var transform = new MatrixTransform(new Matrix(
+            Math.Cos(radians), Math.Sin(radians),
+            -Math.Sin(radians), Math.Cos(radians),
+            origin.X, origin.Y));
 
         var path = new System.Windows.Shapes.Path
         {
-            Data = geometry,
+            Data = trackGeometry,
+            RenderTransform = transform,
             Stroke = new SolidColorBrush(color),
-            StrokeThickness = piece.Id == _selectedPieceId ? 7 : 4,
+            StrokeThickness = piece.Id == _selectedPieceId ? 7 : 5,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+            StrokeLineJoin = PenLineJoin.Round,
             StrokeDashArray = status == "confirmed" ? null : new DoubleCollection { 3, 2 },
             IsHitTestVisible = false,
-            ToolTip = $"{piece.CatalogueCode} · {item?.Name ?? "Peça de catàleg"} · geometria {status} · símbol no a escala"
+            ToolTip = $"{piece.CatalogueCode} · {item?.Name ?? "Peça de catàleg"} · geometria {status} · traçats connectats als ports"
         };
-        var rotation = new RotateTransform((double)piece.RotationDegrees, origin.X, origin.Y);
-        path.RenderTransform = rotation;
         _surface.Children.Add(path);
 
         var label = new TextBlock
