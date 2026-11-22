@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using Platinum.Domain.Layout;
 using Platinum.Infrastructure.Projects;
+using Xunit;
 
 namespace Platinum.Infrastructure.Tests;
 
