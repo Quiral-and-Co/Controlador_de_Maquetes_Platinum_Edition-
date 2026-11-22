@@ -10,6 +10,7 @@ public sealed class TrackLayout
     public decimal GridMillimetres { get; set; } = 10m;
     public List<TrackLevel> Levels { get; init; } = [];
     public List<TrackPiece> Pieces { get; init; } = [];
+    public List<TrackGeometrySegment> GeometrySegments { get; set; } = [];
     public List<TrackConnection> Connections { get; init; } = [];
     public List<LogicalBlock> Blocks { get; init; } = [];
     public List<FeedbackSensor> Sensors { get; init; } = [];
