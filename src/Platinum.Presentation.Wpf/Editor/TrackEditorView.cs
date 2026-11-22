@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using Platinum.Domain.Layout;
+using Platinum.Presentation.Wpf.Catalogue;
 
 namespace Platinum.Presentation.Wpf.Editor;
 
@@ -17,6 +18,9 @@ public sealed class TrackEditorView : UserControl
     private readonly ScaleTransform _zoom = new(1, 1);
     private readonly TextBlock _hint = new() { Foreground = Brushes.LightGray, Margin = new Thickness(10, 4, 0, 4) };
     private readonly List<TrackGeometrySegment> _segments = [];
+    private readonly List<TrackPiece> _pieces = [];
+    private readonly Dictionary<string, CatalogueItem> _catalogueByCode = new(StringComparer.OrdinalIgnoreCase);
+    private CatalogueItem? _placementItem;
     private readonly Stack<List<TrackGeometrySegment>> _undo = new();
     private readonly Stack<List<TrackGeometrySegment>> _redo = new();
     private Guid _levelId;
@@ -71,6 +75,8 @@ public sealed class TrackEditorView : UserControl
     }
 
     public IReadOnlyList<TrackGeometrySegment> Segments => _segments;
+    public IReadOnlyList<TrackPiece> Pieces => _pieces;
+    public event Action<TrackPiece>? CataloguePiecePlaced;
 
     public void SetActiveLevel(Guid levelId)
     {
@@ -79,6 +85,30 @@ public sealed class TrackEditorView : UserControl
         _anchor = null;
         _draggingSelection = false;
         Draw();
+    }
+
+    public void SetCatalogue(IEnumerable<CatalogueItem> items)
+    {
+        _catalogueByCode.Clear();
+        foreach (var item in items) _catalogueByCode[item.Ref] = item;
+        Draw();
+    }
+
+    public void LoadPieces(IEnumerable<TrackPiece>? pieces)
+    {
+        _pieces.Clear();
+        if (pieces is not null) _pieces.AddRange(pieces);
+        Draw();
+    }
+
+    public void BeginCataloguePlacement(CatalogueItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        _placementItem = item;
+        _tool = Tool.Select;
+        _anchor = null;
+        _draggingSelection = false;
+        _hint.Text = $"Col·loca {item.Ref} fent clic al nivell actiu. Símbol esquemàtic, no a escala; estat geomètric: {item.GeometryStatus}.";
     }
 
     public void SetGridSize(decimal millimetres)
@@ -133,7 +163,19 @@ public sealed class TrackEditorView : UserControl
 
     private void Surface_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        var point = ToModel(e.GetPosition(_surface));
+        var point = Snap(ToModel(e.GetPosition(_surface)));
+        if (_placementItem is not null)
+        {
+            var item = _placementItem;
+            var placed = new TrackPiece(Guid.NewGuid(), item.Ref, (decimal)point.X, (decimal)point.Y, 0m, _levelId, item.GeometryStatus);
+            _pieces.Add(placed);
+            _placementItem = null;
+            CataloguePiecePlaced?.Invoke(placed);
+            _hint.Text = $"Peça {item.Ref} col·locada al nivell actiu. La geometria es conserva amb estat {item.GeometryStatus}.";
+            Draw();
+            e.Handled = true;
+            return;
+        }
         if (_tool == Tool.Select)
         {
             _selectedId = HitTest(point);
@@ -291,6 +333,8 @@ public sealed class TrackEditorView : UserControl
             for (var y = 0; y < _surface.Height; y += 22) dc.DrawLine(pen, new Point(0, y), new Point(_surface.Width, y));
         }
         _surface.Background = new DrawingBrush(grid) { Stretch = Stretch.None };
+        foreach (var piece in _pieces.Where(p => p.LevelId == _levelId))
+            DrawCataloguePiece(piece);
         foreach (var segment in _segments.Where(s => s.LevelId == _levelId))
         {
             var geometry = CreateGeometry(segment);
@@ -306,6 +350,64 @@ public sealed class TrackEditorView : UserControl
             };
             _surface.Children.Add(path);
         }
+    }
+
+    private void DrawCataloguePiece(TrackPiece piece)
+    {
+        var origin = ToView(piece.X, piece.Y);
+        var itemExists = _catalogueByCode.TryGetValue(piece.CatalogueCode, out var item);
+        var status = itemExists ? item!.GeometryStatus : piece.GeometryStatus;
+        var color = status switch
+        {
+            "confirmed" => Color.FromRgb(83, 190, 210),
+            "partial" => Color.FromRgb(240, 174, 82),
+            _ => Color.FromRgb(165, 174, 184)
+        };
+        var geometry = new GeometryGroup();
+        if (item?.Type == "curve")
+        {
+            var figure = new PathFigure { StartPoint = new Point(origin.X - 18, origin.Y + 12), IsClosed = false };
+            figure.Segments.Add(new QuadraticBezierSegment(new Point(origin.X - 3, origin.Y - 20), new Point(origin.X + 20, origin.Y - 12), true));
+            geometry.Children.Add(new PathGeometry { Figures = new PathFigureCollection { figure } });
+        }
+        else if (item?.Type == "turnout")
+        {
+            geometry.Children.Add(new LineGeometry(new Point(origin.X - 20, origin.Y + 12), new Point(origin.X + 20, origin.Y - 12)));
+            geometry.Children.Add(new LineGeometry(new Point(origin.X - 2, origin.Y + 2), new Point(origin.X + 20, origin.Y + 18)));
+        }
+        else if (item?.Type == "straight")
+        {
+            geometry.Children.Add(new LineGeometry(new Point(origin.X - 22, origin.Y), new Point(origin.X + 22, origin.Y)));
+        }
+        else
+        {
+            geometry.Children.Add(new RectangleGeometry(new Rect(origin.X - 12, origin.Y - 12, 24, 24)));
+        }
+
+        var path = new System.Windows.Shapes.Path
+        {
+            Data = geometry,
+            Stroke = new SolidColorBrush(color),
+            StrokeThickness = 4,
+            StrokeDashArray = status == "confirmed" ? null : new DoubleCollection { 3, 2 },
+            IsHitTestVisible = false,
+            ToolTip = $"{piece.CatalogueCode} · {item?.Name ?? "Peça de catàleg"} · geometria {status} · símbol no a escala"
+        };
+        var rotation = new RotateTransform((double)piece.RotationDegrees, origin.X, origin.Y);
+        path.RenderTransform = rotation;
+        _surface.Children.Add(path);
+
+        var label = new TextBlock
+        {
+            Text = piece.CatalogueCode,
+            Foreground = new SolidColorBrush(color),
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold,
+            IsHitTestVisible = false
+        };
+        Canvas.SetLeft(label, origin.X + 25);
+        Canvas.SetTop(label, origin.Y - 9);
+        _surface.Children.Add(label);
     }
 
     private static Geometry CreateGeometry(TrackGeometrySegment segment)
