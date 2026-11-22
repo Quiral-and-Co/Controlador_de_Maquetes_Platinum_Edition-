@@ -95,6 +95,7 @@ public sealed class TrackEditorView : UserControl
         _selectedId = null;
         _selectedPieceId = null;
         _pendingConnectionPieceId = null;
+        _pendingConnectionPortId = null;
         _connectMode = false;
         _anchor = null;
         _draggingSelection = false;
@@ -121,6 +122,7 @@ public sealed class TrackEditorView : UserControl
         _connections.Clear();
         if (connections is not null) _connections.AddRange(connections);
         _pendingConnectionPieceId = null;
+        _pendingConnectionPortId = null;
         Draw();
     }
 
@@ -139,6 +141,7 @@ public sealed class TrackEditorView : UserControl
     {
         _connectMode = !_connectMode;
         _pendingConnectionPieceId = null;
+        _pendingConnectionPortId = null;
         _placementItem = null;
         _hint.Text = _connectMode
             ? "Connexió lògica: clica dues peces del mateix nivell. No implica connexió física verificada."
