@@ -99,7 +99,7 @@ public sealed class NativeOperationsView : UserControl
         {
             if (routeList.SelectedItem is not string route) return;
             var parts = route.Split('·');
-            var names = parts.Length > 1 ? parts[1].Split('→', StringSplitOptions.TrimEntries) : [];
+            var names = parts.Length > 1 ? parts[1].Split('→', StringSplitOptions.TrimEntries) : Array.Empty<string>();
             var conflicts = names.Where(_occupied.Contains).ToArray();
             _dispatcherStatus.Text = conflicts.Length == 0 ? "Simulació: blocs disponibles. No és un enclavament." : "Blocs ocupats: " + string.Join(", ", conflicts);
         }));
