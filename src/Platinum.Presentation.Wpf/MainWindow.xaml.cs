@@ -18,6 +18,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         TrackEditor.SetActiveLevel(ActiveLevelId);
+        TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
         TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
         UpdateProjectStatus();
     }
@@ -33,6 +34,7 @@ public partial class MainWindow : Window
         _currentLayout = CreateNewLayout();
         _currentPath = null;
         TrackEditor.SetActiveLevel(ActiveLevelId);
+        TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
         TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
         UpdateProjectStatus();
         StatusText.Text = "Projecte nou creat. Encara no s'ha desat.";
@@ -55,6 +57,7 @@ public partial class MainWindow : Window
             _currentPath = dialog.FileName;
             if (_currentLayout.Levels.Count == 0) _currentLayout.Levels.Add(new TrackLevel(Guid.NewGuid(), "Nivell principal", 0m));
             TrackEditor.SetActiveLevel(ActiveLevelId);
+            TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
             TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
             UpdateProjectStatus();
             StatusText.Text = "Projecte carregat i validat.";
