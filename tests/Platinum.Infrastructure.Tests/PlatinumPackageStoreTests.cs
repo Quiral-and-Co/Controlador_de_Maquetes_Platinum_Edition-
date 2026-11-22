@@ -66,4 +66,29 @@ public sealed class PlatinumPackageStoreTests
             if (File.Exists(path)) File.Delete(path);
         }
     }
+    [Fact]
+    public void PhysicalControlGate_DeniesCommandsByDefault()
+    {
+        var gate = new Platinum.Application.Safety.PhysicalControlGate();
+        var state = new Platinum.Domain.Safety.HardwareSafetyState();
+
+        Assert.False(gate.CanIssueCommands(state));
+        Assert.Throws<InvalidOperationException>(() => gate.EnsureCommandsAllowed(state));
+    }
+
+    [Fact]
+    public void PhysicalControlGate_RequiresEveryRuntimeSafetyCondition()
+    {
+        var gate = new Platinum.Application.Safety.PhysicalControlGate();
+        var state = new Platinum.Domain.Safety.HardwareSafetyState(
+            JmriConnected: true,
+            CommandStationConnected: true,
+            FeedbackHealthy: true,
+            EmergencyStopCircuitVerified: true,
+            OperatorSafetyAcknowledged: true,
+            PhysicalControlArmed: false);
+
+        Assert.False(gate.CanIssueCommands(state));
+    }
+
 }
