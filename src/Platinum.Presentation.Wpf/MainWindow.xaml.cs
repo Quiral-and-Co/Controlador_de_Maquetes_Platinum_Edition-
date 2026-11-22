@@ -4,6 +4,7 @@ using Platinum.Application.Projects;
 using Platinum.Domain.Layout;
 using Platinum.Infrastructure.Projects;
 using Platinum.Presentation.Wpf.Updates;
+using Platinum.Presentation.Wpf.Editor;
 
 namespace Platinum.Presentation.Wpf;
 
@@ -16,6 +17,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        TrackEditor.SetActiveLevel(ActiveLevelId);
+        TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
         UpdateProjectStatus();
     }
 
@@ -29,6 +32,8 @@ public partial class MainWindow : Window
     {
         _currentLayout = CreateNewLayout();
         _currentPath = null;
+        TrackEditor.SetActiveLevel(ActiveLevelId);
+        TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
         UpdateProjectStatus();
         StatusText.Text = "Projecte nou creat. Encara no s'ha desat.";
     }
@@ -48,6 +53,9 @@ public partial class MainWindow : Window
         {
             _currentLayout = await _projects.LoadAsync(dialog.FileName);
             _currentPath = dialog.FileName;
+            if (_currentLayout.Levels.Count == 0) _currentLayout.Levels.Add(new TrackLevel(Guid.NewGuid(), "Nivell principal", 0m));
+            TrackEditor.SetActiveLevel(ActiveLevelId);
+            TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
             UpdateProjectStatus();
             StatusText.Text = "Projecte carregat i validat.";
         }
@@ -77,6 +85,7 @@ public partial class MainWindow : Window
 
         try
         {
+            _currentLayout.GeometrySegments = TrackEditor.Segments.ToList();
             await _projects.SaveAsync(_currentLayout, path);
             _currentPath = path;
             UpdateProjectStatus();
@@ -120,6 +129,8 @@ public partial class MainWindow : Window
             StatusText.Text = "No s'ha pogut consultar GitHub.";
         }
     }
+
+    private Guid ActiveLevelId => _currentLayout.Levels.FirstOrDefault()?.Id ?? Guid.Empty;
 
     private void UpdateProjectStatus()
     {
