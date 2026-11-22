@@ -1,3 +1,34 @@
+# Aplicació d'escriptori nativa · .NET 10 WPF
+
+> **Branca de migració nativa:** l'aplicació d'escriptori en desenvolupament és C# + WPF + XAML. No carrega HTML, CSS, JavaScript, WebView ni necessita iniciar cap servidor o navegador per executar el projecte WPF. Els fitxers web descrits més avall es mantenen com a implementació de referència mentre es completa la paritat funcional; no són dependències del projecte WPF.
+
+Per compilar i executar la versió nativa a Windows:
+
+```powershell
+dotnet restore Platinum.sln
+dotnet build Platinum.sln -c Release
+dotnet run --project src/Platinum.Presentation.Wpf/Platinum.Presentation.Wpf.csproj
+```
+
+Consulta [la guia de migració WPF](docs/native-wpf-migration.md) per veure què ja s'ha portat i què queda pendent. Les pantalles noves de simulació són locals i no controlen maquinari real.
+
+## Instal·lació i actualitzacions (WPF)
+
+El setup Inno Setup conserva un `AppId` estable. Quan detecta una instal·lació anterior de Quiral Platinum, executa el desinstal·lador antic en mode silenciós abans de copiar els fitxers nous. Aquesta operació es fa després que l'usuari confirmi la instal·lació; si la desinstal·lació falla, el setup s'atura i no deixa una instal·lació parcial. Es conserva la carpeta d'instal·lació anterior i es tornen a crear les dreceres.
+
+La barra superior de Platinum inclou **Actualitzar des de GitHub**. L'aplicació consulta l'última GitHub Release, compara la versió de l'assembly, descarrega l'instal·lador oficial .exe, verifica el manifest SHA-256 i només després de la confirmació de l'usuari inicia l'instal·lador elevat de Windows. L'aplicació es tanca perquè Inno Setup pugui substituir la versió instal·lada.
+
+- [Platinum WPF setup build](.github/workflows/wpf-setup-build.yml) compila WPF self-contained per a Windows x64 i publica un artefacte descarregable a GitHub Actions.
+- [Platinum WPF Windows release](.github/workflows/wpf-release.yml) genera el mateix instal·lador i el publica com a GitHub Release amb el seu manifest SHA-256.
+- Per publicar una release estable, executa el workflow de release indicant una versió semàntica (per exemple `0.2.0`) o crea un tag `vMAJOR.MINOR.PATCH`.
+- Fins que no hi hagi una GitHub Release amb l'EXE i el fitxer `.sha256`, el botó d'actualització només pot informar de l'estat; no hi ha cap actualització instal·lable.
+
+La verificació SHA-256 detecta fitxers alterats o corruptes, però no substitueix la signatura Authenticode del fabricant. Abans de distribuir públicament, és recomanable signar l'instal·lador amb un certificat de codi.
+
+**Motor de control propi:** Platinum ja disposa de serveis C# i d'un adaptador de xarxa natiu per a Märklin CS2: CAN-over-Ethernet UDP, ports 15731/15730 i consulta de presència, sense JMRI/Java/WebSocket. Les ordres físiques continuen bloquejades fins a completar el mapa d'identificadors, la supervisió de seguretat i les proves amb maquinari. CS3, Z21 i ECoS continuen pendents. Vegeu [motor de control propi](docs/own-railway-control-engine.md) i [protocol natiu CS2](docs/native-marklin-cs2-protocol.md).
+
+---
+
 # JMRI TC Gold Custom — 1.4.0
 
 Aplicació d'escriptori i eines de planificació, diagnòstic i validació per a maquetes Märklin H0. La integració amb JMRI i el pont de circulacions tenen modes i límits de seguretat documentats; les funcions simulades no equivalen a protocols ferroviaris certificats ni a control físic validat.

@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../Platinum.Domain/Platinum.Domain.csproj" /><ProjectReference Include="../Platinum.Application/Platinum.Application.csproj" /></ItemGroup>
+</Project>
