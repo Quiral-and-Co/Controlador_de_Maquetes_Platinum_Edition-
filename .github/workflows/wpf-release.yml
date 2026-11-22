@@ -31,7 +31,7 @@ jobs:
           } else {
             $version = "${{ github.ref_name }}".TrimStart('v')
           }
-          if ($version -notmatch '^\\d+\\.\\d+\\.\\d+(\\.\\d+)?$') { throw "Invalid version: $version" }
+          if ($version -notmatch '^\d+\.\d+\.\d+(\.\d+)?$') { throw "Invalid version: $version" }
           "version=$version" >> $env:GITHUB_OUTPUT
 
       - name: Set up .NET 10
@@ -63,7 +63,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $iscc = "${env:ProgramFiles(x86)}\\Inno Setup 6\\ISCC.exe"
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found: $iscc" }
           & $iscc "/DMyAppVersion=${{ steps.version.outputs.version }}" "installer/QuiralPlatinum.iss"
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
