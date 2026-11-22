@@ -22,6 +22,7 @@ public partial class MainWindow : Window
         LoadCatalogue();
         TrackEditor.CataloguePiecePlaced += OnCataloguePiecePlaced;
         TrackEditor.ConnectionCreated += OnConnectionCreated;
+        TrackEditor.ProjectModelChanged += OnEditorProjectModelChanged;
         TrackEditor.SetActiveLevel(ActiveLevelId);
         TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
         TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
@@ -233,6 +234,18 @@ public partial class MainWindow : Window
         StatusText.Text = $"Fes clic al plànol per col·locar {item.Ref} al nivell actiu.";
     }
 
+    private void OnEditorProjectModelChanged()
+    {
+        // The editor, persistence layer and 3D preview share the same project model.
+        _currentLayout.GeometrySegments = TrackEditor.Segments.ToList();
+        _currentLayout.Pieces.Clear();
+        _currentLayout.Pieces.AddRange(TrackEditor.Pieces);
+        _currentLayout.Connections.Clear();
+        _currentLayout.Connections.AddRange(TrackEditor.Connections);
+        Sync3DEditor();
+        UpdateProjectStatus();
+    }
+
     private void OnConnectionCreated(TrackConnection connection)
     {
         if (!_currentLayout.Connections.Any(existing => existing.Id == connection.Id))
@@ -276,7 +289,7 @@ public partial class MainWindow : Window
     private void Sync3DEditor()
     {
         if (TrackEditor3D is null || TrackEditor is null) return;
-        TrackEditor3D.SetData(TrackEditor.Segments, TrackEditor.Pieces, _currentLayout.Levels, _catalogueItems, ActiveLevelId);
+        TrackEditor3D.SetData(_currentLayout.GeometrySegments, _currentLayout.Pieces, _currentLayout.Levels, _catalogueItems, ActiveLevelId, _currentLayout.Connections);
     }
 
     private void UpdateProjectStatus()
