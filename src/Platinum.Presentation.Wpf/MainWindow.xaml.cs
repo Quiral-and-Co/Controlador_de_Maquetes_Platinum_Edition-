@@ -1,4 +1,5 @@
 using System.IO;
+using System.Globalization;
 using Microsoft.Win32;
 using System.Windows;
 using Platinum.Application.Projects;
@@ -57,6 +58,36 @@ public partial class MainWindow : Window
         StatusText.Text = $"Topologia: {issues.Count} incidències. Sortides físiques bloquejades.";
         var details = string.Join(Environment.NewLine, issues.Select(issue => $"[{issue.Code}] {issue.Message}"));
         MessageBox.Show(this, details, "Incidències de topologia", MessageBoxButton.OK, MessageBoxImage.Warning);
+    }
+
+
+    private void AnalyzeElevation_Click(object sender, RoutedEventArgs e)
+    {
+        if (!decimal.TryParse(ElevationRunInput.Text, NumberStyles.Number,
+                CultureInfo.CurrentCulture, out var horizontalRun) || horizontalRun <= 0)
+        {
+            MessageBox.Show(this, "Introdueix una distància horitzontal vàlida, superior a zero mil·límetres.",
+                "Anàlisi de pendents", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        try
+        {
+            var grades = TrackElevationAnalyzer.AnalyzeAdjacentLevels(_currentLayout.Levels, horizontalRun);
+            var details = string.Join(Environment.NewLine, grades.Select(grade =>
+                $"{grade.LowerLevelName} → {grade.UpperLevelName}: desnivell {grade.RiseMillimetres:0.##} mm / " +
+                $"{grade.HorizontalRunMillimetres:0.##} mm = {grade.GradePercent:0.##}%"));
+            StatusText.Text = $"Anàlisi teòrica completada: {grades.Count} trams de nivell.";
+            MessageBox.Show(this,
+                details + Environment.NewLine + Environment.NewLine +
+                "Càlcul teòric entre nivells consecutius. No verifica longitud real de rampa, radis, gàlib, adherència ni viabilitat física.",
+                "Anàlisi de pendents", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "No s'ha pogut analitzar el pendent",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private void NewProject_Click(object sender, RoutedEventArgs e)
