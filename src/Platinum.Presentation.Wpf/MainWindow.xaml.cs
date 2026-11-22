@@ -175,8 +175,8 @@ public partial class MainWindow : Window
     {
         if (CatalogueList.SelectedItem is not CatalogueItem item) return;
         var geometry = string.IsNullOrWhiteSpace(item.GeometrySummary) ? "Geometria dimensional no disponible." : item.GeometrySummary;
-        CatalogueDetails.Text = $"{item.DisplayName}\\nCategoria: {item.Category}\\nTipus: {item.Type}\\nGeometria: {geometry}\\nEstat: {item.GeometryStatus}" +
-            (string.IsNullOrWhiteSpace(item.Notes) ? string.Empty : $"\\nNota: {item.Notes}");
+        CatalogueDetails.Text = $"{item.DisplayName}\nCategoria: {item.Category}\nTipus: {item.Type}\nGeometria: {geometry}\nEstat: {item.GeometryStatus}" +
+            (string.IsNullOrWhiteSpace(item.Notes) ? string.Empty : $"\nNota: {item.Notes}");
     }
 
     private Guid ActiveLevelId => LevelSelector.SelectedValue is Guid selected ? selected : _currentLayout.Levels.FirstOrDefault()?.Id ?? Guid.Empty;
