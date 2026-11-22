@@ -23,8 +23,8 @@ public sealed class NativeOperationsView : UserControl
     private ListBox? _dispatcherRoutesList;
     private ListBox? _signalsList;
     private ComboBox? _signalBlockSelector;
-    private ComboBox? _signalAspectSelector;
     private ListBox? _protocolProfilesList;
+    private ListBox? _locomotiveProfilesList;
     public event EventHandler? ProjectDataChanged;
 
     private readonly RailwayControlService _controlService = new(new LocalSimulationAdapter());
@@ -33,7 +33,6 @@ public sealed class NativeOperationsView : UserControl
     private readonly ObservableCollection<string> _blocks = [];
     private readonly HashSet<string> _occupied = new(StringComparer.OrdinalIgnoreCase);
     private readonly ObservableCollection<string> _routes = [];
-    private readonly ObservableCollection<string> _stations = [];
     private readonly ObservableCollection<string> _events = [];
     private readonly List<CheckBox> _validationChecks = [];
     private readonly TextBlock _dispatcherStatus = Status("Cap bloc creat.");
@@ -260,6 +259,7 @@ public sealed class NativeOperationsView : UserControl
         RefreshDispatcher();
         RefreshSignalling();
         RefreshProtocolProfiles();
+        RefreshLocomotives();
     }
 
     private void RefreshDispatcher()
@@ -278,6 +278,7 @@ public sealed class NativeOperationsView : UserControl
         RefreshDispatcher();
         RefreshSignalling();
         RefreshProtocolProfiles();
+        RefreshLocomotives();
         ProjectDataChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -400,7 +401,6 @@ public sealed class NativeOperationsView : UserControl
         var list = new ListBox { MinHeight = 140, Background = Brush("#FF111820"), Foreground = Brushes.White };
         _signalsList = list;
         _signalBlockSelector = block;
-        _signalAspectSelector = aspect;
         list.SelectionChanged += (_, _) =>
         {
             if (list.SelectedItem is SignalDefinition selected)
@@ -532,16 +532,79 @@ public sealed class NativeOperationsView : UserControl
         return Scroll(panel);
     }
 
+    private void RefreshLocomotives()
+    {
+        if (_layout is null || _locomotiveProfilesList is null) return;
+        var selectedId = (_locomotiveProfilesList.SelectedItem as LocomotiveProfile)?.Id;
+        _locomotiveProfilesList.ItemsSource = _layout.Locomotives.ToArray();
+        _locomotiveProfilesList.DisplayMemberPath = nameof(LocomotiveProfile.Name);
+        if (selectedId.HasValue)
+            _locomotiveProfilesList.SelectedItem = _layout.Locomotives.FirstOrDefault(x => x.Id == selectedId.Value);
+    }
+
     private UIElement BuildDmi()
     {
         var panel = Panel("DMI · cabina virtual de locomotora");
+        var name = new TextBox { Text = "Locomotora 1", Width = 260, Margin = new Thickness(0, 4, 0, 8) };
+        var address = new TextBox { Text = "3", Width = 120, Margin = new Thickness(0, 4, 0, 8) };
+        var protocol = new ComboBox
+        {
+            ItemsSource = new[] { "simulation", "Märklin CS2 (perfil)", "Märklin CS3 (perfil)", "Z21 (perfil)", "ESU ECoS (perfil)", "DCC genèric (perfil)" },
+            SelectedIndex = 0, Width = 260, Margin = new Thickness(0, 4, 0, 8)
+        };
+        var profiles = new ListBox { MinHeight = 100, Background = Brush("#FF111820"), Foreground = Brushes.White };
+        _locomotiveProfilesList = profiles;
+        profiles.SelectionChanged += (_, _) =>
+        {
+            if (profiles.SelectedItem is LocomotiveProfile selected)
+            {
+                name.Text = selected.Name;
+                address.Text = selected.Address.ToString();
+                protocol.SelectedItem = selected.Protocol;
+            }
+        };
+        panel.Children.Add(Label("Nom del perfil")); panel.Children.Add(name);
+        panel.Children.Add(Label("Adreça de locomotora")); panel.Children.Add(address);
+        panel.Children.Add(Label("Protocol (perfil, no connexió)")); panel.Children.Add(protocol);
+        panel.Children.Add(Button("Desar locomotora al projecte", (_, _) =>
+        {
+            if (_layout is null) { _dmiStatus.Text = "No hi ha projecte actiu."; return; }
+            if (name.Text.Trim().Length == 0 || !int.TryParse(address.Text, out var locoAddress) || locoAddress is < 1 or > 10239)
+            { _dmiStatus.Text = "Nom o adreça invàlids (1–10239)."; return; }
+            var existing = _layout.Locomotives.FindIndex(x => string.Equals(x.Name, name.Text.Trim(), StringComparison.OrdinalIgnoreCase));
+            var profile = new LocomotiveProfile(existing >= 0 ? _layout.Locomotives[existing].Id : Guid.NewGuid(),
+                name.Text.Trim(), locoAddress, protocol.SelectedItem?.ToString() ?? "simulation", true);
+            if (existing >= 0) _layout.Locomotives[existing] = profile; else _layout.Locomotives.Add(profile);
+            NotifyProjectChanged();
+            _dmiStatus.Text = $"Perfil «{profile.Name}» desat. Cabina en simulació.";
+        }));
+        panel.Children.Add(Label("Locomotores del projecte")); panel.Children.Add(profiles);
         var speed = new Slider { Minimum = 0, Maximum = 200, Value = 0, TickFrequency = 10, Margin = new Thickness(0, 10, 0, 10) };
+        var reverse = new CheckBox { Content = "Marxa enrere (simulada)", Foreground = Brushes.White, Margin = new Thickness(0, 4, 0, 8) };
+        var function = new ComboBox { ItemsSource = Enumerable.Range(0, 29).Select(x => $"F{x}"), SelectedIndex = 0, Width = 120, Margin = new Thickness(0, 4, 0, 8) };
+        var functionOn = new CheckBox { Content = "Funció activada (simulada)", Foreground = Brushes.White, Margin = new Thickness(0, 4, 0, 8) };
         var readout = Label("Velocitat simulada: 0 km/h");
-        speed.ValueChanged += (_, _) => { readout.Text = $"Velocitat simulada: {speed.Value:0} km/h"; _dmiStatus.Text = speed.Value > 0 ? "Cabina virtual activa. Cap ordre enviada." : "Locomotora virtual aturada."; };
-        panel.Children.Add(readout); panel.Children.Add(speed);
-        panel.Children.Add(Button("Parada virtual", (_, _) => { speed.Value = 0; _dmiStatus.Text = "Parada virtual aplicada. No és una parada d'emergència física."; }));
+        speed.ValueChanged += (_, _) =>
+        {
+            readout.Text = $"Velocitat simulada: {speed.Value:0} km/h";
+            _dmiStatus.Text = speed.Value > 0 ? "Cabina virtual activa. Cap ordre enviada." : "Locomotora virtual aturada.";
+        };
+        panel.Children.Add(Label("Regulador de velocitat")); panel.Children.Add(readout); panel.Children.Add(speed);
+        panel.Children.Add(reverse); panel.Children.Add(function); panel.Children.Add(functionOn);
+        panel.Children.Add(Button("Aplicar a simulació local", (_, _) =>
+        {
+            if (profiles.SelectedItem is not LocomotiveProfile selected)
+            { _dmiStatus.Text = "Selecciona una locomotora del projecte."; return; }
+            _dmiStatus.Text = $"{selected.Name} · {speed.Value:0} km/h · {(reverse.IsChecked == true ? "enrere" : "endavant")} · F{function.SelectedIndex}={(functionOn.IsChecked == true ? "ON" : "OFF")} · SIMULACIÓ, sense sortida física.";
+        }));
+        panel.Children.Add(Button("Parada virtual", (_, _) =>
+        {
+            speed.Value = 0;
+            _dmiStatus.Text = "Parada virtual aplicada. No és una parada d'emergència física.";
+        }));
         panel.Children.Add(_dmiStatus);
-        panel.Children.Add(Label("Les funcions F0–F28, direcció i regulador físic necessiten un adaptador de protocol verificat abans d'ús real."));
+        panel.Children.Add(Label("Els perfils i la cabina són locals. CS2 només permet prova de presència; cap protocol físic de tracció està habilitat."));
+        RefreshLocomotives();
         return Scroll(panel);
     }
 
