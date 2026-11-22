@@ -91,4 +91,40 @@ public sealed class PlatinumPackageStoreTests
         Assert.False(gate.CanIssueCommands(state));
     }
 
+    [Fact]
+    public async Task Save_RejectsConnectionsToMissingPieces()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"platinum-invalid-layout-{Guid.NewGuid():N}.platinum");
+        var layout = new TrackLayout
+        {
+            Levels = [new TrackLevel(Guid.NewGuid(), "Principal", 0m)],
+            Connections = [new TrackConnection(Guid.NewGuid(), Guid.NewGuid(), "A", Guid.NewGuid(), "B")]
+        };
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => new PlatinumPackageStore().SaveAsync(layout, path));
+        Assert.False(File.Exists(path));
+    }
+
+    [Fact]
+    public async Task Load_RejectsXmlDocumentTypeDeclarations()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"platinum-dtd-{Guid.NewGuid():N}.platinum");
+        try
+        {
+            using (var archive = ZipFile.Open(path, ZipArchiveMode.Create))
+            {
+                var entry = archive.CreateEntry("manifest.xml");
+                await using var stream = entry.Open();
+                await using var writer = new StreamWriter(stream);
+                await writer.WriteAsync("<!DOCTYPE PlatinumManifest [<!ENTITY xxe SYSTEM 'file:///etc/passwd'>]><PlatinumManifest><Format>&xxe;</Format><FormatVersion>1</FormatVersion></PlatinumManifest>");
+            }
+
+            await Assert.ThrowsAsync<System.Xml.XmlException>(() => new PlatinumPackageStore().LoadAsync(path));
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
 }
