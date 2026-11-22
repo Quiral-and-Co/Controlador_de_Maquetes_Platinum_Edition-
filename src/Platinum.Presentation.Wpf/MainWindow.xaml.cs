@@ -3,6 +3,7 @@ using System.Windows;
 using Platinum.Application.Projects;
 using Platinum.Domain.Layout;
 using Platinum.Infrastructure.Projects;
+using Platinum.Presentation.Wpf.Updates;
 
 namespace Platinum.Presentation.Wpf;
 
@@ -85,6 +86,38 @@ public partial class MainWindow : Window
         {
             MessageBox.Show(this, ex.Message, "No s'ha pogut desar el projecte", MessageBoxButton.OK, MessageBoxImage.Error);
             StatusText.Text = "Error en desar el projecte.";
+        }
+    }
+
+    private async void CheckUpdates_Click(object sender, RoutedEventArgs e)
+    {
+        StatusText.Text = "Consultant les versions publicades a GitHub…";
+        try
+        {
+            var service = new GitHubUpdateService();
+            var release = await service.GetLatestReleaseAsync();
+            if (release is null)
+            {
+                MessageBox.Show(this, "Encara no hi ha cap Release publicada al repositori. Quan es publiqui una versió amb un instal·lador .exe, apareixerà aquí.", "Actualitzacions", MessageBoxButton.OK, MessageBoxImage.Information);
+                StatusText.Text = "No hi ha cap Release publicada.";
+                return;
+            }
+            var current = typeof(MainWindow).Assembly.GetName().Version ?? new Version(0, 0);
+            var latest = GitHubUpdateService.ParseVersion(release.Tag);
+            var isNewer = latest > current;
+            var message = release.Name + " (" + release.Tag + ")\n\n" +
+                (isNewer ? "Hi ha una versió més nova disponible.\n\n" : "Aquesta és la versió publicada més recent.\n\n") +
+                (release.Installer is null ? "La Release no conté cap instal·lador .exe. Consulta les notes a GitHub." : "Instal·lador .exe disponible a GitHub." ) +
+                (string.IsNullOrWhiteSpace(release.Notes) ? string.Empty : "\n\nNotes:\n" + release.Notes);
+            var answer = MessageBox.Show(this, message + "\n\nVols obrir la descàrrega oficial?", "Actualitzacions de Platinum", MessageBoxButton.YesNo, MessageBoxImage.Information);
+            if (answer == MessageBoxResult.Yes)
+                GitHubUpdateService.OpenOfficialUrl(isNewer && release.Installer is not null ? release.Installer : release.Page);
+            StatusText.Text = isNewer ? "Actualització disponible: " + release.Tag : "Versió més recent: " + release.Tag;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "No s'ha pogut consultar GitHub.\n\n" + ex.Message, "Error en cercar actualitzacions", MessageBoxButton.OK, MessageBoxImage.Warning);
+            StatusText.Text = "No s'ha pogut consultar GitHub.";
         }
     }
 
