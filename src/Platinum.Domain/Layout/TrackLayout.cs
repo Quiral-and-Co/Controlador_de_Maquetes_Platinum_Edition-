@@ -23,9 +23,9 @@ public sealed class TrackLayout
 public sealed record TrackLevel(Guid Id, string Name, decimal ElevationMillimetres);
 public sealed record TrackPiece(Guid Id, string CatalogueCode, decimal X, decimal Y, decimal RotationDegrees, Guid LevelId, string GeometryStatus = "unverified");
 public sealed record TrackConnection(Guid Id, Guid FromPieceId, string FromPort, Guid ToPieceId, string ToPort, bool PhysicallyVerified = false);
-public sealed record LogicalBlock(Guid Id, string Name, Guid LevelId, IReadOnlyList<Guid> PieceIds);
+public sealed record LogicalBlock(Guid Id, string Name, Guid LevelId, IReadOnlyList<Guid> PieceIds, bool Occupied = false);
 public sealed record FeedbackSensor(Guid Id, string SystemName, string DisplayName, bool PhysicallyVerified = false);
-public sealed record RouteDefinition(Guid Id, string Name, IReadOnlyList<Guid> BlockIds);
+public sealed record RouteDefinition(Guid Id, string Name, IReadOnlyList<Guid> BlockIds, bool Reserved = false);
 
 public sealed record SignalDefinition(Guid Id, string Name, string Aspect, Guid? ProtectedBlockId, bool PhysicallyVerified = false);
 public sealed record LocomotiveProfile(Guid Id, string Name, int Address, string Protocol, bool SimulationOnly = true);
