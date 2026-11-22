@@ -19,6 +19,10 @@ public partial class DispatcherView : UserControl
     {
         _layout = layout ?? throw new ArgumentNullException(nameof(layout));
         _service.Initialize(_layout);
+        BlockLevelSelector.ItemsSource = _layout.Levels;
+        BlockLevelSelector.DisplayMemberPath = nameof(TrackLevel.Name);
+        BlockLevelSelector.SelectedValuePath = nameof(TrackLevel.Id);
+        BlockLevelSelector.SelectedValue = _layout.Levels.FirstOrDefault()?.Id;
         Refresh();
     }
 
@@ -51,6 +55,49 @@ public partial class DispatcherView : UserControl
         ReservationStatusText.Text = _layout.RouteReservations.Count == 0
             ? "Cap reserva activa."
             : $"{_layout.RouteReservations.Count} reserva(es) activa(es).";
+    }
+
+    private void AddBlock_Click(object sender, RoutedEventArgs e)
+    {
+        if (_layout is null) return;
+        var name = BlockNameBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            MessageBox.Show("Escriu un nom per al bloc.", "Dispatcher", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        if (BlockLevelSelector.SelectedValue is not Guid levelId || _layout.Levels.All(x => x.Id != levelId))
+        {
+            MessageBox.Show("Selecciona un nivell vàlid.", "Dispatcher", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        if (_layout.Blocks.Any(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase) && x.LevelId == levelId))
+        {
+            MessageBox.Show("Ja existeix un bloc amb aquest nom en el nivell seleccionat.", "Dispatcher", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        _layout.Blocks.Add(new LogicalBlock(Guid.NewGuid(), name, levelId, Array.Empty<Guid>()));
+        BlockNameBox.Clear();
+        _service.Initialize(_layout);
+        Refresh();
+    }
+
+    private void DeleteBlock_Click(object sender, RoutedEventArgs e)
+    {
+        if (_layout is null) return;
+        var selected = BlocksGrid.SelectedItems.Cast<BlockRow>().Select(x => x.Id).ToHashSet();
+        if (selected.Count == 0)
+        {
+            MessageBox.Show("Selecciona almenys un bloc per eliminar.", "Dispatcher", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        var affectedRoutes = _layout.Routes.Where(route => route.BlockIds.Any(selected.Contains)).Select(route => route.Id).ToHashSet();
+        _layout.RouteReservations.RemoveAll(reservation => affectedRoutes.Contains(reservation.RouteId));
+        _layout.Routes.RemoveAll(route => affectedRoutes.Contains(route.Id));
+        _layout.BlockOccupancies.RemoveAll(occupancy => selected.Contains(occupancy.BlockId));
+        _layout.Blocks.RemoveAll(block => selected.Contains(block.Id));
+        _service.Initialize(_layout);
+        Refresh();
     }
 
     private void SetSelectedOccupancy(BlockOccupancyState state)
