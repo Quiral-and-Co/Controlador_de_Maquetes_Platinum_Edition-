@@ -101,8 +101,8 @@ els.propLevel.value='2';els.moveLevelBtn.onclick();if(els.currentLevelTitle.text
   const mk=(id,x)=>({id,type:'straight',name:id,x,y:100,rotation:0,levelId:1,blockId:'',sensorName:'',geometry:{lengthMm:180,radiusMm:360,angleDeg:30}});
   topo.levels[0].tracks=[mk('T-A',100),mk('T-B',280)];
   topo.connections=[{id:'C1',levelId:1,from:{pieceId:'T-A',port:'B'},to:{pieceId:'T-B',port:'A'},verified:false},{id:'C2',levelId:1,from:{pieceId:'T-A',port:'B'},to:{pieceId:'T-B',port:'A'},verified:false}];
-  await els.configFile.onchange({target:{files:[{name:'topology-duplicate.json',text:async()=>JSON.stringify(topo)}],value:''}});
-  els.validateTopologyBtn.onclick();if(!els.topologyReport.textContent.includes('error(s)')||!els.topologyReport.textContent.includes('duplicada'))throw Error('Topology audit failed to detect duplicated connection/occupied ports');
+  let duplicateTopologyRejected=false;try{window.JMRI_TC_LAYOUT_MODEL.validateConfig(topo);}catch(error){duplicateTopologyRejected=/ja està ocupat|duplicada/.test(error.message);}
+  if(!duplicateTopologyRejected)throw Error('JSON v3 validation must reject duplicated connection ports before project load');
   // Reset to a clean, empty five-level project for the manual-connection acceptance test.
   const clean={schemaVersion:3,name:'Manual ports',scale:'H0',trackSystem:'Märklin C',room:{widthMm:3000,heightMm:1800},levelSpacingMm:110,levels:Array.from({length:5},(_,i)=>({id:i+1,name:`Nivell ${i+1}`,elevationMm:i*110,tracks:[],blocks:[],sensors:[]})),connections:[]};
   await els.configFile.onchange({target:{files:[{name:'clean.json',text:async()=>JSON.stringify(clean)}],value:''}});
