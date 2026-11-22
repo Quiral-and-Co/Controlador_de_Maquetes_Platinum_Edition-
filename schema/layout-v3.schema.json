@@ -179,8 +179,60 @@
             },
             "angleDeg": {
               "type": "number"
+            },
+            "branchOffsetMm": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "curveDirection": {
+              "enum": [
+                "left",
+                "right"
+              ]
             }
           }
+        },
+        "zMm": {
+          "type": "number",
+          "description": "Cota Z de la peça en mm dins del model global."
+        },
+        "turnoutSystemName": {
+          "type": "string"
+        },
+        "catalogueRef": {
+          "type": "string"
+        },
+        "catalogueBrand": {
+          "type": "string"
+        },
+        "catalogueSystem": {
+          "type": "string"
+        },
+        "catalogueNotes": {
+          "type": "string"
+        },
+        "geometryStatus": {
+          "enum": [
+            "confirmed",
+            "partial",
+            "unverified"
+          ]
+        },
+        "junctionKind": {
+          "enum": [
+            "double-slip"
+          ]
+        },
+        "connectionPoint": {
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ]
+        },
+        "verticalRisk": {
+          "type": "string"
         }
       },
       "additionalProperties": true
@@ -289,7 +341,11 @@
           "type": "boolean"
         },
         "method": {
-          "type": "string"
+          "enum": [
+            "manual",
+            "catalogue-gap-suggestion",
+            "legacy-import"
+          ]
         }
       },
       "additionalProperties": false
@@ -306,7 +362,12 @@
         },
         "port": {
           "type": "string",
-          "enum": ["A", "B", "C"]
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ]
         }
       },
       "additionalProperties": false

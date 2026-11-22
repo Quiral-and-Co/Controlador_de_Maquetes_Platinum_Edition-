@@ -21,3 +21,8 @@ L'exportació no substitueix la validació de geometria i gàlib amb el catàleg
 ## Seguretat i pèrdua de dades
 
 Les importacions externes només modifiquen el model gràfic. No activen JMRI, DCC, sensors ni sortides físiques. Les connexions importades o generades continuen no verificades fins que superin les proves geomètriques, topològiques i de seguretat del projecte.
+
+
+## Preservació de metadades en XTrackCAD
+
+XTrackCAD no representa el model lògic JMRI. En importar un fitxer XTC sobre un projecte existent, Platinum Edition conserva els registres de blocs i sensors, els deixa sense assignacions de peces i informa que les connexions del traçat anterior s'han descartat perquè els identificadors de peces/ports no es poden mapar amb seguretat. En exportar, l'informe indica explícitament les assignacions JMRI, registres de blocs/sensors, connexions de ports i cotes Z individuals que no poden representar-se en XTC. La conversió geomètrica actual continua limitada a rectes i corbes; desviaments i altres elements no compatibles s'informen com a no exportats.

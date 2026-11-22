@@ -12,8 +12,12 @@
   function parseXtc(source,template){
     if(typeof source!=='string'||!/^\s*#?XTrackCAD|^\s*VERSION\s+/mi.test(source)) throw new Error('El fitxer no sembla un layout XTrackCAD .xtc de text.');
     const cfg=template?JSON.parse(JSON.stringify(template)):baseConfig();
-    cfg.levels.forEach(l=>{l.tracks=[];l.blocks=[];l.sensors=[];});cfg.connections=[];
+    const preservedBlocks=cfg.levels.reduce((n,l)=>n+(Array.isArray(l.blocks)?l.blocks.length:0),0),preservedSensors=cfg.levels.reduce((n,l)=>n+(Array.isArray(l.sensors)?l.sensors.length:0),0),discardedConnections=Array.isArray(cfg.connections)?cfg.connections.length:0;
+    cfg.levels.forEach(l=>{l.tracks=[];l.blocks=Array.isArray(l.blocks)?l.blocks:[];l.sensors=Array.isArray(l.sensors)?l.sensors:[];l.blocks.forEach(b=>{b.trackIds=[];b.sensorIds=[];});});cfg.connections=[];
     const lines=source.replace(/\r/g,'').split('\n'); let current=null,unsupported=[],imported=0;
+    if(template&&preservedBlocks)unsupported.push(`S’han conservat ${preservedBlocks} bloc(s) del projecte base, però cal reassignar-hi les peces importades perquè XTrackCAD no desa aquesta relació.`);
+    if(template&&preservedSensors)unsupported.push(`S’han conservat ${preservedSensors} sensor(s) JMRI del projecte base, però cal reassignar-los perquè XTrackCAD no desa aquestes relacions.`);
+    if(template&&discardedConnections)unsupported.push(`S’han descartat ${discardedConnections} connexió(ns) del traçat anterior: XTrackCAD no permet mapar amb seguretat els ports a les peces importades.`);
     for(let i=0;i<lines.length;i++){
       const line=lines[i].trim(); if(!line||line.startsWith('#'))continue;
       const t=words(line); if(!t.length)continue;
@@ -58,6 +62,8 @@
     for(const level of (config.levels||[])){
       for(const p of (level.tracks||[])){
         const x=n(p.x),y=n(p.y),rot=n(p.rotation)*Math.PI/180,g=p.geometry||{};
+        if(p.blockId||p.sensorName||p.turnoutSystemName)unsupported.push(`${p.name||p.id}: assignacions de bloc/sensor/desviament JMRI no representables en XTrackCAD.`);
+        if(p.zMm!==undefined&&Math.abs(n(p.zMm)-n(level.elevationMm))>0.1)unsupported.push(`${p.name||p.id}: cota Z pròpia no representable com a capa XTrackCAD.`);
         if(p.type==='straight'){
           const len=n(g.lengthMm,180),ex=x+Math.cos(rot)*len,ey=y+Math.sin(rot)*len;
           out.push('STRAIGHT '+id+' '+Math.max(0,Math.min(4,n(level.id,1)-1))+' 0 0 0 H0 2 0.000000 0.000000');
@@ -76,8 +82,12 @@
         }else unsupported.push((p.type||'element')+' '+(p.name||p.id||''));
       }
     }
+    const blockCount=(config.levels||[]).reduce((n,l)=>n+(l.blocks||[]).length,0),sensorCount=(config.levels||[]).reduce((n,l)=>n+(l.sensors||[]).length,0);
+    if(blockCount)unsupported.push(`${blockCount} registre(s) de bloc lògic no exportats: XTrackCAD no representa blocs JMRI.`);
+    if(sensorCount)unsupported.push(`${sensorCount} registre(s) de sensor JMRI no exportats: XTrackCAD no representa detectors ni adreces de retroalimentació.`);
+    if((config.connections||[]).length)unsupported.push(`${config.connections.length} connexió(ns) de ports del model v3 no exportades: la topologia explícita no es pot garantir en XTrackCAD.`);
     out.push('END$TRACKS');
-    return {content:out.join('\n')+'\n',report:{exported:id-1,unsupported}};
+    return {content:out.join('\n')+'\n',report:{exported:id-1,unsupported:[...new Set(unsupported)]}};
   }
   function exportJson(config){return JSON.stringify(config,null,2);}
   root.JMRI_TC_PROJECT_FILES={parseXtc,exportXtc,exportJson,baseConfig};

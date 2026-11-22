@@ -38,3 +38,11 @@ L'acció **Validar topologia** inspecciona totes les peces i connexions dels cin
 - distància entre els dos extrems connectats: màxim 1 mm.
 
 Els ports sense connexió es compten com a **avisos**, no com a errors: el projecte encara no conté el traçat definitiu. Aquesta comprovació és geomètrica/topològica i no certifica continuïtat elèctrica, polaritat, cablejat de via, detecció S88, reserves ni seguretat operacional.
+
+
+## Contracte v3 ampliat a Platinum Edition 1.5.0
+
+- `TrackPiece.zMm` és una cota Z explícita en mm; si no hi és, l'editor utilitza la cota del nivell com a valor de presentació.
+- Les peces poden conservar metadades de catàleg Märklin, estat de geometria, vinculació a un desviament JMRI, tipus de junction i risc vertical.
+- Els desviaments doble-slip utilitzen quatre ports geomètrics A/B/C/D. Un port només pot pertànyer a una connexió i les connexions duplicades són rebutjades.
+- La validació del contracte és un mòdul pur (`layout-model-v3.js`), separat de la interfície; l'editor li injecta els adaptadors de geometria i sincronització de relacions.

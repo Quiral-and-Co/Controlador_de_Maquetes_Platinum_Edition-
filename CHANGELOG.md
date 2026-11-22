@@ -1,3 +1,25 @@
+# Changelog
+
+## 1.5.0 — JSON v3 model contract hardening
+
+- Alineat l'esquema JSON v3 amb les dades que desa l'editor: cota Z, vinculació JMRI de desviaments, metadades de catàleg, estat de geometria, tipus de junction i riscos verticals.
+- Incorporats els quatre ports A/B/C/D dels desviaments doble-slip al contracte del projecte.
+- La validació rebutja ports reutilitzats, connexions duplicades, mètodes desconeguts i geometries numèricament invàlides.
+- Extret el validador JSON v3 a un mòdul pur compartit entre aplicació i proves.
+- La importació XTC conserva els registres de blocs i sensors, neteja les assignacions obsoletes i avisa de les connexions descartades; l'exportació informa de les metadades JMRI i Z no representables.
+- Afegides proves de regressió per al port D, conflictes de ports, esquema v3 i preservació d'informació XTC.
+- Workflow d'instal·lador i artefactes actualitzats a la versió 1.5.0.
+
+# Changelog
+
+## 1.5.0 — JSON v3 model contract hardening
+
+- Alineat l'esquema JSON v3 amb les dades que desa l'editor: cota Z, vinculació JMRI de desviaments, metadades de catàleg, estat de geometria, tipus de junction i riscos verticals.
+- Incorporats els quatre ports A/B/C/D dels desviaments doble-slip al contracte del projecte.
+- La validació rebutja ports reutilitzats, connexions duplicades, mètodes desconeguts i geometries numèricament invàlides.
+- Afegides proves de regressió per al port D, conflictes de ports i esquema de dades.
+- Workflow d'instal·lador i artefactes actualitzats a la versió 1.5.0.
+
 # Canvis
 
 ## 1.4.0 — editor de maquetes i contracte JSON v3

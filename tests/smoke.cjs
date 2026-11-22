@@ -24,9 +24,23 @@ const palette=['straight','curve','turnout','block'].map(type=>{const e=new El()
 const shell=new El('shell');
 const docHandlers={};
 const document={addEventListener:(name,fn)=>{docHandlers[name]=fn;},getElementById:id=>els[id]||(els[id]=new El(id)),createElement:tag=>new El(tag),createElementNS:()=>new El('svg'),querySelectorAll:q=>q==='[data-piece]'?palette:[],querySelector:q=>shell};
-const window={MARKLIN_C_CATALOGUE:JSON.parse(fs.readFileSync(__dirname+'/../catalogue-marklin-c.json','utf8')),JMRI_TC_VIEWPORT:viewport,JMRI_TC_SELECTION_MOVE:selectionMove,JMRI_TC_TRACK_JUNCTION:trackJunction,addEventListener:()=>{}};
+const window={JMRI_TC_LAYOUT_MODEL:require('../layout-model-v3.js'),MARKLIN_C_CATALOGUE:JSON.parse(fs.readFileSync(__dirname+'/../catalogue-marklin-c.json','utf8')),JMRI_TC_VIEWPORT:viewport,JMRI_TC_SELECTION_MOVE:selectionMove,JMRI_TC_TRACK_JUNCTION:trackJunction,addEventListener:()=>{}};
 vm.runInNewContext(fs.readFileSync(__dirname+'/../app.js','utf8'),{document,window,console,Date,Math,JSON,Number,String,Array,Set,Map,WebSocket:function(){}});
 if(els.levelCount.textContent!==5)throw Error('Expected five levels');
+// JSON v3: el port D dels desviaments doble-slip forma part del contracte.
+const doubleSlipConfig={schemaVersion:3,name:'Double-slip contract',scale:'H0',trackSystem:'Märklin C',room:{widthMm:3000,heightMm:1800},levelSpacingMm:110,levels:Array.from({length:5},(_,i)=>({id:i+1,name:'Nivell '+(i+1),elevationMm:i*110,tracks:[],blocks:[],sensors:[]})),connections:[]};
+doubleSlipConfig.levels[0].tracks.push(
+  {id:'DS-1',type:'turnout',name:'Desviament doble',x:100,y:100,rotation:0,levelId:1,blockId:'',sensorName:'',turnoutSystemName:'',catalogueRef:'24624',junctionKind:'double-slip',connectionPoint:'D',geometry:{lengthMm:180,branchOffsetMm:60}},
+  {id:'ST-1',type:'straight',name:'Recta',x:280,y:100,rotation:0,levelId:1,blockId:'',sensorName:'',geometry:{lengthMm:180}}
+);
+doubleSlipConfig.connections.push({id:'CD-1',levelId:1,from:{pieceId:'DS-1',port:'D'},to:{pieceId:'ST-1',port:'A'},verified:false,method:'manual'});
+window.JMRI_TC_LAYOUT_MODEL.validateConfig(doubleSlipConfig);
+const duplicatePortConfig=JSON.parse(JSON.stringify(doubleSlipConfig));
+duplicatePortConfig.levels[0].tracks.push({id:'ST-2',type:'straight',name:'Recta 2',x:280,y:200,rotation:0,levelId:1,blockId:'',sensorName:'',geometry:{lengthMm:180}});
+duplicatePortConfig.connections.push({id:'CD-2',levelId:1,from:{pieceId:'DS-1',port:'D'},to:{pieceId:'ST-2',port:'A'},verified:false,method:'manual'});
+let duplicatePortRejected=false;try{window.JMRI_TC_LAYOUT_MODEL.validateConfig(duplicatePortConfig);}catch(error){duplicatePortRejected=/ja està ocupat/.test(error.message);}
+if(!duplicatePortRejected)throw Error('JSON v3 must reject a port used by more than one connection.');
+
 if(els.zoomReadout.textContent!=='100%')throw Error('Viewport must start at 100% fit');
 els.zoomInBtn.onclick();const zoomedView=window.JMRI_TC_VIEWPORT_UI.getViewBox();if(!(zoomedView.width<3000))throw Error('Zoom-in button did not enlarge the board');
 docHandlers.keydown({code:'Space',key:' ',target:{tagName:'BODY'},preventDefault(){}});
@@ -87,8 +101,8 @@ els.propLevel.value='2';els.moveLevelBtn.onclick();if(els.currentLevelTitle.text
   const mk=(id,x)=>({id,type:'straight',name:id,x,y:100,rotation:0,levelId:1,blockId:'',sensorName:'',geometry:{lengthMm:180,radiusMm:360,angleDeg:30}});
   topo.levels[0].tracks=[mk('T-A',100),mk('T-B',280)];
   topo.connections=[{id:'C1',levelId:1,from:{pieceId:'T-A',port:'B'},to:{pieceId:'T-B',port:'A'},verified:false},{id:'C2',levelId:1,from:{pieceId:'T-A',port:'B'},to:{pieceId:'T-B',port:'A'},verified:false}];
-  await els.configFile.onchange({target:{files:[{name:'topology-duplicate.json',text:async()=>JSON.stringify(topo)}],value:''}});
-  els.validateTopologyBtn.onclick();if(!els.topologyReport.textContent.includes('error(s)')||!els.topologyReport.textContent.includes('duplicada'))throw Error('Topology audit failed to detect duplicated connection/occupied ports');
+  let duplicateTopologyRejected=false;try{window.JMRI_TC_LAYOUT_MODEL.validateConfig(topo);}catch(error){duplicateTopologyRejected=/ja està ocupat|duplicada/.test(error.message);}
+  if(!duplicateTopologyRejected)throw Error('JSON v3 validation must reject duplicated connection ports before project load');
   // Reset to a clean, empty five-level project for the manual-connection acceptance test.
   const clean={schemaVersion:3,name:'Manual ports',scale:'H0',trackSystem:'Märklin C',room:{widthMm:3000,heightMm:1800},levelSpacingMm:110,levels:Array.from({length:5},(_,i)=>({id:i+1,name:`Nivell ${i+1}`,elevationMm:i*110,tracks:[],blocks:[],sensors:[]})),connections:[]};
   await els.configFile.onchange({target:{files:[{name:'clean.json',text:async()=>JSON.stringify(clean)}],value:''}});
