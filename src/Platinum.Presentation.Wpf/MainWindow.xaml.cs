@@ -20,6 +20,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         LoadCatalogue();
+        OperationsView.SetLayout(_currentLayout);
         TrackEditor.CataloguePiecePlaced += OnCataloguePiecePlaced;
         TrackEditor.ConnectionCreated += OnConnectionCreated;
         TrackEditor.SetActiveLevel(ActiveLevelId);
@@ -42,6 +43,7 @@ public partial class MainWindow : Window
     {
         _currentLayout = CreateNewLayout();
         _currentPath = null;
+        OperationsView.SetLayout(_currentLayout);
         TrackEditor.SetActiveLevel(ActiveLevelId);
         TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
         TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
@@ -68,6 +70,7 @@ public partial class MainWindow : Window
         {
             _currentLayout = await _projects.LoadAsync(dialog.FileName);
             _currentPath = dialog.FileName;
+            OperationsView.SetLayout(_currentLayout);
             if (_currentLayout.Levels.Count == 0) _currentLayout.Levels.Add(new TrackLevel(Guid.NewGuid(), "Nivell principal", 0m));
             TrackEditor.SetActiveLevel(ActiveLevelId);
             TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
@@ -105,6 +108,7 @@ public partial class MainWindow : Window
 
         try
         {
+            OperationsView.ApplyToLayout(_currentLayout);
             _currentLayout.GeometrySegments = TrackEditor.Segments.ToList();
             _currentLayout.Pieces.Clear();
             _currentLayout.Pieces.AddRange(TrackEditor.Pieces);
