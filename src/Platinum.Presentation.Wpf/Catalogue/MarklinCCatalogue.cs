@@ -4,6 +4,14 @@ namespace Platinum.Presentation.Wpf.Catalogue;
 
 public sealed record CataloguePort(string Id, decimal X, decimal Y, string Accuracy);
 
+/// <summary>One centre-line route between two catalogue ports, in local millimetres.</summary>
+public sealed record CatalogueTrackPath(
+    string FromPort,
+    string ToPort,
+    string Kind,
+    decimal ControlX = 0m,
+    decimal ControlY = 0m);
+
 public sealed record CatalogueItem(
     string Ref,
     string Name,
@@ -57,6 +65,61 @@ public sealed record CatalogueItem(
                 return TurntablePorts();
 
             // Sets are compositions, not individual track pieces.
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Centre-line routes for drawing. Every route references the same port IDs
+    /// used by connection hit-testing, so rendered endpoints and snap points coincide.
+    /// </summary>
+    public IReadOnlyList<CatalogueTrackPath> TrackPaths
+    {
+        get
+        {
+            if (IsCurvedTurnout)
+            {
+                var angle = 30d * Math.PI / 180d;
+                var innerRadius = Ref is "24771" or "24772" ? 515m : 360m;
+                var outerRadius = Ref is "24771" or "24772" ? 579.3m : 437.5m;
+                return [
+                    new("IN", "INNER", "quadratic", (decimal)(innerRadius * Math.Tan(angle / 2d)), 0m),
+                    new("IN", "OUTER", "quadratic", (decimal)(outerRadius * Math.Tan(angle / 2d)), 0m)
+                ];
+            }
+
+            if (Ref == "24630")
+                return [
+                    new("IN", "STRAIGHT", "line"),
+                    new("IN", "LEFT", "quadratic", 0m, 0m),
+                    new("IN", "RIGHT", "quadratic", 0m, 0m)
+                ];
+
+            if (IsCrossingOrDoubleSlip)
+                return [
+                    new("A_IN", "A_OUT", "line"),
+                    new("B_IN", "B_OUT", "line")
+                ];
+
+            if (IsStandardTurnout)
+                return [
+                    new("IN", "MAIN", "line"),
+                    new("IN", "BRANCH", "quadratic", 0m, 0m)
+                ];
+
+            if (IsKnownStraightSpecial)
+                return [new("A", "B", "line")];
+
+            if (RadiusMm is > 0 && AngleDeg is > 0 && Type == "curve")
+            {
+                var half = (double)AngleDeg.Value * Math.PI / 360d;
+                var radius = (double)RadiusMm.Value;
+                return [new("A", "B", "quadratic", 0m, (decimal)(-radius * (1d - Math.Cos(half))))];
+            }
+
+            if (Ref is "74861" or "74862")
+                return [];
+
             return [];
         }
     }
