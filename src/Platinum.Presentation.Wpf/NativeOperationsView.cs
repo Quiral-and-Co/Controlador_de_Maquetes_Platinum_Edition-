@@ -8,6 +8,7 @@ using System.Windows.Media;
 using Platinum.Application.Control;
 using Platinum.Domain.Control;
 using Platinum.Infrastructure.Control;
+using Platinum.Domain.Layout;
 
 namespace Platinum.Presentation.Wpf;
 
@@ -17,6 +18,11 @@ namespace Platinum.Presentation.Wpf;
 /// </summary>
 public sealed class NativeOperationsView : UserControl
 {
+    private TrackLayout? _layout;
+    private ListBox? _dispatcherBlocksList;
+    private ListBox? _dispatcherRoutesList;
+    public event EventHandler? ProjectDataChanged;
+
     private readonly RailwayControlService _controlService = new(new LocalSimulationAdapter());
     private readonly RailwayAutomationEngine _automation = new();
     private MarklinCs2Adapter? _cs2Adapter;
@@ -244,51 +250,109 @@ public sealed class NativeOperationsView : UserControl
         return Scroll(panel);
     }
 
+    public void SetLayout(TrackLayout layout)
+    {
+        _layout = layout ?? throw new ArgumentNullException(nameof(layout));
+        RefreshDispatcher();
+    }
+
+    private void RefreshDispatcher()
+    {
+        if (_layout is null || _dispatcherBlocksList is null || _dispatcherRoutesList is null) return;
+        _dispatcherBlocksList.ItemsSource = _layout.Blocks
+            .Select(b => $"{(b.Occupied ? "● OCUPAT" : "○ LLIURE")} · {b.Name}")
+            .ToArray();
+        _dispatcherRoutesList.ItemsSource = _layout.Routes
+            .Select(r => $"{(r.Reserved ? "RESERVAT" : "NO RESERVAT")} · {r.Name} · {string.Join(" → ", r.BlockIds.Select(id => _layout.Blocks.FirstOrDefault(b => b.Id == id)?.Name ?? "?"))}")
+            .ToArray();
+    }
+
+    private void NotifyProjectChanged()
+    {
+        RefreshDispatcher();
+        ProjectDataChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     private UIElement BuildDispatcher()
     {
         var root = TwoColumns();
-        var left = Panel("Blocs lògics");
+        var left = Panel("Blocs lògics del projecte");
         var name = new TextBox { Text = "Bloc nou", MinWidth = 180, Margin = new Thickness(0, 4, 0, 8) };
         var list = new ListBox { MinHeight = 180, Background = Brush("#FF111820"), Foreground = Brushes.White };
-        void Refresh() { var selected = list.SelectedIndex; list.ItemsSource = _blocks.Select(b => (_occupied.Contains(b) ? "● OCUPAT · " : "○ LLIURE · ") + b).ToList(); if (selected >= 0 && selected < list.Items.Count) list.SelectedIndex = selected; }
+        _dispatcherBlocksList = list;
         left.Children.Add(Label("Nom del bloc")); left.Children.Add(name);
-        left.Children.Add(Button("Afegir bloc", (_, _) =>
+        left.Children.Add(Button("Afegir bloc al projecte", (_, _) =>
         {
+            if (_layout is null) { _dispatcherStatus.Text = "No hi ha cap projecte actiu."; return; }
             var value = name.Text.Trim();
-            if (value.Length == 0 || _blocks.Contains(value)) return;
-            _blocks.Add(value); Refresh(); _dispatcherStatus.Text = $"Bloc «{value}» creat localment.";
+            if (value.Length == 0 || _layout.Blocks.Any(b => string.Equals(b.Name, value, StringComparison.OrdinalIgnoreCase)))
+            { _dispatcherStatus.Text = "Nom buit o bloc duplicat."; return; }
+            var level = _layout.Levels.FirstOrDefault();
+            if (level is null) { _dispatcherStatus.Text = "Crea primer un nivell al projecte."; return; }
+            _layout.Blocks.Add(new LogicalBlock(Guid.NewGuid(), value, level.Id, Array.Empty<Guid>()));
+            NotifyProjectChanged();
+            _dispatcherStatus.Text = $"Bloc «{value}» desat al projecte actiu.";
         }));
         left.Children.Add(list);
         left.Children.Add(Button("Canviar lliure / ocupat", (_, _) =>
         {
-            if (list.SelectedItem is not string selected) return;
+            if (_layout is null || list.SelectedItem is not string selected) return;
             var value = selected[(selected.IndexOf('·') + 1)..].Trim();
-            if (_occupied.Contains(value)) _occupied.Remove(value); else _occupied.Add(value);
-            Refresh(); _dispatcherStatus.Text = $"Estat local actualitzat: {value}.";
+            var index = _layout.Blocks.FindIndex(b => string.Equals(b.Name, value, StringComparison.OrdinalIgnoreCase));
+            if (index < 0) return;
+            _layout.Blocks[index] = _layout.Blocks[index] with { Occupied = !_layout.Blocks[index].Occupied };
+            NotifyProjectChanged();
+            _dispatcherStatus.Text = $"Ocupació de «{value}» actualitzada al projecte. És un estat lògic/manual, no una lectura de sensor.";
         }));
         left.Children.Add(_dispatcherStatus);
 
-        var right = Panel("Itineraris locals");
+        var right = Panel("Itineraris lògics del projecte");
         var routeName = new TextBox { Text = "Itinerari 1", Margin = new Thickness(0, 4, 0, 8) };
         var routeBlocks = new TextBox { Text = "", AcceptsReturn = true, MinHeight = 70, ToolTip = "Noms dels blocs separats per comes." };
-        var routeList = new ListBox { ItemsSource = _routes, MinHeight = 150, Background = Brush("#FF111820"), Foreground = Brushes.White };
+        var routeList = new ListBox { MinHeight = 150, Background = Brush("#FF111820"), Foreground = Brushes.White };
+        _dispatcherRoutesList = routeList;
         right.Children.Add(Label("Nom")); right.Children.Add(routeName); right.Children.Add(Label("Blocs (separats per comes)")); right.Children.Add(routeBlocks);
-        right.Children.Add(Button("Crear itinerari", (_, _) =>
+        right.Children.Add(Button("Crear itinerari al projecte", (_, _) =>
         {
-            var blocks = routeBlocks.Text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-            if (blocks.Length == 0 || blocks.Any(b => !_blocks.Contains(b))) { _dispatcherStatus.Text = "Itinerari rebutjat: indica blocs existents."; return; }
-            _routes.Add($"{routeName.Text.Trim()} · {string.Join(" → ", blocks)} · NO RESERVAT");
+            if (_layout is null) { _dispatcherStatus.Text = "No hi ha cap projecte actiu."; return; }
+            var value = routeName.Text.Trim();
+            var names = routeBlocks.Text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            var blocks = names.Select(n => _layout.Blocks.FirstOrDefault(b => string.Equals(b.Name, n, StringComparison.OrdinalIgnoreCase))).ToArray();
+            if (value.Length == 0 || _layout.Routes.Any(r => string.Equals(r.Name, value, StringComparison.OrdinalIgnoreCase)) ||
+                names.Length == 0 || blocks.Any(b => b is null) || blocks.Select(b => b!.Id).Distinct().Count() != blocks.Length)
+            { _dispatcherStatus.Text = "Itinerari rebutjat: nom únic i blocs existents sense duplicats."; return; }
+            _layout.Routes.Add(new RouteDefinition(Guid.NewGuid(), value, blocks.Select(b => b!.Id).ToArray()));
+            NotifyProjectChanged();
+            _dispatcherStatus.Text = $"Itinerari «{value}» desat al projecte.";
         }));
         right.Children.Add(routeList);
-        right.Children.Add(Button("Comprovar disponibilitat local", (_, _) =>
+        right.Children.Add(Button("Reservar itinerari lògic", (_, _) =>
         {
-            if (routeList.SelectedItem is not string route) return;
-            var parts = route.Split('·');
-            var names = parts.Length > 1 ? parts[1].Split('→', StringSplitOptions.TrimEntries) : Array.Empty<string>();
-            var conflicts = names.Where(_occupied.Contains).ToArray();
-            _dispatcherStatus.Text = conflicts.Length == 0 ? "Simulació: blocs disponibles. No és un enclavament." : "Blocs ocupats: " + string.Join(", ", conflicts);
+            if (_layout is null || routeList.SelectedItem is not string selected) return;
+            var namePart = selected.Split('·').Skip(1).FirstOrDefault()?.Trim();
+            var index = _layout.Routes.FindIndex(r => r.Name == namePart);
+            if (index < 0) return;
+            var route = _layout.Routes[index];
+            var blocks = route.BlockIds.Select(id => _layout.Blocks.FirstOrDefault(b => b.Id == id)).ToArray();
+            if (blocks.Any(b => b is null || b.Occupied || _layout.Routes.Any(other => other.Id != route.Id && other.Reserved && other.BlockIds.Contains(b!.Id))))
+            { _dispatcherStatus.Text = "Reserva rebutjada: hi ha blocs ocupats, inexistents o reservats."; return; }
+            _layout.Routes[index] = route with { Reserved = true };
+            NotifyProjectChanged();
+            _dispatcherStatus.Text = "Reserva lògica desada. No activa cap desviament ni senyal físic.";
         }));
+        right.Children.Add(Button("Alliberar reserva lògica", (_, _) =>
+        {
+            if (_layout is null || routeList.SelectedItem is not string selected) return;
+            var namePart = selected.Split('·').Skip(1).FirstOrDefault()?.Trim();
+            var index = _layout.Routes.FindIndex(r => r.Name == namePart);
+            if (index < 0) return;
+            _layout.Routes[index] = _layout.Routes[index] with { Reserved = false };
+            NotifyProjectChanged();
+            _dispatcherStatus.Text = "Reserva lògica alliberada.";
+        }));
+        right.Children.Add(Label("Les reserves i ocupacions són dades lògiques persistents. No constitueixen un enclavament certificat ni autoritzen sortides físiques."));
         AddColumn(root, left); AddColumn(root, right);
+        RefreshDispatcher();
         return root;
     }
 
