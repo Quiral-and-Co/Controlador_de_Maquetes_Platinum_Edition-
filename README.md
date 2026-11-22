@@ -14,7 +14,7 @@ Consulta [la guia de migració WPF](docs/native-wpf-migration.md) per veure què
 
 ### Dispatcher natiu WPF (.NET 10)
 
-La branca `main` incorpora el panell Dispatcher WPF connectat al `TrackLayout` actiu: consulta de blocs per nivell, estats lògics Desconegut/Lliure/Ocupat, creació d'itineraris amb blocs seleccionats, reserva atòmica sense conflictes i alliberament de reserves quan un bloc deixa d'estar lliure. Les ocupacions i reserves es desen al paquet `.platinum`. Aquesta interfície és de simulació local: no envia ordres a locomotores, desviaments, senyals, JMRI ni centrals digitals. Proves de domini: `dotnet test Platinum.sln -c Release` (inclou `DispatcherServiceTests`). Les pantalles noves de simulació són locals i no controlen maquinari real.
+La branca `main` incorpora el panell Dispatcher WPF connectat al `TrackLayout` actiu: alta i baixa de blocs per nivell, consulta d'ocupació lògica Desconegut/Lliure/Ocupat, creació d'itineraris amb blocs seleccionats, reserva atòmica sense conflictes i alliberament de reserves quan un bloc deixa d'estar lliure. Les ocupacions i reserves es desen al paquet `.platinum`. Aquesta interfície és de simulació local: no envia ordres a locomotores, desviaments, senyals, JMRI ni centrals digitals. Proves de domini: `dotnet test Platinum.sln -c Release` (inclou `DispatcherServiceTests`). Les pantalles noves de simulació són locals i no controlen maquinari real.
 
 ## Instal·lació i actualitzacions (WPF)
 
