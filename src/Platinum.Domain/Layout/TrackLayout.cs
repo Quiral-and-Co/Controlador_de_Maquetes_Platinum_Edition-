@@ -15,6 +15,8 @@ public sealed class TrackLayout
     public List<LogicalBlock> Blocks { get; init; } = [];
     public List<FeedbackSensor> Sensors { get; init; } = [];
     public List<RouteDefinition> Routes { get; init; } = [];
+    public List<BlockOccupancy> BlockOccupancies { get; init; } = [];
+    public List<RouteReservation> RouteReservations { get; init; } = [];
 }
 
 public sealed record TrackLevel(Guid Id, string Name, decimal ElevationMillimetres);
