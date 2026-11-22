@@ -12,8 +12,8 @@ using Platinum.Infrastructure.Control;
 namespace Platinum.Presentation.Wpf;
 
 /// <summary>
-/// Panells d'operació WPF natius. Les funcions són locals i simulades:
-/// no obren sockets, no connecten JMRI/CS2, no armen DCC ni comanden maquinari.
+/// Panells d'operació WPF natius. El comandament és virtual; la pestanya de centrals
+/// només fa una consulta de presència CS2. No arma DCC ni envia ordres físiques.
 /// </summary>
 public sealed class NativeOperationsView : UserControl
 {
@@ -241,6 +241,7 @@ public sealed class NativeOperationsView : UserControl
                 return;
             }
 
+            MarklinCs2Adapter? candidate = null;
             try
             {
                 if (_cs2Adapter is not null)
@@ -250,14 +251,16 @@ public sealed class NativeOperationsView : UserControl
                 }
 
                 var profile = new ControlStationProfile("Märklin CS2", ControlStationKind.MarklinCs2, host.Text.Trim(), commandPort);
-                var adapter = (MarklinCs2Adapter)ControlStationAdapterFactory.Create(profile);
+                candidate = (MarklinCs2Adapter)ControlStationAdapterFactory.Create(profile);
                 _stationStatus.Text = "Enviant consulta de presència a la CS2...";
-                await adapter.ConnectAsync();
-                _cs2Adapter = adapter;
+                await candidate.ConnectAsync();
+                _cs2Adapter = candidate;
+                candidate = null;
                 _stationStatus.Text = "CS2 DETECTADA · protocol CAN natiu · ping confirmat. Tracció i accessoris continuen bloquejats.";
             }
             catch (Exception ex)
             {
+                if (candidate is not null) await candidate.DisposeAsync();
                 _stationStatus.Text = "No s'ha pogut confirmar la CS2: " + ex.Message;
             }
         }));
