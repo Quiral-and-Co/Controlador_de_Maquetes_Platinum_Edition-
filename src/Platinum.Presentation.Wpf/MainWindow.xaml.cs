@@ -21,10 +21,12 @@ public partial class MainWindow : Window
         InitializeComponent();
         LoadCatalogue();
         TrackEditor.CataloguePiecePlaced += OnCataloguePiecePlaced;
+        TrackEditor.ConnectionCreated += OnConnectionCreated;
         TrackEditor.SetActiveLevel(ActiveLevelId);
         TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
         TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
         TrackEditor.LoadPieces(_currentLayout.Pieces);
+        TrackEditor.LoadConnections(_currentLayout.Connections);
         RefreshLevelSelector();
         UpdateProjectStatus();
     }
@@ -101,6 +103,8 @@ public partial class MainWindow : Window
             _currentLayout.GeometrySegments = TrackEditor.Segments.ToList();
             _currentLayout.Pieces.Clear();
             _currentLayout.Pieces.AddRange(TrackEditor.Pieces);
+            _currentLayout.Connections.Clear();
+            _currentLayout.Connections.AddRange(TrackEditor.Connections);
             await _projects.SaveAsync(_currentLayout, path);
             _currentPath = path;
             UpdateProjectStatus();
@@ -200,6 +204,14 @@ public partial class MainWindow : Window
         }
         TrackEditor.BeginCataloguePlacement(item);
         StatusText.Text = $"Fes clic al plànol per col·locar {item.Ref} al nivell actiu.";
+    }
+
+    private void OnConnectionCreated(TrackConnection connection)
+    {
+        if (!_currentLayout.Connections.Any(existing => existing.Id == connection.Id))
+            _currentLayout.Connections.Add(connection);
+        StatusText.Text = "Connexió lògica creada. Cal verificar-la físicament abans de considerar-la real.";
+        UpdateProjectStatus();
     }
 
     private void OnCataloguePiecePlaced(TrackPiece piece)
