@@ -183,3 +183,8 @@ El panell train-ground incorpora una interfície de cabina inspirada en terminal
 **Límit essencial:** no és una rèplica exacta del terminal Alcatel/AEG ni implementa ràdio, SIM, autenticació, GSM-R real, EuroRadio o comunicacions amb infraestructura ferroviària. El botó d'emergència només crea un esdeveniment simulat. No controla la CS2, JMRI, DCC, tracció, frens ni sortides físiques. No s'ha d'utilitzar per comunicacions reals. Consulta [docs/train-ground-terminal.md](docs/train-ground-terminal.md).
 
 Proves: `node --check train-ground-core.js`, `node --check train-ground-ui.js` i `node tests/train-ground.cjs`; incorporades a `npm test`.
+
+
+## Platinum Edition 1.4.0
+
+Aquest repositori manté una línia de publicació independent de la branca principal del projecte original. Les compilacions Windows x64 es publiquen des de les GitHub Actions d'aquest repositori.
