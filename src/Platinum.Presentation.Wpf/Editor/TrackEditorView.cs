@@ -24,6 +24,7 @@ public sealed class TrackEditorView : UserControl
     private CatalogueItem? _placementItem;
     private Guid? _selectedPieceId;
     private Guid? _pendingConnectionPieceId;
+    private string? _pendingConnectionPortId;
     private bool _connectMode;
     private readonly Stack<List<TrackGeometrySegment>> _undo = new();
     private readonly Stack<List<TrackGeometrySegment>> _redo = new();
@@ -221,32 +222,48 @@ public sealed class TrackEditorView : UserControl
         }
         if (_connectMode)
         {
-            var pieceId = HitTestPiece(point);
-            if (!pieceId.HasValue) { _hint.Text = "Clica una peça del catàleg per iniciar o completar la connexió."; return; }
+            var hit = HitTestPort(point);
+            if (hit is null)
+            {
+                _hint.Text = "Clica a prop d'un extrem de via marcat. Els ports taronges són estimats.";
+                return;
+            }
+
+            var pieceId = hit.Value.Piece.Id;
+            var portId = hit.Value.Port.Id;
             if (!_pendingConnectionPieceId.HasValue)
             {
                 _pendingConnectionPieceId = pieceId;
+                _pendingConnectionPortId = portId;
                 _selectedPieceId = pieceId;
-                _hint.Text = "Primera peça seleccionada. Ara clica la segona peça.";
+                _hint.Text = $"Port {portId} de {hit.Value.Piece.CatalogueCode} seleccionat. Ara tria un port d'una altra peça.";
             }
-            else if (_pendingConnectionPieceId.Value == pieceId.Value)
+            else if (_pendingConnectionPieceId.Value == pieceId && _pendingConnectionPortId == portId)
             {
-                _hint.Text = "Tria una peça diferent per completar la connexió.";
+                _hint.Text = "Aquest és el mateix port. Tria un altre extrem.";
             }
             else
             {
+                var fromPiece = _pendingConnectionPieceId.Value;
+                var fromPort = _pendingConnectionPortId ?? "logical";
                 var exists = _connections.Any(connection =>
-                    (connection.FromPieceId == _pendingConnectionPieceId.Value && connection.ToPieceId == pieceId.Value) ||
-                    (connection.FromPieceId == pieceId.Value && connection.ToPieceId == _pendingConnectionPieceId.Value));
+                    (connection.FromPieceId == fromPiece && connection.FromPort == fromPort && connection.ToPieceId == pieceId && connection.ToPort == portId) ||
+                    (connection.FromPieceId == pieceId && connection.FromPort == portId && connection.ToPieceId == fromPiece && connection.ToPort == fromPort));
                 if (!exists)
                 {
-                    var connection = new TrackConnection(Guid.NewGuid(), _pendingConnectionPieceId.Value, "logical", pieceId.Value, "logical", false);
+                    var accuracy = hit.Value.Port.Accuracy;
+                    var sourcePort = FindPort(fromPiece, fromPort);
+                    if (sourcePort?.Accuracy == "estimated" || accuracy == "estimated")
+                        _hint.Text = "Connexió entre ports creada; un dels extrems és estimat i cal verificar-lo amb plànol Märklin.";
+                    else
+                        _hint.Text = "Connexió entre extrems creada a partir de dimensions de catàleg; no certifica l'encaix físic.";
+                    var connection = new TrackConnection(Guid.NewGuid(), fromPiece, fromPort, pieceId, portId, false);
                     _connections.Add(connection);
                     ConnectionCreated?.Invoke(connection);
-                    _hint.Text = "Connexió lògica creada (no verificada físicament).";
                 }
-                else _hint.Text = "Aquestes peces ja tenen una connexió.";
+                else _hint.Text = "Aquests dos ports ja estan connectats.";
                 _pendingConnectionPieceId = null;
+                _pendingConnectionPortId = null;
             }
             Draw();
             e.Handled = true;
@@ -385,6 +402,74 @@ public sealed class TrackEditorView : UserControl
         Draw();
     }
 
+    private CataloguePort? FindPort(Guid pieceId, string portId)
+    {
+        var piece = _pieces.FirstOrDefault(candidate => candidate.Id == pieceId);
+        if (piece is null || !_catalogueByCode.TryGetValue(piece.CatalogueCode, out var item)) return null;
+        return item.Ports.FirstOrDefault(port => string.Equals(port.Id, portId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private Point GetWorldPort(TrackPiece piece, string portId)
+    {
+        if (portId == "logical" || !_catalogueByCode.TryGetValue(piece.CatalogueCode, out var item))
+            return new Point((double)piece.X, (double)piece.Y);
+        var port = item.Ports.FirstOrDefault(candidate => string.Equals(candidate.Id, portId, StringComparison.OrdinalIgnoreCase));
+        if (port is null) return new Point((double)piece.X, (double)piece.Y);
+
+        var radians = (double)piece.RotationDegrees * Math.PI / 180d;
+        var x = (double)port.X;
+        var y = (double)port.Y;
+        return new Point(
+            (double)piece.X + x * Math.Cos(radians) - y * Math.Sin(radians),
+            (double)piece.Y + x * Math.Sin(radians) + y * Math.Cos(radians));
+    }
+
+    private (TrackPiece Piece, CataloguePort Port)? HitTestPort(Point point)
+    {
+        const double toleranceMm = 22d;
+        (TrackPiece Piece, CataloguePort Port)? nearest = null;
+        var nearestDistance = toleranceMm;
+        foreach (var piece in _pieces.Where(candidate => candidate.LevelId == _levelId).Reverse())
+        {
+            if (!_catalogueByCode.TryGetValue(piece.CatalogueCode, out var item)) continue;
+            foreach (var port in item.Ports)
+            {
+                var world = GetWorldPort(piece, port.Id);
+                var distance = (point - world).Length;
+                if (distance <= nearestDistance)
+                {
+                    nearestDistance = distance;
+                    nearest = (piece, port);
+                }
+            }
+        }
+        return nearest;
+    }
+
+    private void DrawPiecePorts(TrackPiece piece)
+    {
+        if (!_catalogueByCode.TryGetValue(piece.CatalogueCode, out var item)) return;
+        foreach (var port in item.Ports)
+        {
+            var world = GetWorldPort(piece, port.Id);
+            var view = ToView((decimal)world.X, (decimal)world.Y);
+            var estimated = port.Accuracy == "estimated";
+            var marker = new System.Windows.Shapes.Ellipse
+            {
+                Width = 9,
+                Height = 9,
+                Fill = estimated ? Brushes.Orange : Brushes.LimeGreen,
+                Stroke = Brushes.Black,
+                StrokeThickness = 1,
+                IsHitTestVisible = false,
+                ToolTip = $"Port {port.Id} · {port.Accuracy} · coordenades locals en mm"
+            };
+            Canvas.SetLeft(marker, view.X - 4.5);
+            Canvas.SetTop(marker, view.Y - 4.5);
+            _surface.Children.Add(marker);
+        }
+    }
+
     private Guid? HitTestPiece(Point point)
     {
         const double tolerance = 115;
@@ -447,8 +532,10 @@ public sealed class TrackEditorView : UserControl
             var from = _pieces.FirstOrDefault(piece => piece.Id == connection.FromPieceId && piece.LevelId == _levelId);
             var to = _pieces.FirstOrDefault(piece => piece.Id == connection.ToPieceId && piece.LevelId == _levelId);
             if (from is null || to is null) continue;
-            var a = ToView(from.X, from.Y);
-            var b = ToView(to.X, to.Y);
+            var fromPoint = GetWorldPort(from, connection.FromPort);
+            var toPoint = GetWorldPort(to, connection.ToPort);
+            var a = ToView((decimal)fromPoint.X, (decimal)fromPoint.Y);
+            var b = ToView((decimal)toPoint.X, (decimal)toPoint.Y);
             _surface.Children.Add(new System.Windows.Shapes.Line
             {
                 X1 = a.X, Y1 = a.Y, X2 = b.X, Y2 = b.Y,
@@ -460,7 +547,10 @@ public sealed class TrackEditorView : UserControl
             });
         }
         foreach (var piece in _pieces.Where(p => p.LevelId == _levelId))
+        {
             DrawCataloguePiece(piece);
+            DrawPiecePorts(piece);
+        }
         foreach (var segment in _segments.Where(s => s.LevelId == _levelId))
         {
             var geometry = CreateGeometry(segment);
