@@ -24,9 +24,9 @@ public sealed class PlatinumPackageStoreTests
                 Pieces = [new TrackPiece(pieceId, "24188", 120m, 240m, 90m, levelId, "partial"), new TrackPiece(secondPieceId, "24172", 300m, 240m, 0m, levelId, "confirmed")],
                 Connections = [connection],
                 GeometrySegments = [new TrackGeometrySegment(Guid.NewGuid(), TrackGeometryKind.Curve, 100m, 100m, 400m, 250m, 230m, 20m, levelId)],
-                Blocks = [new LogicalBlock(Guid.NewGuid(), "Bloc A", levelId, [pieceId])],
+                Blocks = [new LogicalBlock(Guid.NewGuid(), "Bloc A", levelId, [pieceId], true)],
                 Sensors = [new FeedbackSensor(Guid.NewGuid(), "CS2:S88:1", "Sensor 1")],
-                Routes = [new RouteDefinition(Guid.NewGuid(), "Ruta A", [])]
+                Routes = [new RouteDefinition(Guid.NewGuid(), "Ruta A", [], true)]
             };
 
             var store = new PlatinumPackageStore();
@@ -42,6 +42,8 @@ public sealed class PlatinumPackageStoreTests
             Assert.Equal(layout.GeometrySegments, loaded.GeometrySegments);
             Assert.Equal(layout.Blocks[0].PieceIds, loaded.Blocks[0].PieceIds);
             Assert.Equal(layout.Sensors[0].SystemName, loaded.Sensors[0].SystemName);
+            Assert.True(loaded.Blocks[0].Occupied);
+            Assert.True(loaded.Routes[0].Reserved);
 
             using var archive = ZipFile.OpenRead(path);
             Assert.NotNull(archive.GetEntry("manifest.xml"));
