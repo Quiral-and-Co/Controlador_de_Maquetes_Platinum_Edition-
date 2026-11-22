@@ -27,7 +27,10 @@ public sealed class PlatinumPackageStoreTests
                 Blocks = [new LogicalBlock(Guid.NewGuid(), "Bloc A", levelId, [pieceId], true)],
                 Sensors = [new FeedbackSensor(Guid.NewGuid(), "CS2:S88:1", "Sensor 1")],
                 Routes = [new RouteDefinition(Guid.NewGuid(), "Ruta A", [], true)],
-                ProtocolProfiles = [new RailwayProtocolProfile(Guid.NewGuid(), "CS2 laboratori", "Märklin CS2", "192.168.1.50", 15731, false)]
+                ProtocolProfiles = [new RailwayProtocolProfile(Guid.NewGuid(), "CS2 laboratori", "Märklin CS2", "192.168.1.50", 15731, false)],
+                ProtectionProfiles = [new TrainProtectionProfile(Guid.NewGuid(), "Prova 80", 80m, 160m, 0.8m, true)],
+                GroundMessages = [new TrainGroundMessage(Guid.NewGuid(), "Tren 001", "Missatge local", DateTimeOffset.Parse("2026-11-22T12:00:00Z"))],
+                GameFuelPercent = 65m
             };
 
             var store = new PlatinumPackageStore();
@@ -47,6 +50,9 @@ public sealed class PlatinumPackageStoreTests
             Assert.True(loaded.Routes[0].Reserved);
             Assert.Equal("Märklin CS2", loaded.ProtocolProfiles[0].Kind);
             Assert.False(loaded.ProtocolProfiles[0].PhysicalCommandsEnabled);
+            Assert.Equal("Prova 80", loaded.ProtectionProfiles[0].Name);
+            Assert.Equal("Missatge local", loaded.GroundMessages[0].Message);
+            Assert.Equal(65m, loaded.GameFuelPercent);
 
             using var archive = ZipFile.OpenRead(path);
             Assert.NotNull(archive.GetEntry("manifest.xml"));
