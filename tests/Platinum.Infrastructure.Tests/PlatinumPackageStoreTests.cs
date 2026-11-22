@@ -80,6 +80,20 @@ public sealed class PlatinumPackageStoreTests
         }
     }
     [Fact]
+    public async Task Save_RejectsProtocolProfilesWithPhysicalCommandsEnabled()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"platinum-unsafe-profile-{Guid.NewGuid():N}.platinum");
+        var layout = new TrackLayout
+        {
+            Levels = [new TrackLevel(Guid.NewGuid(), "Principal", 0m)],
+            ProtocolProfiles = [new RailwayProtocolProfile(Guid.NewGuid(), "Perfil físic", "Märklin CS2", "192.168.1.50", 15731, true)]
+        };
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => new PlatinumPackageStore().SaveAsync(layout, path));
+        Assert.False(File.Exists(path));
+    }
+
+    [Fact]
     public void PhysicalControlGate_DeniesCommandsByDefault()
     {
         var gate = new Platinum.Application.Safety.PhysicalControlGate();
