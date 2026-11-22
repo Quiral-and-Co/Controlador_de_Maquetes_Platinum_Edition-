@@ -3,7 +3,7 @@ name: .NET 10 WPF
 on:
   workflow_dispatch:
   push:
-    branches: [main, migration/dotnet10-wpf-native]
+    branches: [main, migration/dotnet10-wpf-native, migration/complete-dotnet10-wpf]
     paths:
       - 'src/**'
       - 'tests/**'
