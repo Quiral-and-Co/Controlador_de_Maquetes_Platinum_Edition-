@@ -1,0 +1,82 @@
+name: Platinum WPF Windows release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versió semàntica (ex. 0.2.0)"
+        required: true
+        default: "0.2.0"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $version = "${{ inputs.version }}"
+          } else {
+            $version = "${{ github.ref_name }}".TrimStart('v')
+          }
+          if ($version -notmatch '^\d+\.\d+\.\d+(\.\d+)?$') { throw "Invalid version: $version" }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore and test
+        run: |
+          dotnet restore Platinum.sln
+          dotnet test tests/Platinum.Infrastructure.Tests/Platinum.Infrastructure.Tests.csproj -c Release
+
+      - name: Publish self-contained WPF application
+        run: >
+          dotnet publish src/Platinum.Presentation.Wpf/Platinum.Presentation.Wpf.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:Version=${{ steps.version.outputs.version }}
+          -o dist/publish
+
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build installer and SHA-256 manifest
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found: $iscc" }
+          & $iscc "/DMyAppVersion=${{ steps.version.outputs.version }}" "installer/QuiralPlatinum.iss"
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
+          $installer = Get-ChildItem dist -Filter 'Quiral-Platinum-Setup-*.exe' -File | Select-Object -First 1
+          if (-not $installer) { throw "Installer not generated" }
+          $hash = (Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -LiteralPath "$($installer.FullName).sha256" -Value "$hash  $($installer.Name)" -Encoding ascii
+          Write-Host "Installer: $($installer.FullName)"
+          Write-Host "SHA-256: $hash"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}
+          name: Quiral Platinum ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          files: |
+            dist/Quiral-Platinum-Setup-*.exe
+            dist/Quiral-Platinum-Setup-*.exe.sha256
