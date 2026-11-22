@@ -53,8 +53,13 @@ public sealed record CatalogueItem(
             if (Ref is "20977" or "24977" or "24978" or "20199" or "24001")
                 return [new("IN", -((LengthMm ?? 77.5m) / 2m), 0m, "estimated")];
 
-            // Sets are compositions, not individual track pieces. Turntables need
-            // their configurable radial sockets; do not fabricate six port angles.
+            if (Ref is "74861" or "74862")
+                return TurntablePorts();
+
+            if (Ref is "74920" or "74924")
+                return StraightPorts();
+
+            // Sets are compositions, not individual track pieces.
             return [];
         }
     }
@@ -86,37 +91,27 @@ public sealed record CatalogueItem(
 
     private IReadOnlyList<CataloguePort> CurvedTurnoutPorts()
     {
-        // C-track curved turnouts are two concentric 30-degree routes. Their
-        // four physical ends are distinct: inner A/B and outer A/B.
+        // A curved turnout is a three-ended junction: one approach and two exits.
+        // It is not two independent concentric tracks (four ports).
         var slim = Ref is "24771" or "24772";
-        var innerRadius = slim ? 515m : 360m;       // R3 or R1
-        var outerRadius = slim ? 579.3m : 437.5m;   // R4 or R2
+        var innerRadius = slim ? 515m : 360m;
+        var outerRadius = slim ? 579.3m : 437.5m;
         var leftHand = Ref is "24671" or "24771";
         var direction = leftHand ? 1m : -1m;
-        const double angleDegrees = 30d;
-        var angle = angleDegrees * Math.PI / 180d;
-        var ports = new List<CataloguePort>(4);
-
-        AddConcentricArc(ports, "INNER", innerRadius, angle, direction);
-        AddConcentricArc(ports, "OUTER", outerRadius, angle, direction);
-        return ports;
+        const double angle = 30d * Math.PI / 180d;
+        var inner = ArcEndpoint(innerRadius, angle, direction);
+        var outer = ArcEndpoint(outerRadius, angle, direction);
+        return [
+            new("IN", 0m, 0m, "estimated"),
+            new("INNER", inner.X, inner.Y, "estimated"),
+            new("OUTER", outer.X, outer.Y, "estimated")
+        ];
     }
 
-    private static void AddConcentricArc(
-        ICollection<CataloguePort> ports,
-        string prefix,
-        decimal radius,
-        double angle,
-        decimal direction)
+    private static (decimal X, decimal Y) ArcEndpoint(decimal radius, double angle, decimal direction)
     {
         var r = (double)radius;
-        var endX = (decimal)(r * Math.Sin(angle));
-        var endY = (decimal)(direction * r * (1d - Math.Cos(angle)));
-
-        // The start/end positions follow the arc's own radius; the actual
-        // switch's connector centre offsets are still estimated pending CAD data.
-        ports.Add(new CataloguePort($"{prefix}_A", 0m, 0m, "estimated"));
-        ports.Add(new CataloguePort($"{prefix}_B", endX, endY, "estimated"));
+        return ((decimal)(r * Math.Sin(angle)), (decimal)(direction * r * (1d - Math.Cos(angle))));
     }
 
     private IReadOnlyList<CataloguePort> ThreeWayTurnoutPorts()
@@ -155,10 +150,32 @@ public sealed record CatalogueItem(
         ];
     }
 
+    private IReadOnlyList<CataloguePort> TurntablePorts()
+    {
+        // Six radial track sockets; angles are nominal and need drawing verification.
+        const double radius = 131.5d;
+        var ids = new[] { "N", "NE", "SE", "S", "SW", "NW" };
+        var angles = new[] { -90d, -30d, 30d, 90d, 150d, 210d };
+        return ids.Select((id, i) => new CataloguePort(id,
+            (decimal)(radius * Math.Cos(angles[i] * Math.PI / 180d)),
+            (decimal)(radius * Math.Sin(angles[i] * Math.PI / 180d)),
+            "estimated")).ToArray();
+    }
+
     private IReadOnlyList<CataloguePort> CrossingPorts()
     {
-        var length = LengthMm ?? 0m;
-        var angle = AngleDeg ?? 0m;
+        var length = LengthMm ?? (Ref switch
+        {
+            "24649" => 103.3m,
+            "24740" or "24720" => 236.1m,
+            _ => 188.3m
+        });
+        var angle = AngleDeg ?? (Ref switch
+        {
+            "24649" => 48.6m,
+            "24740" or "24720" => 12.1m,
+            _ => 24.3m
+        });
         if (length <= 0m || angle <= 0m)
             return [];
 
