@@ -21,6 +21,7 @@ public sealed class ThreeDTrackEditorView : UserControl
     private readonly Dictionary<string, CatalogueItem> _catalogue = new(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyList<TrackGeometrySegment> _segments = [];
     private IReadOnlyList<TrackPiece> _pieces = [];
+    private IReadOnlyList<TrackConnection> _connections = [];
     private IReadOnlyList<TrackLevel> _levels = [];
     private Guid _activeLevel;
     private Point _lastMouse;
@@ -56,10 +57,12 @@ public sealed class ThreeDTrackEditorView : UserControl
     }
 
     public void SetData(IEnumerable<TrackGeometrySegment>? segments, IEnumerable<TrackPiece>? pieces,
-        IEnumerable<TrackLevel>? levels, IEnumerable<CatalogueItem>? catalogue, Guid activeLevel)
+        IEnumerable<TrackLevel>? levels, IEnumerable<CatalogueItem>? catalogue, Guid activeLevel,
+        IEnumerable<TrackConnection>? connections = null)
     {
         _segments = segments?.ToArray() ?? [];
         _pieces = pieces?.ToArray() ?? [];
+        _connections = connections?.ToArray() ?? [];
         _levels = levels?.ToArray() ?? [];
         _catalogue.Clear();
         if (catalogue is not null)
@@ -93,6 +96,16 @@ public sealed class ThreeDTrackEditorView : UserControl
         }
         foreach (var piece in _pieces.Where(x => x.LevelId == _activeLevel))
             DrawPiece(piece, elevation);
+        foreach (var connection in _connections)
+        {
+            var from = _pieces.FirstOrDefault(x => x.Id == connection.FromPieceId && x.LevelId == _activeLevel);
+            var to = _pieces.FirstOrDefault(x => x.Id == connection.ToPieceId && x.LevelId == _activeLevel);
+            if (from is null || to is null) continue;
+            var a = GetWorldPort(from, connection.FromPort, elevation);
+            var b = GetWorldPort(to, connection.ToPort, elevation);
+            var material = new DiffuseMaterial(new SolidColorBrush(connection.PhysicallyVerified ? Colors.LimeGreen : Colors.DarkOrange));
+            AddCylinder(a, b, 2.2, material);
+        }
         _status.Text = $"Editor 3D natiu · {level?.Name ?? "Nivell actiu"} · {_pieces.Count(x => x.LevelId == _activeLevel)} peces · {_segments.Count(x => x.LevelId == _activeLevel)} traçats · Arrossega per orbitar, roda per zoom";
     }
 
@@ -107,6 +120,25 @@ public sealed class ThreeDTrackEditorView : UserControl
         var gridMaterial = new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(48, 62, 76)));
         for (var x = -1800; x <= 1800; x += 100) AddCylinder(new Point3D(x, -1200, -5), new Point3D(x, 1200, -5), 0.7, gridMaterial);
         for (var y = -1200; y <= 1200; y += 100) AddCylinder(new Point3D(-1800, y, -5), new Point3D(1800, y, -5), 0.7, gridMaterial);
+    }
+
+    private Point3D GetWorldPort(TrackPiece piece, string portId, double elevation)
+    {
+        var x = (double)piece.X;
+        var y = (double)piece.Y;
+        if (_catalogue.TryGetValue(piece.CatalogueCode, out var item))
+        {
+            var port = item.Ports.FirstOrDefault(candidate => string.Equals(candidate.Id, portId, StringComparison.OrdinalIgnoreCase));
+            if (port is not null)
+            {
+                var radians = (double)piece.RotationDegrees * Math.PI / 180d;
+                var localX = (double)port.X;
+                var localY = (double)port.Y;
+                x += localX * Math.Cos(radians) - localY * Math.Sin(radians);
+                y += localX * Math.Sin(radians) + localY * Math.Cos(radians);
+            }
+        }
+        return new Point3D(x, -y, elevation + 12);
     }
 
     private void DrawPiece(TrackPiece piece, double elevation)
