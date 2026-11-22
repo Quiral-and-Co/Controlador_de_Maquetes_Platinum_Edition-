@@ -1,3 +1,19 @@
+# Aplicació d'escriptori nativa · .NET 10 WPF
+
+> **Branca de migració nativa:** l'aplicació d'escriptori en desenvolupament és C# + WPF + XAML. No carrega HTML, CSS, JavaScript, WebView ni necessita iniciar cap servidor o navegador per executar el projecte WPF. Els fitxers web descrits més avall es mantenen com a implementació de referència mentre es completa la paritat funcional; no són dependències del projecte WPF.
+
+Per compilar i executar la versió nativa a Windows:
+
+```powershell
+dotnet restore Platinum.sln
+dotnet build Platinum.sln -c Release
+dotnet run --project src/Platinum.Presentation.Wpf/Platinum.Presentation.Wpf.csproj
+```
+
+Consulta [la guia de migració WPF](docs/native-wpf-migration.md) per veure què ja s'ha portat i què queda pendent. Les pantalles noves de simulació són locals i no controlen maquinari real.
+
+---
+
 # JMRI TC Gold Custom — 1.4.0
 
 Aplicació d'escriptori i eines de planificació, diagnòstic i validació per a maquetes Märklin H0. La integració amb JMRI i el pont de circulacions tenen modes i límits de seguretat documentats; les funcions simulades no equivalen a protocols ferroviaris certificats ni a control físic validat.
