@@ -72,7 +72,14 @@ public sealed class TrackEditorView : UserControl
 
     public IReadOnlyList<TrackGeometrySegment> Segments => _segments;
 
-    public void SetActiveLevel(Guid levelId) => _levelId = levelId;
+    public void SetActiveLevel(Guid levelId)
+    {
+        _levelId = levelId;
+        _selectedId = null;
+        _anchor = null;
+        _draggingSelection = false;
+        Draw();
+    }
 
     public void SetGridSize(decimal millimetres)
     {
@@ -241,7 +248,7 @@ public sealed class TrackEditorView : UserControl
     private Guid? HitTest(Point point)
     {
         const double tolerance = 55;
-        foreach (var segment in _segments.AsEnumerable().Reverse())
+        foreach (var segment in _segments.Where(s => s.LevelId == _levelId).Reverse())
         {
             var a = new Point((double)segment.StartX, (double)segment.StartY);
             var b = new Point((double)segment.EndX, (double)segment.EndY);
@@ -284,7 +291,7 @@ public sealed class TrackEditorView : UserControl
             for (var y = 0; y < _surface.Height; y += 22) dc.DrawLine(pen, new Point(0, y), new Point(_surface.Width, y));
         }
         _surface.Background = new DrawingBrush(grid) { Stretch = Stretch.None };
-        foreach (var segment in _segments)
+        foreach (var segment in _segments.Where(s => s.LevelId == _levelId))
         {
             var geometry = CreateGeometry(segment);
             var selected = segment.Id == _selectedId;
