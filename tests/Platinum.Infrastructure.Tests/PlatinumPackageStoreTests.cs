@@ -19,7 +19,7 @@ public sealed class PlatinumPackageStoreTests
             {
                 Name = "Circuit de prova",
                 Levels = [new TrackLevel(levelId, "Principal", 0m)],
-                Pieces = [new TrackPiece(pieceId, "Märklin-24188", 120m, 240m, 90m, levelId)],
+                Pieces = [new TrackPiece(pieceId, "24188", 120m, 240m, 90m, levelId, "partial")],
                 GeometrySegments = [new TrackGeometrySegment(Guid.NewGuid(), TrackGeometryKind.Curve, 100m, 100m, 400m, 250m, 230m, 20m, levelId)],
                 Blocks = [new LogicalBlock(Guid.NewGuid(), "Bloc A", levelId, [pieceId])],
                 Sensors = [new FeedbackSensor(Guid.NewGuid(), "CS2:S88:1", "Sensor 1")],
@@ -33,6 +33,7 @@ public sealed class PlatinumPackageStoreTests
             Assert.Equal(layout.Id, loaded.Id);
             Assert.Equal(layout.Name, loaded.Name);
             Assert.Equal(layout.Pieces, loaded.Pieces);
+            Assert.Equal("partial", loaded.Pieces[0].GeometryStatus);
             Assert.Equal(layout.GeometrySegments, loaded.GeometrySegments);
             Assert.Equal(layout.Blocks[0].PieceIds, loaded.Blocks[0].PieceIds);
             Assert.Equal(layout.Sensors[0].SystemName, loaded.Sensors[0].SystemName);
