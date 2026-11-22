@@ -114,10 +114,11 @@ public sealed class PlatinumPackageStoreTests
     {
         var gate = new Platinum.Application.Safety.PhysicalControlGate();
         var state = new Platinum.Domain.Safety.HardwareSafetyState(
-            JmriConnected: true,
             CommandStationConnected: true,
             FeedbackHealthy: true,
             EmergencyStopCircuitVerified: true,
+            WatchdogHealthy: true,
+            InterlocksHealthy: true,
             OperatorSafetyAcknowledged: true,
             PhysicalControlArmed: false);
 
