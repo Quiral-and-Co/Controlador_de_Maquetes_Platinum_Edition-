@@ -18,6 +18,12 @@
           <StackPanel DockPanel.Dock="Top">
             <TextBlock Text="BLOCS DEL PROJECTE" FontWeight="Bold" Margin="0,0,0,8"/>
             <TextBlock x:Name="BlockCountText" Foreground="#FFB7C1CC" Margin="0,0,0,8"/>
+            <WrapPanel Margin="0,0,0,8">
+              <TextBox x:Name="BlockNameBox" Width="130" Padding="6" Margin="0,0,6,0" ToolTip="Nom del nou bloc"/>
+              <ComboBox x:Name="BlockLevelSelector" Width="125" Padding="5" DisplayMemberPath="Name" SelectedValuePath="Id"/>
+              <Button Content="Afegeix bloc" Click="AddBlock_Click" Padding="8,5" Margin="6,0,0,0"/>
+              <Button Content="Elimina" Click="DeleteBlock_Click" Padding="8,5" Margin="6,0,0,0"/>
+            </WrapPanel>
           </StackPanel>
           <DataGrid x:Name="BlocksGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended"
                     Background="#FF111820" Foreground="#FFE9EDF2" RowBackground="#FF18212B"
