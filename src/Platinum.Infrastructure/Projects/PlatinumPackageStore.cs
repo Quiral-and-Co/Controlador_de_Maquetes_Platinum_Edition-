@@ -105,7 +105,8 @@ public sealed class PlatinumPackageStore : IProjectStore
             throw new InvalidDataException("La geometria de vies conté nivells inexistents o tipus desconeguts.");
 
         if (layout.Pieces.Any(x => string.IsNullOrWhiteSpace(x.CatalogueCode) ||
-            !levelIds.Contains(x.LevelId)))
+            !levelIds.Contains(x.LevelId) ||
+            x.GeometryStatus is not ("confirmed" or "partial" or "unverified")))
             throw new InvalidDataException("Hi ha peces sense codi de catàleg o assignades a nivells inexistents.");
 
         if (layout.Connections.Any(x => x.FromPieceId == x.ToPieceId ||
