@@ -35,7 +35,7 @@ public sealed class TrackTopologyValidatorTests
         var layout = Layout();
         var first = layout.Connections[0];
         layout.Connections.Add(new TrackConnection(Guid.NewGuid(), first.FromPieceId, "B",
-            Guid.NewGuid(), "A"));
+            first.ToPieceId, "C"));
         var issues = TrackTopologyValidator.Validate(layout);
         Assert.Contains(issues, issue => issue.Code == "CONNECTION_PIECE_MISSING");
         Assert.Contains(issues, issue => issue.Code == "PORT_ALREADY_CONNECTED");
