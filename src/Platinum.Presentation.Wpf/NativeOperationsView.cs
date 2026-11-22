@@ -18,6 +18,7 @@ namespace Platinum.Presentation.Wpf;
 public sealed class NativeOperationsView : UserControl
 {
     private readonly RailwayControlService _controlService = new(new LocalSimulationAdapter());
+    private readonly RailwayAutomationEngine _automation = new();
     private readonly ObservableCollection<string> _blocks = [];
     private readonly HashSet<string> _occupied = new(StringComparer.OrdinalIgnoreCase);
     private readonly ObservableCollection<string> _routes = [];
@@ -38,6 +39,7 @@ public sealed class NativeOperationsView : UserControl
         Background = Brush("#FF18212B");
         var tabs = new TabControl { Background = Brush("#FF18212B"), Foreground = Brushes.White, BorderThickness = new Thickness(0) };
         tabs.Items.Add(Tab("Control propi", BuildNativeControl()));
+        tabs.Items.Add(Tab("Enclavaments propis", BuildAutomation()));
         tabs.Items.Add(Tab("Dispatcher", BuildDispatcher()));
         tabs.Items.Add(Tab("Senyalització", BuildSignalling()));
         tabs.Items.Add(Tab("Centrals", BuildStations()));
