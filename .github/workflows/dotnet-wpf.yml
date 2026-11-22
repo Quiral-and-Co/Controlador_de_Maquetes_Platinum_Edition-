@@ -1,0 +1,36 @@
+name: .NET 10 WPF
+
+on:
+  push:
+    branches: [main, migration/dotnet10-wpf-native]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - '*.sln'
+      - '*.props'
+      - 'global.json'
+      - '.github/workflows/dotnet-wpf.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - '*.sln'
+      - '*.props'
+      - 'global.json'
+      - '.github/workflows/dotnet-wpf.yml'
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore Platinum.sln
+      - name: Build
+        run: dotnet build Platinum.sln --configuration Release --no-restore
+      - name: Test
+        run: dotnet test tests/Platinum.Infrastructure.Tests/Platinum.Infrastructure.Tests.csproj --configuration Release --no-build
