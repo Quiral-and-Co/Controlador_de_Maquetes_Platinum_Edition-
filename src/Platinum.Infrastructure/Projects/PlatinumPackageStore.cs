@@ -191,7 +191,7 @@ public sealed class PlatinumPackageStore : IProjectStore
         {
             Id=x.Id, Name=x.Name, WidthMillimetres=x.WidthMillimetres, HeightMillimetres=x.HeightMillimetres, GridMillimetres=x.GridMillimetres,
             Levels=x.Levels.Select(v=>new LevelDocument{Id=v.Id,Name=v.Name,ElevationMillimetres=v.ElevationMillimetres}).ToList(),
-            Pieces=x.Pieces.Select(v=>new PieceDocument{Id=v.Id,CatalogueCode=v.CatalogueCode,X=v.X,Y=v.Y,RotationDegrees=v.RotationDegrees,LevelId=v.LevelId}).ToList(),
+            Pieces=x.Pieces.Select(v=>new PieceDocument{Id=v.Id,CatalogueCode=v.CatalogueCode,X=v.X,Y=v.Y,RotationDegrees=v.RotationDegrees,LevelId=v.LevelId,GeometryStatus=v.GeometryStatus}).ToList(),
             GeometrySegments=x.GeometrySegments.Select(v=>new GeometrySegmentDocument{Id=v.Id,Kind=v.Kind,StartX=v.StartX,StartY=v.StartY,EndX=v.EndX,EndY=v.EndY,ControlX=v.ControlX,ControlY=v.ControlY,LevelId=v.LevelId}).ToList(),
             Connections=x.Connections.Select(v=>new ConnectionDocument{Id=v.Id,FromPieceId=v.FromPieceId,FromPort=v.FromPort,ToPieceId=v.ToPieceId,ToPort=v.ToPort,PhysicallyVerified=v.PhysicallyVerified}).ToList(),
             Blocks=x.Blocks.Select(v=>new BlockDocument{Id=v.Id,Name=v.Name,LevelId=v.LevelId,PieceIds=v.PieceIds.ToList()}).ToList(),
@@ -202,7 +202,7 @@ public sealed class PlatinumPackageStore : IProjectStore
         {
             Id=Id,Name=Name,WidthMillimetres=WidthMillimetres,HeightMillimetres=HeightMillimetres,GridMillimetres=GridMillimetres,
             Levels=Levels.Select(v=>new TrackLevel(v.Id,v.Name,v.ElevationMillimetres)).ToList(),
-            Pieces=Pieces.Select(v=>new TrackPiece(v.Id,v.CatalogueCode,v.X,v.Y,v.RotationDegrees,v.LevelId)).ToList(),
+            Pieces=Pieces.Select(v=>new TrackPiece(v.Id,v.CatalogueCode,v.X,v.Y,v.RotationDegrees,v.LevelId,string.IsNullOrWhiteSpace(v.GeometryStatus) ? "unverified" : v.GeometryStatus)).ToList(),
             GeometrySegments=GeometrySegments.Select(v=>new TrackGeometrySegment(v.Id,v.Kind,v.StartX,v.StartY,v.EndX,v.EndY,v.ControlX,v.ControlY,v.LevelId)).ToList(),
             Connections=Connections.Select(v=>new TrackConnection(v.Id,v.FromPieceId,v.FromPort,v.ToPieceId,v.ToPort,v.PhysicallyVerified)).ToList(),
             Blocks=Blocks.Select(v=>new LogicalBlock(v.Id,v.Name,v.LevelId,v.PieceIds)).ToList(),
@@ -211,7 +211,7 @@ public sealed class PlatinumPackageStore : IProjectStore
         };
     }
     public sealed class LevelDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public decimal ElevationMillimetres {get;set;} }
-    public sealed class PieceDocument { public Guid Id {get;set;} public string CatalogueCode {get;set;}=""; public decimal X {get;set;} public decimal Y {get;set;} public decimal RotationDegrees {get;set;} public Guid LevelId {get;set;} }
+    public sealed class PieceDocument { public Guid Id {get;set;} public string CatalogueCode {get;set;}=""; public decimal X {get;set;} public decimal Y {get;set;} public decimal RotationDegrees {get;set;} public Guid LevelId {get;set;} public string GeometryStatus {get;set;}="unverified"; }
     public sealed class GeometrySegmentDocument { public Guid Id {get;set;} public TrackGeometryKind Kind {get;set;} public decimal StartX {get;set;} public decimal StartY {get;set;} public decimal EndX {get;set;} public decimal EndY {get;set;} public decimal ControlX {get;set;} public decimal ControlY {get;set;} public Guid LevelId {get;set;} }
     public sealed class ConnectionDocument { public Guid Id {get;set;} public Guid FromPieceId {get;set;} public string FromPort {get;set;}=""; public Guid ToPieceId {get;set;} public string ToPort {get;set;}=""; public bool PhysicallyVerified {get;set;} }
     public sealed class BlockDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public Guid LevelId {get;set;} [XmlArrayItem("PieceId")] public List<Guid> PieceIds {get;set;}=[]; }
