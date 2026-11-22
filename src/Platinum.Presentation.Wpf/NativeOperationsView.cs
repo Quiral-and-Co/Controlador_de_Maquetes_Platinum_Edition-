@@ -19,6 +19,7 @@ public sealed class NativeOperationsView : UserControl
 {
     private readonly RailwayControlService _controlService = new(new LocalSimulationAdapter());
     private readonly RailwayAutomationEngine _automation = new();
+    private MarklinCs2Adapter? _cs2Adapter;
     private readonly ObservableCollection<string> _blocks = [];
     private readonly HashSet<string> _occupied = new(StringComparer.OrdinalIgnoreCase);
     private readonly ObservableCollection<string> _routes = [];
@@ -61,7 +62,7 @@ public sealed class NativeOperationsView : UserControl
         Background = Brush("#FF3A2D1B"), Padding = new Thickness(12), Margin = new Thickness(8, 8, 8, 4),
         Child = new TextBlock
         {
-            Text = "MOTOR PROPI PLATINUM · WPF NATIU. No depèn de JMRI. Aquesta versió opera amb central virtual; CS2/CS3 i les sortides físiques continuen bloquejades.",
+            Text = "MOTOR PROPI PLATINUM · WPF NATIU. No depèn de JMRI. Inclou prova de presència CS2 per protocol natiu; les ordres físiques continuen bloquejades.",
             TextWrapping = TextWrapping.Wrap, Foreground = Brush("#FFFFD58A"), FontWeight = FontWeights.SemiBold
         }
     };
@@ -231,8 +232,46 @@ public sealed class NativeOperationsView : UserControl
             _stations.Add($"{manufacturer.SelectedItem} · {model.Text.Trim()} · {host.Text.Trim()}:{p} · NO CONNECTAT");
             _stationStatus.Text = "Perfil desat en memòria d'aquesta sessió. No s'ha obert cap connexió.";
         }));
-        panel.Children.Add(profiles); panel.Children.Add(_stationStatus);
-        panel.Children.Add(Label("La connexió de xarxa/sèrie no s'habilita en aquesta fase. Cap perfil no arma DCC."));
+        panel.Children.Add(profiles);
+        panel.Children.Add(Button("Provar connexió nativa Märklin CS2 (ping)", async (_, _) =>
+        {
+            if (!int.TryParse(port.Text, out var commandPort) || commandPort is < 1 or > 65535)
+            {
+                _stationStatus.Text = "Port CS2 invàlid. El valor habitual és 15731.";
+                return;
+            }
+
+            try
+            {
+                if (_cs2Adapter is not null)
+                {
+                    await _cs2Adapter.DisposeAsync();
+                    _cs2Adapter = null;
+                }
+
+                var profile = new ControlStationProfile("Märklin CS2", ControlStationKind.MarklinCs2, host.Text.Trim(), commandPort);
+                var adapter = (MarklinCs2Adapter)ControlStationAdapterFactory.Create(profile);
+                _stationStatus.Text = "Enviant consulta de presència a la CS2...";
+                await adapter.ConnectAsync();
+                _cs2Adapter = adapter;
+                _stationStatus.Text = "CS2 DETECTADA · protocol CAN natiu · ping confirmat. Tracció i accessoris continuen bloquejats.";
+            }
+            catch (Exception ex)
+            {
+                _stationStatus.Text = "No s'ha pogut confirmar la CS2: " + ex.Message;
+            }
+        }));
+        panel.Children.Add(Button("Desconnectar CS2", async (_, _) =>
+        {
+            if (_cs2Adapter is not null)
+            {
+                await _cs2Adapter.DisposeAsync();
+                _cs2Adapter = null;
+            }
+            _stationStatus.Text = "Adaptador CS2 desconnectat.";
+        }));
+        panel.Children.Add(_stationStatus);
+        panel.Children.Add(Label("La prova utilitza UDP 15731 (comandes) i 15730 (respostes). Només envia ping; no activa la via ni mou locomotores o desviaments."));
         return Scroll(panel);
     }
 
