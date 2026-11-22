@@ -119,7 +119,9 @@ public sealed class PlatinumPackageStoreTests
                 await writer.WriteAsync("<!DOCTYPE PlatinumManifest [<!ENTITY xxe SYSTEM 'file:///etc/passwd'>]><PlatinumManifest><Format>&xxe;</Format><FormatVersion>1</FormatVersion></PlatinumManifest>");
             }
 
-            await Assert.ThrowsAsync<System.Xml.XmlException>(() => new PlatinumPackageStore().LoadAsync(path));
+            var exception = await Assert.ThrowsAsync<InvalidDataException>(() => new PlatinumPackageStore().LoadAsync(path));
+            Assert.IsType<InvalidOperationException>(exception.InnerException);
+            Assert.IsType<System.Xml.XmlException>(exception.InnerException.InnerException);
         }
         finally
         {
