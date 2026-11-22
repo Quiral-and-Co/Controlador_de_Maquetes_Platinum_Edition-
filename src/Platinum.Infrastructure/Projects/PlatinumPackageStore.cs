@@ -75,7 +75,7 @@ public sealed class PlatinumPackageStore : IProjectStore
     private static void Validate(TrackLayout layout)
     {
         ArgumentNullException.ThrowIfNull(layout);
-        if (layout.Levels is null || layout.Pieces is null || layout.Connections is null || layout.Blocks is null || layout.Sensors is null || layout.Routes is null)
+        if (layout.Levels is null || layout.Pieces is null || layout.Connections is null || layout.Blocks is null || layout.Sensors is null || layout.Routes is null || layout.GeometrySegments is null)
             throw new InvalidDataException("El projecte conté col·leccions nul·les.");
         if (layout.Id == Guid.Empty || string.IsNullOrWhiteSpace(layout.Name) ||
             layout.WidthMillimetres <= 0 || layout.HeightMillimetres <= 0 || layout.GridMillimetres <= 0)
@@ -96,10 +96,13 @@ public sealed class PlatinumPackageStore : IProjectStore
         EnsureUniqueIds(layout.Blocks, x => x.Id, "blocs");
         EnsureUniqueIds(layout.Sensors, x => x.Id, "sensors");
         EnsureUniqueIds(layout.Routes, x => x.Id, "itineraris");
+        EnsureUniqueIds(layout.GeometrySegments, x => x.Id, "geometria de vies");
 
         var levelIds = layout.Levels.Select(x => x.Id).ToHashSet();
         var pieceIds = layout.Pieces.Select(x => x.Id).ToHashSet();
         var blockIds = layout.Blocks.Select(x => x.Id).ToHashSet();
+        if (layout.GeometrySegments.Any(x => !levelIds.Contains(x.LevelId) || !Enum.IsDefined(x.Kind)))
+            throw new InvalidDataException("La geometria de vies conté nivells inexistents o tipus desconeguts.");
 
         if (layout.Pieces.Any(x => string.IsNullOrWhiteSpace(x.CatalogueCode) ||
             !levelIds.Contains(x.LevelId)))
@@ -178,6 +181,7 @@ public sealed class PlatinumPackageStore : IProjectStore
         public decimal GridMillimetres { get; set; }
         [XmlArray] public List<LevelDocument> Levels { get; set; } = [];
         [XmlArray] public List<PieceDocument> Pieces { get; set; } = [];
+        [XmlArray] public List<GeometrySegmentDocument> GeometrySegments { get; set; } = [];
         [XmlArray] public List<ConnectionDocument> Connections { get; set; } = [];
         [XmlArray] public List<BlockDocument> Blocks { get; set; } = [];
         [XmlArray] public List<SensorDocument> Sensors { get; set; } = [];
@@ -188,6 +192,7 @@ public sealed class PlatinumPackageStore : IProjectStore
             Id=x.Id, Name=x.Name, WidthMillimetres=x.WidthMillimetres, HeightMillimetres=x.HeightMillimetres, GridMillimetres=x.GridMillimetres,
             Levels=x.Levels.Select(v=>new LevelDocument{Id=v.Id,Name=v.Name,ElevationMillimetres=v.ElevationMillimetres}).ToList(),
             Pieces=x.Pieces.Select(v=>new PieceDocument{Id=v.Id,CatalogueCode=v.CatalogueCode,X=v.X,Y=v.Y,RotationDegrees=v.RotationDegrees,LevelId=v.LevelId}).ToList(),
+            GeometrySegments=x.GeometrySegments.Select(v=>new GeometrySegmentDocument{Id=v.Id,Kind=v.Kind,StartX=v.StartX,StartY=v.StartY,EndX=v.EndX,EndY=v.EndY,ControlX=v.ControlX,ControlY=v.ControlY,LevelId=v.LevelId}).ToList(),
             Connections=x.Connections.Select(v=>new ConnectionDocument{Id=v.Id,FromPieceId=v.FromPieceId,FromPort=v.FromPort,ToPieceId=v.ToPieceId,ToPort=v.ToPort,PhysicallyVerified=v.PhysicallyVerified}).ToList(),
             Blocks=x.Blocks.Select(v=>new BlockDocument{Id=v.Id,Name=v.Name,LevelId=v.LevelId,PieceIds=v.PieceIds.ToList()}).ToList(),
             Sensors=x.Sensors.Select(v=>new SensorDocument{Id=v.Id,SystemName=v.SystemName,DisplayName=v.DisplayName,PhysicallyVerified=v.PhysicallyVerified}).ToList(),
@@ -198,6 +203,7 @@ public sealed class PlatinumPackageStore : IProjectStore
             Id=Id,Name=Name,WidthMillimetres=WidthMillimetres,HeightMillimetres=HeightMillimetres,GridMillimetres=GridMillimetres,
             Levels=Levels.Select(v=>new TrackLevel(v.Id,v.Name,v.ElevationMillimetres)).ToList(),
             Pieces=Pieces.Select(v=>new TrackPiece(v.Id,v.CatalogueCode,v.X,v.Y,v.RotationDegrees,v.LevelId)).ToList(),
+            GeometrySegments=GeometrySegments.Select(v=>new TrackGeometrySegment(v.Id,v.Kind,v.StartX,v.StartY,v.EndX,v.EndY,v.ControlX,v.ControlY,v.LevelId)).ToList(),
             Connections=Connections.Select(v=>new TrackConnection(v.Id,v.FromPieceId,v.FromPort,v.ToPieceId,v.ToPort,v.PhysicallyVerified)).ToList(),
             Blocks=Blocks.Select(v=>new LogicalBlock(v.Id,v.Name,v.LevelId,v.PieceIds)).ToList(),
             Sensors=Sensors.Select(v=>new FeedbackSensor(v.Id,v.SystemName,v.DisplayName,v.PhysicallyVerified)).ToList(),
@@ -206,6 +212,7 @@ public sealed class PlatinumPackageStore : IProjectStore
     }
     public sealed class LevelDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public decimal ElevationMillimetres {get;set;} }
     public sealed class PieceDocument { public Guid Id {get;set;} public string CatalogueCode {get;set;}=""; public decimal X {get;set;} public decimal Y {get;set;} public decimal RotationDegrees {get;set;} public Guid LevelId {get;set;} }
+    public sealed class GeometrySegmentDocument { public Guid Id {get;set;} public TrackGeometryKind Kind {get;set;} public decimal StartX {get;set;} public decimal StartY {get;set;} public decimal EndX {get;set;} public decimal EndY {get;set;} public decimal ControlX {get;set;} public decimal ControlY {get;set;} public Guid LevelId {get;set;} }
     public sealed class ConnectionDocument { public Guid Id {get;set;} public Guid FromPieceId {get;set;} public string FromPort {get;set;}=""; public Guid ToPieceId {get;set;} public string ToPort {get;set;}=""; public bool PhysicallyVerified {get;set;} }
     public sealed class BlockDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public Guid LevelId {get;set;} [XmlArrayItem("PieceId")] public List<Guid> PieceIds {get;set;}=[]; }
     public sealed class SensorDocument { public Guid Id {get;set;} public string SystemName {get;set;}=""; public string DisplayName {get;set;}=""; public bool PhysicallyVerified {get;set;} }
