@@ -87,7 +87,10 @@ public sealed class ThreeDTrackEditorView : UserControl
         var level = _levels.FirstOrDefault(x => x.Id == _activeLevel);
         var elevation = level is null ? 0d : (double)level.ElevationMillimetres;
         foreach (var segment in _segments.Where(x => x.LevelId == _activeLevel))
+        {
             DrawTrack(BuildSegmentPoints(segment), elevation, Colors.Silver);
+            if (segment.Kind == TrackGeometryKind.Turnout) DrawTurnoutBranch(segment, elevation);
+        }
         foreach (var piece in _pieces.Where(x => x.LevelId == _activeLevel))
             DrawPiece(piece, elevation);
         _status.Text = $"Editor 3D natiu · {level?.Name ?? "Nivell actiu"} · {_pieces.Count(x => x.LevelId == _activeLevel)} peces · {_segments.Count(x => x.LevelId == _activeLevel)} traçats · Arrossega per orbitar, roda per zoom";
@@ -141,6 +144,16 @@ public sealed class ThreeDTrackEditorView : UserControl
             else { points.Add(start); points.Add(end); }
             DrawTrack(points, elevation, item.GeometryStatus == "confirmed" ? Colors.LightSteelBlue : Colors.DarkOrange);
         }
+    }
+
+    private void DrawTurnoutBranch(TrackGeometrySegment segment, double elevation)
+    {
+        var a = new Point3D((double)segment.StartX, -(double)segment.StartY, elevation);
+        var b = new Point3D((double)segment.EndX, -(double)segment.EndY, elevation);
+        var dx = b.X - a.X; var dy = b.Y - a.Y;
+        var start = new Point3D(a.X + dx * 0.48, a.Y + dy * 0.48, elevation);
+        var end = new Point3D(b.X - dx * 0.42 - dy * 0.28, b.Y - dy * 0.42 + dx * 0.28, elevation);
+        DrawTrack([start, end], elevation, Colors.DarkOrange);
     }
 
     private static IReadOnlyList<Point3D> BuildSegmentPoints(TrackGeometrySegment segment)
