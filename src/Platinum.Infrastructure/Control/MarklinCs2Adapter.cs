@@ -133,6 +133,50 @@ public static class MarklinCs2FrameCodec
         return packet;
     }
 
+    /// <summary>Construeix una ordre de velocitat; no l'envia a la xarxa.</summary>
+    public static byte[] CreateLocomotiveSpeed(ushort hash, uint locId, int speed)
+    {
+        if (speed is < 0 or > 1023) throw new ArgumentOutOfRangeException(nameof(speed));
+        Span<byte> data = stackalloc byte[6];
+        BinaryPrimitives.WriteUInt32BigEndian(data[..4], locId);
+        BinaryPrimitives.WriteUInt16BigEndian(data[4..], (ushort)speed);
+        return Create(0x04, 3, false, hash, data);
+    }
+
+    /// <summary>Construeix una ordre de direcció; 1=endavant, 2=enrere.</summary>
+    public static byte[] CreateLocomotiveDirection(ushort hash, uint locId, bool reverse)
+    {
+        Span<byte> data = stackalloc byte[5];
+        BinaryPrimitives.WriteUInt32BigEndian(data[..4], locId);
+        data[4] = reverse ? (byte)2 : (byte)1;
+        return Create(0x05, 3, false, hash, data);
+    }
+
+    /// <summary>Construeix una ordre F0-F31; no l'envia a la xarxa.</summary>
+    public static byte[] CreateLocomotiveFunction(ushort hash, uint locId, int function, bool enabled)
+    {
+        if (function is < 0 or > 31) throw new ArgumentOutOfRangeException(nameof(function));
+        Span<byte> data = stackalloc byte[6];
+        BinaryPrimitives.WriteUInt32BigEndian(data[..4], locId);
+        data[4] = (byte)function;
+        data[5] = enabled ? (byte)1 : (byte)0;
+        return Create(0x06, 3, false, hash, data);
+    }
+
+    /// <summary>
+    /// Construeix una ordre genèrica d'accessori. La posició/corrent s'han de
+    /// proporcionar segons el protocol i el descodificador físic verificats.
+    /// </summary>
+    public static byte[] CreateAccessory(ushort hash, uint accessoryUid, byte position, byte current)
+    {
+        if (current > 31) throw new ArgumentOutOfRangeException(nameof(current));
+        Span<byte> data = stackalloc byte[6];
+        BinaryPrimitives.WriteUInt32BigEndian(data[..4], accessoryUid);
+        data[4] = position;
+        data[5] = current;
+        return Create(0x0B, 3, false, hash, data);
+    }
+
     public static bool TryParse(ReadOnlySpan<byte> packet, out MarklinCs2Frame frame)
     {
         frame = default;
