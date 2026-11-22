@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict');
+const safety=require('../safety-core.js');
+const s=safety.createState();
+assert.equal(safety.status(s).state,'LOCKED');
+assert.equal(safety.canEnablePhysical(s,{jmriConnected:true,jmriPower:'ON',bridgeConnected:true,sensorDataValid:true,emergencyCircuitVerified:true}).ok,false);
+for(const [id] of safety.ITEMS) safety.setCheck(s,id,true);
+safety.confirmPhysical(s,true);
+const live={jmriConnected:true,jmriPower:'ON',bridgeConnected:true,sensorDataValid:true,emergencyCircuitVerified:true};
+assert.equal(safety.canEnablePhysical(s,live).ok,true);
+assert.equal(safety.canEnablePhysical(s,{...live,jmriPower:'UNKNOWN'}).ok,false);
+safety.trip(s,'Pèrdua de comunicació');
+assert.equal(safety.canEnablePhysical(s,live).ok,false);
+safety.reset(s);
+assert.equal(safety.status(s).state,'LOCKED');
+console.log('PASS: safety validation checklist, fail-closed gate, runtime interlocks and fault reset');

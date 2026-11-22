@@ -1,0 +1,97 @@
+name: Dispatcher and editor tests
+
+on:
+  pull_request:
+    branches: [main, "feature/**"]
+  push:
+    branches: [main, "feature/**", "test/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Check JavaScript syntax
+        run: |
+          node --check app.js
+          node --check viewport-core.js
+          node --check catalogue.js
+          node --check dispatcher-core.js
+          node --check dispatcher.js
+          node --check traffic-core.js
+          node --check safety-core.js
+          node --check automation-core.js
+          node --check deadman-core.js
+          node --check traffic.js
+          node --check traffic-bridge.js
+          node --check signalling-core.js
+          node --check signalling-ui.js
+          node --check signalling-integration-core.js
+          node --check signalling-integration.js
+          node --check signalling-topology-core.js
+          node --check signalling-topology-ui.js
+          node --check physical-validation-core.js
+          node --check physical-validation-ui.js
+          node --check validation-master-registry-core.js
+          node --check validation-master-registry-ui.js
+          node --check jmri-dispatcher-diagnostics-core.js
+          node --check jmri-dispatcher-diagnostics.js
+          node --check jmri-turnout-supervision-core.js
+          node --check jmri-turnout-supervision.js
+      - name: Install local bridge dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      - name: VMR real-browser integration tests
+        run: npm run test:browser
+      - name: Safety core tests
+        run: node tests/safety.cjs
+      - name: Safety bridge integration tests
+        run: node tests/safety-bridge.cjs
+      - name: Supervised timetable tests
+        run: node tests/automation.cjs
+      - name: Traffic state-machine tests
+        run: node tests/traffic.cjs
+      - name: Dead-man vigilance sequence tests
+        run: node tests/deadman.cjs
+      - name: Dispatcher unit tests
+        run: node tests/dispatcher.cjs
+      - name: Dispatcher UI integration tests
+        run: node tests/dispatcher-ui.cjs
+      - name: Editor regression tests
+        run: node tests/smoke.cjs
+      - name: Editor viewport navigation tests
+        run: node tests/viewport.cjs
+      - name: Validate example JSON syntax
+        run: node -e "JSON.parse(require('fs').readFileSync('config/layout.example.json', 'utf8')); console.log('PASS example JSON')"
+
+      - name: Signal topology mapping tests
+        run: node tests/signalling-topology.cjs
+      - name: Physical validation matrix tests
+        run: node tests/physical-validation.cjs
+      - name: Integrated SVG, Dispatcher and signalling UI tests
+        run: node tests/signalling-ui-integration.cjs
+      - name: JMRI live diagnostics tests
+        run: node tests/jmri-dispatcher-diagnostics.cjs
+      - name: Turnout and route supervision failure/recovery tests
+        run: node tests/jmri-turnout-supervision.cjs
+      - name: Digital command station configuration tests
+        run: node tests/command-station.cjs
+      - name: Full regression and fail-safe suite — run 1
+        run: npm test
+      - name: Full regression and fail-safe suite — run 2
+        id: regression2
+        run: npm test
+
+      - name: Editor XYZ, parallel tracks, curves and topology acceptance gate
+        if: always() && steps.regression2.outcome == 'success'
+        run: node tests/editor-geometry-acceptance.cjs

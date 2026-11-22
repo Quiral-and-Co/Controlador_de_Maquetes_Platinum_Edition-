@@ -1,0 +1,14 @@
+/* Panell de protecció de tren · simulació no certificada */
+.train-protection-panel{margin-top:16px;padding:16px;background:#182433;border:1px solid #765d35;border-radius:10px;color:#e8edf4}
+.tp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:12px 0}
+.tp-grid label{display:grid;gap:5px;color:#b8c8d8;font-size:12px}
+.tp-grid input,.tp-grid select{min-width:0;width:100%;background:#0f1824;border:1px solid #3b4d62;border-radius:6px;color:#fff;padding:9px}
+.tp-readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:12px 0}
+.tp-readout{padding:10px;background:#101b28;border:1px solid #34465c;border-radius:8px}
+.tp-readout span{display:block;color:#9eacbd;font-size:10px}.tp-readout strong{display:block;font-size:21px;margin-top:5px;font-variant-numeric:tabular-nums}
+.tp-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.tp-actions button{flex:1 1 145px;min-height:42px}
+.tp-state{display:inline-block;padding:7px 12px;border-radius:7px;font-weight:800;font-size:12px}.tp-state.ready{background:#173b31;color:#a8f0d1}.tp-state.warning{background:#49391d;color:#ffe0a1}.tp-state.tripped{background:#54262d;color:#ffc2c5}
+.tp-ack{background:#9c6714!important;border-color:#edb84f!important;color:#fff!important;font-weight:900;font-size:16px;min-height:56px!important}
+.tp-emergency{background:#8b202b!important;border-color:#e05c68!important;font-weight:900}
+.tp-events{max-height:150px;overflow:auto;font-size:11px;color:#b8c8d8}.tp-disclaimer{padding:10px;border-left:3px solid #d69b36;background:#352d1d;color:#f1dfb5;font-size:11px;line-height:1.55}
+@media(max-width:650px){.tp-actions button{flex-basis:100%}}

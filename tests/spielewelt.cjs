@@ -1,0 +1,34 @@
+const assert=require('node:assert/strict');
+const game=require('../spielewelt-core.js');
+for(const decoderProtocol of ['mfx+','mfx','dcc','mm2','motorola','other']){
+ const caps=game.capabilities({decoderProtocol});
+ assert.equal(caps.universalCab,true);
+ assert.equal(caps.virtualResourceSimulation,true);
+ assert.equal(caps.nativeMfxPlus,decoderProtocol==='mfx+');
+}
+assert.equal(game.normalizeProtocol({protocol:'MM'}),'mm2');
+const loco={id:'L1',name:'BR 89',decoderProtocol:'dcc',vehicleType:'steam'};
+let s=game.createSession(loco,{mode:game.MODES.WITH_CONSUMPTION});
+assert.equal(s.profile,'steam');
+assert.equal(s.resources.water,100);
+s=game.setThrottle(s,100);
+const advanced=game.advance(s,60);
+assert.equal(advanced.ok,true);
+assert.equal(advanced.session.resources.water,99.45);
+assert.equal(advanced.session.capabilities.nativeMfxPlus,false);
+assert.equal(advanced.session.capabilities.consumptionSource,'software-simulation');
+assert.equal(game.advance(s,0).ok,false);
+assert.equal(game.advance({...s,active:false},1).ok,false);
+const noConsumption=game.createSession(loco,{mode:game.MODES.WITHOUT_CONSUMPTION});
+assert.equal(game.advance(noConsumption,60).session.resources.water,100);
+let depot=game.createSession(loco,{mode:game.MODES.DEPOT_REFUEL});
+depot.resources.water=10;
+assert.equal(game.refill(depot,{atDepot:false}).ok,false);
+assert.equal(game.refill(depot,{atDepot:true}).session.resources.water,100);
+assert.equal(game.refill(noConsumption,{atDepot:true}).ok,false);
+const diesel=game.createSession({id:'D1',decoderProtocol:'mfx',vehicleType:'diesel'});
+assert.ok(diesel.resources.fuel!==undefined);
+const electric=game.createSession({id:'E1',decoderProtocol:'mm2',vehicleType:'electric'});
+assert.ok(electric.resources.energy!==undefined);
+assert.equal(game.resourceStatus({...diesel,resources:{fuel:5}})[0].status,'critical');
+console.log('PASS: universal Märklin-style cab, decoder capability separation, three game modes, virtual consumption and depot refuelling');

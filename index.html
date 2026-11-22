@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="ca">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JMRI TC Gold Custom · Circulacions 1.2 alpha</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="dispatcher.css"><link rel="stylesheet" href="signalling.css"><link rel="stylesheet" href="signalling-topology.css"><link rel="stylesheet" href="physical-validation.css"><link rel="stylesheet" href="jmri-turnout-supervision.css"><link rel="stylesheet" href="command-station.css"><link rel="stylesheet" href="locomotive-dmi.css"><link rel="stylesheet" href="spielewelt.css"><link rel="stylesheet" href="train-protection.css"><link rel="stylesheet" href="train-ground.css">
+</head>
+<body>
+<header class="topbar"><div class="brand"><div class="brand-mark">🚆</div><div><strong>JMRI TC Gold Custom</strong><small>Gestió de maqueta · versió 1.2 alpha</small></div></div><div class="top-actions"><span id="connectionBadge" class="badge offline">Desconnectat</span><button id="modeClassic" class="mode-btn active">Mode clàssic</button><button id="modeModern" class="mode-btn">Mode modern</button></div></header>
+<main>
+  <section class="notice"><strong>Biblioteca de catàleg Märklin C · versió 0.9.</strong> Les referències amb geometria parcial o no verificada es dibuixen esquemàticament i no s’utilitzen per certificar connexions físiques. El control DCC utilitza el pont WiThrottle local i queda desarmat per defecte.</section>
+  <section class="toolbar"><label>Servidor JMRI<input id="host" value="127.0.0.1"></label><label>Port Web Server<input id="port" type="number" value="12080"></label><button id="connectBtn" class="primary">Connectar</button><button id="disconnectBtn" disabled>Desconnectar</button><button id="newProjectBtn" type="button">Nou</button><button id="openProjectBtn" type="button">Obrir…</button><button id="saveProjectBtn" type="button">Guardar</button><button id="saveAsProjectBtn" type="button">Guardar com…</button><label class="file-label">Importar JSON<input id="configFile" type="file" accept=".json,application/json"></label><button id="exportBtn" type="button">Exportar JSON</button><button id="importXtcBtn" type="button">Importar XTrackCAD</button><button id="exportXtcBtn" type="button">Exportar XTrackCAD</button><button id="undoBtn" disabled>↶ Desfer</button><button id="redoBtn" disabled>↷ Refer</button><button id="measureBtn">Mesurar distància</button><button id="validateTopologyBtn">Validar topologia</button><span id="configName" class="muted">Projecte base · sense vies reals</span></section>
+  <section id="commandStationPanel" class="command-station-panel" aria-labelledby="commandStationTitle">
+    <h2 id="commandStationTitle">Centrals digitals · fabricant, protocol i connexió</h2>
+    <p class="small muted">Configura perfils de centrals de diferents fabricants. La configuració no estableix connexions ni envia ordres físiques.</p>
+    <div class="cs-note"><strong>Bloqueig de seguretat:</strong> totes les centrals queden en estat NO PROVAT. Seleccionar o desar un perfil no connecta maquinari, no arma DCC i no habilita sortides físiques.</div>
+    <div class="cs-grid">
+      <label>Nom del perfil<input id="csName" maxlength="80" value="Central principal" placeholder="Nom identificatiu"></label>
+      <label>Fabricant<select id="csManufacturer"></select></label>
+      <label>Model<select id="csModel"></select></label>
+      <label>Protocol<select id="csProtocol"></select></label>
+      <label>Interfície<select id="csInterface"></select></label>
+    </div>
+    <fieldset class="cs-fieldset"><legend>Paràmetres de connexió</legend>
+      <div id="csNetworkFields" class="cs-grid">
+        <label>Adreça IP / host<input id="csHost" value="192.168.1.50" placeholder="192.168.1.50"></label>
+        <label>Port TCP<input id="csPort" type="number" min="1" max="65535" placeholder="15731"></label>
+        <label>Ruta / endpoint<input id="csPath" value="/" placeholder="/"></label>
+      </div>
+      <div id="csSerialFields" class="cs-grid hidden">
+        <label>Port USB / sèrie<input id="csSerialPort" placeholder="COM4 o /dev/ttyUSB0"></label>
+        <label>Baud rate<input id="csBaud" type="number" min="300" max="4000000" value="9600"></label>
+      </div>
+      <div class="cs-grid">
+        <label>Timeout (ms)<input id="csTimeout" type="number" min="250" max="60000" value="5000"></label>
+        <label>Notes<textarea id="csNotes" rows="2" maxlength="1000" placeholder="Firmware, adaptador, observacions..."></textarea></label>
+      </div>
+    </fieldset>
+    <div class="cs-actions"><button id="csNew" type="button">Nova central</button><button id="csSave" class="primary" type="button">Desar central</button><button id="csExport" type="button">Exportar perfils JSON</button><button id="csImport" type="button">Importar perfils JSON</button><input id="csImportFile" type="file" accept=".json,application/json" hidden></div>
+    <p class="small">Centrals registrades: <strong id="csCount">0</strong> · Seleccionada: <strong id="csSelected">Cap central seleccionada</strong></p>
+    <div id="csStationList" class="cs-station-list" aria-live="polite"></div>
+    <p id="csSafetyState" class="cs-safety" role="status">SORTIDES FÍSIQUES BLOQUEJADES</p>
+    <p id="csMessage" class="small muted" role="status" aria-live="polite">Preparat. Afegeix una central digital per crear-ne el perfil.</p>
+  </section>
+  <section class="summary-grid"><article class="metric"><span>Nivells</span><strong id="levelCount">5</strong></article><article class="metric"><span>Peces dibuixades</span><strong id="pieceCount">0</strong></article><article class="metric"><span>Connexions</span><strong id="connectionCount">0</strong></article><article class="metric"><span>Blocs</span><strong id="blockCount">0</strong></article><article class="metric"><span>Sensors desconeguts</span><strong id="unknownCount">0</strong></article></section>
+  <section class="editor-shell">
+    <aside class="editor-sidebar"><h2>Nivells</h2><div id="levelList" class="level-list"></div><div class="layout-facts"><h3>Superfície</h3><p>3.000 × 1.800 mm</p><p>H0 · Märklin C (biblioteca 68 referències; geometries qualificades)</p><p>Separació vertical: 110 mm</p></div><h2>Catàleg Märklin C</h2><input id="catalogueSearch" type="search" placeholder="Cerca per referència o nom" aria-label="Cerca al catàleg Märklin C"><select id="catalogueCategory" aria-label="Filtra per categoria"><option value="all">Totes les categories</option></select><div id="catalogueList" class="palette catalogue-list" aria-live="polite"></div><section class="gap-suggestion-panel"><strong>Completar trams buits</strong><p class="small muted">Busca parelles de ports oberts i proposa combinacions de rectes confirmades del catàleg Märklin C. Només insereix combinacions amb error geomètric màxim de 2 mm.</p><button id="suggestGapTracksBtn" type="button" class="wide">Suggerir vies per als buits</button><div id="gapSuggestions" aria-live="polite"></div></section>
+<section class="vertical-ramp-panel" aria-labelledby="verticalRampTitle">
+<strong id="verticalRampTitle">Rampes, pendents i hèlix verticals</strong>
+<p class="small muted">Calcula el desnivell i col·loca automàticament peces amb geometria confirmada del catàleg Märklin C.</p>
+<label>Tipus de traçat<select id="verticalMode"><option value="straight">Rampa recta amb transicions</option><option value="helix">Rampa helicoidal</option></select></label>
+<div id="straightRampFields">
+<label>Longitud recta (mm)<input id="rampLengthMm" type="number" min="100" step="1" placeholder="p. ex. 3000"></label>
+<label>Alçada / desnivell (mm)<input id="rampRiseMm" type="number" min="1" step="0.1" value="110"></label>
+<label>Pendent desitjat (%) · opcional<input id="rampGradePercent" type="number" min="0.1" step="0.1" placeholder="Deixa buit per calcular-lo"></label>
+<label>Longitud de transició a cada extrem (mm)<input id="rampTransitionMm" type="number" min="0" step="10" value="200"></label>
+</div>
+<div id="helixRampFields" class="hidden">
+<label>Radi desitjat (mm)<input id="helixRadiusMm" type="number" min="100" step="0.5" value="360"></label>
+<label>Alçada total (mm)<input id="helixRiseMm" type="number" min="1" step="0.1" value="110"></label>
+<label>Pendent objectiu (%) · opcional<input id="helixGradePercent" type="number" min="0.1" step="0.1" placeholder="Deixa buit per calcular-lo"></label>
+<label>Nombre de vies paral·leles<input id="helixTrackCount" type="number" min="1" max="8" step="1" value="1"></label>
+<label>Separació entre vies<select id="helixSpacingMm"><option value="77">77 mm</option><option value="64">64 mm</option></select></label>
+<label>Nombre de voltes · decimal compatible<select id="helixTurns"></select></label>
+<label>Orientació<select id="helixDirection"><option value="right">Dreta</option><option value="left">Esquerra</option></select></label>
+<label>Longitud de transició (mm)<input id="helixTransitionMm" type="number" min="0" step="10" value="100"></label>
+</div>
+<details><summary>Límits de classificació de pendent</summary>
+<label>Verd fins a (%)<input id="rampGreenMax" type="number" min="0" step="0.1" value="2"></label>
+<label>Groc fins a (%)<input id="rampYellowMax" type="number" min="0" step="0.1" value="3"></label>
+<label>Vermell fins a (%)<input id="rampRedMax" type="number" min="0" step="0.1" value="5"></label>
+<p class="small muted">Llindars inicials orientatius i editables; no són límits certificats pel fabricant.</p>
+</details>
+<button id="calculateVerticalRampBtn" type="button" class="wide">Calcular rampa / hèlix</button>
+<div id="verticalRampResult" class="vertical-result" role="status" aria-live="polite">Introdueix les dades i calcula la geometria.</div>
+<button id="insertVerticalRampBtn" type="button" class="wide" disabled>Inserir vies automàticament al tauler</button>
+<p class="small muted">Les peces i connexions s'insereixen com a geometria de projecte no verificada. Comprova gàlib, transicions, material rodant i muntatge físic abans de construir.</p>
+<div class="ramp-legend"><span class="status-green">Verd · correcte</span><span class="status-yellow">Groc · no recomanable</span><span class="status-red">Vermell · risc alt</span><span class="status-brown">Marró fosc · impossible</span></div>
+</section><details><summary>Primitives gràfiques lliures</summary><div class="palette"><button data-piece="straight">━ Recta lliure</button><button data-piece="curve">⌒ Corba lliure</button><button data-piece="turnout">⑂ Desviament lliure</button><button data-piece="block">▰ Bloc lògic</button></div></details><p class="small muted">Selecciona una referència per inserir-la. Arrossega al tauler; la posició s'ajusta a la graella de 10 mm. Les peces es poden afegir al catàleg mitjançant el fitxer JSON de biblioteca.</p></aside>
+    <section class="track-area"><div class="section-heading"><div><h1 id="currentLevelTitle">Nivell 1</h1><p id="currentLevelSubtitle">Coordenades en mm · origen a la cantonada superior esquerra</p></div><span class="badge neutral">Editor 2D · 0.9</span></div>
+      <div class="viewport-toolbar" aria-label="Navegació del tauler">
+        <button id="zoomOutBtn" type="button" aria-label="Allunya el tauler" title="Allunya">−</button>
+        <output id="zoomReadout" aria-live="polite">100%</output>
+        <button id="zoomInBtn" type="button" aria-label="Amplia el tauler" title="Amplia">+</button>
+        <button id="zoomFitBtn" type="button">Ajusta a superfície</button>
+        <span class="small muted">Roda del ratolí: zoom · Espai + arrossegar o botó central: desplaçar</span>
+      </div>
+      <div class="canvas-wrap"><svg id="trackSvg" viewBox="0 0 3000 1800" role="application" aria-label="Tauler de vies de 3000 per 1800 mil·límetres"><defs><pattern id="minorGrid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="#26384b" stroke-width="1"/></pattern><pattern id="majorGrid" width="100" height="100" patternUnits="userSpaceOnUse"><rect width="100" height="100" fill="url(#minorGrid)"/><path d="M 100 0 L 0 0 0 100" fill="none" stroke="#3d526b" stroke-width="2"/></pattern></defs><rect width="3000" height="1800" fill="#101b28"/><rect width="3000" height="1800" fill="url(#majorGrid)"/><rect x="0" y="0" width="3000" height="1800" fill="none" stroke="#9aabba" stroke-width="5"/><g id="pieceLayer"></g><g id="connectionLayer"></g><g id="portLayer"></g><g id="signalLayer"></g></svg></div>
+      <div class="canvas-status"><span id="cursorCoords">X: — · Y: — mm</span><span id="selectionText">Cap peça seleccionada</span><span id="measureStatus">Graella: 10 mm · major: 100 mm</span></div>
+    </section>
+    <aside class="properties-panel"><h2>Propietats</h2><div id="emptyProperties" class="muted small">Selecciona una peça del tauler o afegeix-ne una des de la paleta.</div><div id="pieceProperties" class="hidden"><label>ID<input id="propId" readonly></label><label>Nom<input id="propName"></label><label>Tipus<input id="propType" readonly></label><label>X (mm)<input id="propX" type="number" step="10"></label><label>Y (mm)<input id="propY" type="number" step="10"></label><label>Z / cota (mm)<input id="propZ" type="number" step="1" readonly></label><label>Rotació (°)<input id="propRotation" type="number" step="15"></label><label>Longitud (mm)<input id="propLength" type="number" min="20" step="10"></label><label>Radi (mm)<input id="propRadius" type="number" min="20" step="10"></label><label>Angle de corba (°)<input id="propAngle" type="number" min="1" max="179" step="1"></label><label id="curveDirectionField" class="hidden">Orientació de la corba<select id="propCurveDirection"><option value="right">Cap a la dreta</option><option value="left">Cap a l’esquerra</option></select></label><label id="junctionConnectionField" class="hidden">Punt preferit de connexió<select id="propJunctionConnection"></select></label><label>Bloc del nivell<select id="propBlock"><option value="">Sense bloc</option></select></label><label>Sensor del nivell<select id="propSensor"><option value="">Sense sensor</option></select></label><label>Desviament JMRI<select id="propTurnout"><option value="">Sense desviament</option></select></label><label>Nivell assignat<select id="propLevel"></select></label><button id="moveLevelBtn" class="wide">Moure peça al nivell seleccionat</button><div class="property-actions"><button id="duplicateBtn">Duplicar</button><button id="deleteBtn" class="danger">Eliminar</button></div>
+<section class="rotation-control" aria-labelledby="xyzTitle">
+<strong id="xyzTitle">Moviment numèric de la selecció · XYZ</strong>
+<p class="small muted">Introdueix la posició absoluta de la primera via seleccionada. La resta de la selecció conserva els seus offsets XYZ.</p>
+<label>Posició X longitudinal (mm)<input id="moveTargetX" type="number" step="0.1" value="0"></label>
+<label>Posició Y transversal (mm)<input id="moveTargetY" type="number" step="0.1" value="0"></label>
+<label>Posició Z / alçada (mm)<input id="moveTargetZ" type="number" step="0.1" value="0"></label>
+<button id="applyXYZBtn" class="wide" type="button">Aplicar moviment XYZ</button>
+</section>
+<section class="rotation-control" aria-labelledby="parallelTitle">
+<strong id="parallelTitle">Generar vies paral·leles</strong>
+<label>Distància entre eixos (mm)<select id="parallelDistance"><option value="77">77 mm · Märklin</option><option value="64">64 mm · Märklin</option></select></label>
+<label>Costat de generació<select id="parallelSide"><option value="left">Esquerre</option><option value="right">Dret</option></select></label>
+<button id="createParallelBtn" class="wide" type="button">Crear paral·lela/es de la selecció</button>
+<p class="small muted">Crea còpies amb el desplaçament perpendicular a l’orientació de cada via. En corbes ajusta el radi per conservar la distància entre eixos. Les còpies no hereten assignacions operatives.</p>
+</section>
+<div class="rotation-control" aria-labelledby="rotationTitle">
+<strong id="rotationTitle">Rotació precisa de la selecció</strong>
+<label>Quadrant
+<select id="rotationQuadrant" aria-label="Quadrant de rotació">
+<option value="0">I · 0°–90°</option><option value="1">II · 90°–180°</option><option value="2">III · 180°–270°</option><option value="3">IV · 270°–360°</option>
+</select></label>
+<div class="rotation-marks" role="group" aria-label="Marques angulars del quadrant">
+<button id="rotationPreset0" type="button">0°</button><button id="rotationPreset30" type="button">30°</button><button id="rotationPreset45" type="button">45°</button><button id="rotationPreset60" type="button">60°</button><button id="rotationPreset90" type="button">90°</button>
+</div>
+<label>Angle personalitzat del quadrant (°)
+<input id="rotationCustomAngle" type="number" min="0" max="90" step="0.1" value="15" inputmode="decimal" aria-label="Angle personalitzat de zero a noranta graus">
+</label>
+<p id="rotationAngleReadout" class="small muted" aria-live="polite">Angle total: 15° · sentit horari al tauler</p>
+<button id="rotateBtn" class="wide" type="button">Girar selecció amb l’angle triat</button>
+<p class="small muted">Les marques es repeteixen als quatre quadrants. També pots escriure decimals amb el teclat i prémer Retorn. El gir es calcula des del centre comú de la selecció.</p>
+</div>
+<button id="portModeBtn" class="wide">Activar connexió manual de ports</button><p id="portStatus" class="small muted">Desactivat. Activa el mode i selecciona dos ports concrets al tauler.</p><button id="connectBtn2" class="wide">Connexió ràpida (ports més propers)</button><p class="small muted">La connexió manual exigeix coincidència geomètrica ≤ 1 mm i no mou ni gira peces automàticament.</p></div><div class="panel-card safety-card"><strong>Control segur</strong><p>Editor offline: cap ordre operativa s'envia a la CS2.</p></div></aside>
+  </section>
+  <section class="panel-card topology-card"><h3>Diagnòstic topològic</h3><p id="topologyReport" class="small muted">Encara no s’ha executat la validació. Les boques obertes són informatives mentre el traçat no estigui definit.</p></section>
+  <section class="dispatcher-panel" aria-labelledby="dispatcherTitle">
+    <div class="dispatcher-header"><div><h2 id="dispatcherTitle">Dispatcher · despatxador</h2><p>Supervisió de blocs i planificació d’itineraris.</p></div><span class="badge neutral">Sensors JMRI + simulació</span></div>
+    <div class="dispatcher-warning"><strong>Mode segur:</strong> els blocs amb sensors verificats calculen l’ocupació des de JMRI; els blocs sense sensors continuen en simulació. Les reserves són locals; les ordres de locomotora només s'envien des del mòdul de circulacions amb DCC armat. No es controlen desviaments. Un bloc desconegut mai no es considera lliure.</div>
+    <div class="dispatcher-metrics">
+      <article class="dispatcher-metric"><span>Blocs lliures</span><strong id="dispatcherFreeCount">0</strong></article>
+      <article class="dispatcher-metric"><span>Blocs ocupats</span><strong id="dispatcherOccupiedCount">0</strong></article>
+      <article class="dispatcher-metric"><span>Estat desconegut</span><strong id="dispatcherUnknownCount">0</strong></article>
+      <article class="dispatcher-metric"><span>Blocs reservats</span><strong id="dispatcherReservedCount">0</strong></article>
+    </div>
+    <div class="dispatcher-columns">
+      <section class="dispatcher-subpanel"><h3>Estat dels blocs</h3><p class="dispatcher-help">Els blocs amb sensors assignats es calculen automàticament; els altres es poden simular manualment. Verifica físicament cada sensor i bloc abans d’utilitzar les lectures.</p><div id="dispatcherBlocks" class="dispatcher-block-list"></div></section>
+      <section class="dispatcher-subpanel"><h3>Itineraris</h3><p class="dispatcher-help">Escriu els identificadors dels blocs en ordre, separats per comes. Exemple: B01, B02, B03.</p>
+        <div class="dispatcher-create"><input id="dispatcherRouteName" placeholder="Nom de l’itinerari" aria-label="Nom de l’itinerari"><input id="dispatcherRouteBlocks" placeholder="B01, B02" aria-label="Identificadors dels blocs"><input id="dispatcherRouteTurnouts" placeholder="Desviaments: LT1:2, LT2:4" aria-label="Desviaments requerits per l’itinerari"><button id="dispatcherCreateRoute" class="primary" type="button">Crear</button></div>
+        <div id="dispatcherRoutes" class="dispatcher-route-list"></div>
+      </section>
+    </div>
+    <div class="dispatcher-subpanel dispatcher-diagnostics" aria-labelledby="dispatcherDiagnosticsTitle">
+      <h3 id="dispatcherDiagnosticsTitle">Diagnòstic JMRI en viu</h3>
+      <div class="dispatcher-diagnostic-metrics">
+        <span>Lectures vàlides: <strong id="jmriDiagnosticValid">0</strong></span>
+        <span>Incidències: <strong id="jmriDiagnosticIncidents">0</strong></span>
+        <span>Blocs desconeguts: <strong id="jmriDiagnosticUnknown">0</strong></span>
+      </div>
+      <ul id="jmriDiagnosticList" class="dispatcher-diagnostic-list"><li>Esperant diagnòstic JMRI.</li></ul>
+    </div>
+    <p id="dispatcherMessage" class="dispatcher-message" role="status" aria-live="polite">Preparat. Crea blocs al registre de recursos per començar.</p>
+  </section>
+  <section class="dispatcher-panel safety-panel" aria-labelledby="safetyTitle">
+    <div class="dispatcher-header"><div><h2 id="safetyTitle">Validació i bloqueig de seguretat</h2><p>Porta comuna abans de qualsevol ordre física DCC.</p></div><span class="badge offline">BLOQUEJAT per defecte</span></div>
+    <div class="dispatcher-warning"><strong>Atenció:</strong> les marques són declaracions de l’operador, no proves instrumentals. La parada d’emergència ha de ser física, independent i tallar l’energia de tracció; el programari no la substitueix.</div>
+    <div id="safetyChecks" class="safety-checks"></div>
+    <label class="safety-physical"><input id="safetyPhysicalAck" type="checkbox"> Confirmo que he inspeccionat físicament la instal·lació i he provat la parada d’emergència independent.</label>
+    <button id="safetyPhysicalConfirm" type="button">Registrar confirmació física</button>
+    <p id="safetyState" class="safety-state locked" role="status" aria-live="polite">BLOQUEJAT · pendent de validació</p>
+  </section>
+  <section id="trainProtectionPanel" class="train-protection-panel" aria-labelledby="tpTitle">
+    <div class="dmi-header"><div><h2 id="tpTitle">Protecció i conducció manual · ASFA / ERTMS / ETCS / LZB / PZB</h2><p class="dmi-muted">Panell del maquinista, reconeixement d’avisos i supervisió simulada</p></div><span id="tpState" class="tp-state warning">SENSE SESSIÓ</span></div>
+    <div class="tp-grid">
+      <label>Sistema<select id="tpSystem"><option value="ASFA_DIGITAL">ASFA Digital</option><option value="ETCS">ERTMS / ETCS</option><option value="LZB">LZB</option><option value="PZB">PZB</option></select></label>
+      <label>Nivell ETCS<select id="tpLevel"><option>Nivell 0</option><option selected>Nivell 1</option><option>Nivell 2</option><option>Nivell 3</option></select></label>
+      <label>Velocitat permesa (km/h)<input id="tpPermitted" type="number" min="0" max="350" value="80"></label>
+      <label>Velocitat objectiu (km/h)<input id="tpTarget" type="number" min="0" max="350" value="40"></label>
+      <label>Distància objectiu (m)<input id="tpDistance" type="number" min="0" max="100000" value="1000"></label>
+    </div>
+    <div class="tp-actions"><button id="tpStart" type="button">Iniciar supervisió manual simulada</button><button id="tpSetTarget" type="button">Actualitzar objectiu</button></div>
+    <div class="tp-readouts"><div class="tp-readout"><span>Velocitat del tren</span><strong id="tpSpeedReadout">—</strong></div><div class="tp-readout"><span>Velocitat permesa</span><strong id="tpPermittedReadout">—</strong></div><div class="tp-readout"><span>Objectiu</span><strong id="tpTargetReadout">—</strong></div><div class="tp-readout"><span>Distància</span><strong id="tpDistanceReadout">—</strong></div></div>
+    <div class="tp-grid"><label>Consigna manual de velocitat <input id="tpSpeed" type="range" min="0" max="160" value="0"><output id="tpSpeedInput">0 km/h</output></label><button id="tpSetSpeed" type="button">Aplicar velocitat simulada</button><label>Motiu d’avís<select id="tpReason"><option>ASFA · avís de senyal</option><option>ETCS · avís de cabina</option><option>LZB · ordre de supervisió</option><option>PZB · vigilància / Indusi</option></select></label><label>Finestra de reconeixement simulada<select id="tpAckWindow"><option value="3">3 segons</option><option value="4" selected>4 segons</option><option value="6">6 segons</option><option value="8">8 segons</option></select></label></div>
+    <div class="tp-actions"><button id="tpWarning" type="button">Generar avís / requerir reconeixement</button><button id="tpAck" class="tp-ack" type="button" disabled>RECONÈIXER</button><button id="tpTick" type="button" disabled>Avançar supervisió 1 segon</button><button id="tpEmergency" class="tp-emergency" type="button">FRENADA D’EMERGÈNCIA (simulada)</button><button id="tpReset" type="button">Reiniciar simulació</button></div>
+    <p id="tpEvent" class="tp-disclaimer">La sessió encara no està iniciada.</p><p id="tpStatus" role="status" aria-live="polite">Sistema inactiu.</p><ul id="tpEvents" class="tp-events" aria-live="polite"></ul>
+    <p class="tp-disclaimer"><strong>Important:</strong> mòdul de formació i simulació, no és ASFA Digital, ETCS, LZB ni PZB certificat ni interoperable amb equips ferroviaris reals. No implementa protocols de balisa/ràdio ni corbes de frenada homologades. No envia ordres a la CS2, JMRI, DCC, tracció, frens ni sortides físiques. No utilitzar per protegir persones o circulació real. Les sortides físiques continuen bloquejades per la porta de seguretat existent.</p>
+  </section>
+  <section id="trainGroundPanel" class="train-ground-panel" aria-labelledby="tgTitle">
+    <div class="tg-header"><div><h2 id="tgTitle">Terminal tren-terra · analògic / GSM-R</h2><p class="tg-sub">Interfície de cabina inspirada en terminals Alcatel/AEG de la RENFE sèrie 252 · simulació local</p></div><div class="tg-pills"><span id="tgRegistration" class="tg-pill">ANALÒGIC</span><span id="tgCallState" class="tg-pill">EN ESPERA</span></div></div>
+    <div class="tg-grid">
+      <label>Mode de comunicació<select id="tgMode"><option value="ANALOG">Tren-terra analògic</option><option value="GSMR">GSM-R digital</option></select></label>
+      <label>Canal analògic<select id="tgChannel"><option>CANAL-1</option><option>CANAL-2</option><option>CANAL-3</option><option>CANAL-MANIobres</option></select></label>
+      <label>Identificació del tren<input id="tgTrainId" maxlength="24" value="252-001"></label>
+      <label>Identificació del terminal<input id="tgRadioId" maxlength="32" value="RENFE-252"></label>
+      <label>Destinatari / número<input id="tgPeer" maxlength="40" value="Regulació"></label>
+      <label>Funció ferroviària<select id="tgFunction"><option>Maquinista</option><option>Regulació</option><option>Circulació</option><option>Emergència</option><option>Maniobres</option><option>Servei</option></select></label>
+    </div>
+    <div class="tg-actions"><button id="tgSave" type="button">Desar configuració</button><button id="tgRegister" type="button" disabled>Registrar a GSM-R (simulat)</button><button id="tgCall" class="tg-call" type="button">TRUCAR</button><button id="tgIncoming" type="button">Simular trucada entrant</button><button id="tgAnswer" type="button" disabled>ATENDRE</button><button id="tgRelease" type="button" disabled>ALLIBERAR</button></div>
+    <div class="tg-console">
+      <section class="tg-keypad"><h3>Botonera del terminal</h3><div id="tgDialKeys" class="tg-digits">
+        <button type="button" data-digit="1">1</button><button type="button" data-digit="2">2</button><button type="button" data-digit="3">3</button>
+        <button type="button" data-digit="4">4</button><button type="button" data-digit="5">5</button><button type="button" data-digit="6">6</button>
+        <button type="button" data-digit="7">7</button><button type="button" data-digit="8">8</button><button type="button" data-digit="9">9</button>
+        <button type="button" data-digit="*">*</button><button type="button" data-digit="0">0</button><button type="button" data-digit="#">#</button>
+      </div><div class="tg-actions"><button id="tgClear" type="button">ESBORRAR / CLR</button><button id="tgEmergency" class="tg-emergency" type="button">EMERGÈNCIA · PRIORITAT</button></div>
+      <div class="tg-ptt"><strong id="tgPttState">PTT · EN REPÒS</strong><button id="tgPttOn" type="button" disabled>PREMUT / PTT</button><button id="tgPttOff" type="button" disabled>ALLIBERAR PTT</button></div></section>
+      <section class="tg-communications"><h3>Missatge de veu / dades simulat</h3><label>Text del missatge<textarea id="tgText" rows="3" maxlength="240" placeholder="Escriu el missatge de prova…"></textarea></label><div class="tg-actions"><button id="tgTransmit" type="button" disabled>ENVIAR MISSATGE</button><button id="tgMessagesClear" type="button">Netejar registre</button></div><p><strong>Xarxa:</strong> <span id="tgNetwork">Xarxa analògica simulada</span></p><h4>Comunicacions</h4><ul id="tgMessages" class="tg-log" aria-live="polite"></ul><h4>Esdeveniments del terminal</h4><ul id="tgEvents" class="tg-log" aria-live="polite"></ul></section>
+    </div>
+    <p id="tgStatus" role="status" aria-live="polite">Terminal preparat en mode local de simulació.</p>
+    <p class="tg-disclaimer"><strong>Limitació:</strong> terminal didàctic, no és una rèplica exacta ni homologada del terminal Alcatel/AEG de la sèrie 252. No disposa de ràdio RF, SIM, autenticació ni xarxa GSM-R real; les trucades, PTT i missatges són locals. El botó d'emergència només crea un registre de prova. No connecta amb JMRI, CS2, DCC, tracció, frens ni sortides físiques i no s'ha d'utilitzar per comunicacions ferroviàries reals.</p>
+  </section>
+    <section id="locomotiveDmiPanel" class="locomotive-dmi" aria-labelledby="dmiTitle">
+    <div class="dmi-header"><div><h2 id="dmiTitle">DMI · Control de locomotora / tren</h2><p id="dmiLocoName" class="dmi-muted">Cap locomotora seleccionada</p></div><span id="dmiSafetyState" class="dmi-safety locked">CONTROL BLOQUEJAT · DCC desarmat</span></div>
+    <div class="dmi-toolbar"><label>Locomotora <select id="dmiLocomotive" aria-label="Locomotora seleccionada"></select></label><label>Velocitat màxima calibrada <input id="dmiMaxSpeed" type="number" min="1" max="500" value="160"> km/h</label><button id="dmiApplyMax" type="button">Aplicar escala</button></div>
+    <section id="dmiKeyboardPanel" class="dmi-keyboard-panel"><h3>Configuració del teclat</h3><p class="dmi-help">Prem «Canviar» i després la tecla o combinació. Les assignacions es desen en aquest ordinador. Només actuen amb conducció manual supervisada i DCC habilitat.</p><div id="dmiKeyboardBindings" class="dmi-keyboard-bindings"></div></section>
+    <div class="dmi-columns">
+      <section class="dmi-gauge-panel"><h3>Velocímetre DMI</h3>
+        <svg class="dmi-gauge" viewBox="0 0 320 205" role="img" aria-label="Velocímetre analògic en quilòmetres per hora">
+          <path class="dmi-gauge-arc" d="M45 150 A115 115 0 0 1 275 150"/>
+          <g class="dmi-gauge-label"><text x="43" y="169">0</text><text x="83" y="74">¼</text><text x="160" y="38">½</text><text x="237" y="74">¾</text><text x="277" y="169">MAX</text></g>
+          <path id="dmiNeedle" class="dmi-needle" d="M160 150 L160 53" transform="rotate(-135 160 150)"/><circle class="dmi-gauge-hub" cx="160" cy="150" r="7"/>
+          <text id="dmiSpeedValue" class="dmi-speed-number" x="160" y="130">0</text><text class="dmi-speed-unit" x="160" y="151">km/h</text>
+        </svg>
+        <div class="dmi-speed-caption">Velocitat estimada a partir del pas DCC · no és una lectura de velocitat real</div><p id="dmiSpeedScale" class="dmi-speed-caption">0 — 160 km/h</p>
+      </section>
+      <section class="dmi-command-panel"><h3>Consigna de velocitat</h3>
+        <div class="dmi-dial-wrap"><div id="dmiSetpointDial" class="dmi-dial" role="slider" tabindex="0" aria-label="Consigna circular de velocitat" aria-valuemin="0" aria-valuemax="160" aria-valuenow="0" aria-valuetext="0 km/h">
+          <svg viewBox="0 0 180 180" aria-hidden="true"><path id="dmiSetpointArc" class="dmi-dial-arc" d="M24 130 A70 70 0 1 1 156 130"/><path id="dmiSetpointNeedle" class="dmi-dial-needle" d="M90 90 L90 24" transform="rotate(-135 90 90)"/></svg>
+          <div class="dmi-dial-center"><strong id="dmiSetpointValue">0</strong><span>km/h · consigna</span></div>
+        </div></div>
+        <div class="dmi-lever-bank">
+          <section class="dmi-lever speed-lever"><h4>Velocitat</h4><strong id="dmiLinearValue">0 km/h</strong>
+            <div class="dmi-vertical-range"><span>MAX</span><input id="dmiLinearSpeed" type="range" min="0" max="160" step="1" value="0" disabled aria-label="Velocitat: zero a baix, màxima a dalt"><span>0</span></div>
+            <div class="dmi-fine-adjust"><button id="dmiSpeedMinus" type="button" disabled aria-label="Reduir velocitat un pas DCC">➖</button><button id="dmiSpeedPlus" type="button" disabled aria-label="Augmentar velocitat un pas DCC">➕</button></div>
+            <small>Ajust fi · un pas DCC</small>
+          </section>
+          <section class="dmi-lever brake-lever"><h4>Fre de servei</h4><strong id="dmiBrakeValue">Alliberat · 0%</strong>
+            <div class="dmi-vertical-range brake-range"><span>Alliberat</span><input id="dmiBrakeSlider" type="range" min="0" max="100" step="1" value="0" disabled aria-label="Fre: alliberat a dalt, màxim a baix"><span>Màxim</span></div>
+            <small>Redueix la consigna de tracció</small>
+            <button id="dmiEmergency" class="dmi-emergency" type="button" disabled>EMERGÈNCIA</button>
+          </section>
+        </div>
+        <button id="dmiDirection" class="dmi-direction" type="button" disabled>▶ ENDAVANT / canviar sentit</button>
+        <p class="dmi-help">Per invertir el sentit, posa primer la consigna a 0 km/h. El comandament també exigeix la porta de seguretat i el dispositiu d’home mort.</p>
+      </section>
+      <section class="dmi-command-panel"><h3>Funcions del descodificador</h3><p class="dmi-help">F0–F32 · estat de les ordres sol·licitades</p><div id="dmiFunctionButtons" class="dmi-functions"><button type="button" data-function="0" aria-pressed="false">F0 · Llums</button><button type="button" data-function="1" aria-pressed="false">F1</button><button type="button" data-function="2" aria-pressed="false">F2</button><button type="button" data-function="3" aria-pressed="false">F3</button><button type="button" data-function="4" aria-pressed="false">F4</button><button type="button" data-function="5" aria-pressed="false">F5</button><button type="button" data-function="6" aria-pressed="false">F6</button><button type="button" data-function="7" aria-pressed="false">F7</button><button type="button" data-function="8" aria-pressed="false">F8</button><button type="button" data-function="9" aria-pressed="false">F9</button><button type="button" data-function="10" aria-pressed="false">F10</button><button type="button" data-function="11" aria-pressed="false">F11</button><button type="button" data-function="12" aria-pressed="false">F12</button><button type="button" data-function="13" aria-pressed="false">F13</button><button type="button" data-function="14" aria-pressed="false">F14</button><button type="button" data-function="15" aria-pressed="false">F15</button><button type="button" data-function="16" aria-pressed="false">F16</button><button type="button" data-function="17" aria-pressed="false">F17</button><button type="button" data-function="18" aria-pressed="false">F18</button><button type="button" data-function="19" aria-pressed="false">F19</button><button type="button" data-function="20" aria-pressed="false">F20</button><button type="button" data-function="21" aria-pressed="false">F21</button><button type="button" data-function="22" aria-pressed="false">F22</button><button type="button" data-function="23" aria-pressed="false">F23</button><button type="button" data-function="24" aria-pressed="false">F24</button><button type="button" data-function="25" aria-pressed="false">F25</button><button type="button" data-function="26" aria-pressed="false">F26</button><button type="button" data-function="27" aria-pressed="false">F27</button><button type="button" data-function="28" aria-pressed="false">F28</button><button type="button" data-function="29" aria-pressed="false">F29</button><button type="button" data-function="30" aria-pressed="false">F30</button><button type="button" data-function="31" aria-pressed="false">F31</button><button type="button" data-function="32" aria-pressed="false">F32</button></div><p id="dmiCommandStatus" class="dmi-command-status" role="status" aria-live="polite">Esperant una circulació manual supervisada.</p></section>
+    </div>
+    <div class="dmi-columns">
+      <section class="dmi-route-panel"><h3>Senyalització del recorregut</h3><p class="dmi-help">Aspecte i tipus de les senyals següents (Senyal 1 i Senyal 2). La distància només apareix quan la telemetria de posició la proporciona.</p><div id="dmiSignals" class="dmi-signal-list"><p class="dmi-muted">Sense dades de senyalització.</p></div></section>
+      <section class="dmi-route-panel"><h3>Posició de les agulles</h3><p class="dmi-help">Lectura JMRI supervisada i posició requerida per l’itinerari.</p><div id="dmiTurnouts" class="dmi-turnouts">Sense itinerari actiu.</div></section>
+    </div>
+  </section>
+  <section id="spieleweltPanel" class="spielewelt-panel" aria-labelledby="spieleweltTitle">
+    <div class="dmi-header"><div><h2 id="spieleweltTitle">Märklin · Món de Jocs universal</h2><p class="dmi-muted">Cabines virtuals per a locomotores mfx+, mfx, DCC i MM2</p></div><span id="spieleweltCapability" class="dmi-safety locked">SIMULACIÓ LOCAL</span></div>
+    <div class="spielewelt-grid">
+      <label>Locomotora <select id="spieleweltLocomotive"></select></label>
+      <label>Tipus de cabina <select id="spieleweltProfile"><option value="steam">Vapor</option><option value="diesel">Dièsel</option><option value="electric">Elèctrica</option></select></label>
+      <label>Mode de joc <select id="spieleweltMode"><option value="without-consumption">Sense consum</option><option value="with-consumption">Amb consum simulat</option><option value="depot-refuel">Repostatge al dipòsit</option><option value="off">Aturat</option></select></label>
+      <label>Consigna virtual <input id="spieleweltThrottle" type="range" min="0" max="100" value="0"><output id="spieleweltThrottleValue">0%</output></label>
+    </div>
+    <div class="spielewelt-actions"><button id="spieleweltStart" type="button">Preparar cabina</button><button id="spieleweltAdvance" type="button" disabled>Simular 10 minuts</button><button id="spieleweltRefill" type="button" disabled>Reomplir al dipòsit (simulació)</button></div>
+    <div id="spieleweltInstruments" class="spielewelt-instruments" aria-live="polite"></div>
+    <div id="spieleweltResources" class="spielewelt-resources" aria-live="polite"></div>
+    <p id="spieleweltStatus" class="spielewelt-status" role="status" aria-live="polite">Selecciona una locomotora i prepara la cabina virtual.</p>
+    <p class="spielewelt-note">Els comandaments, instruments i consums d’aquest mòdul són simulació local. No envien ordres a la CS2, al descodificador ni a les sortides físiques. La compatibilitat nativa mfx+ només es declara quan consta explícitament a la fitxa de la locomotora.</p>
+  </section>
+  <section class="dispatcher-panel traffic-panel" aria-labelledby="trafficTitle">
+    <div class="dispatcher-header"><div><h2 id="trafficTitle">Gestió de circulacions · Märklin DCC</h2><p>Conducció manual i circulacions automàtiques supervisades pel Dispatcher.</p></div><span id="trafficBridgeStatus" class="badge offline">WiThrottle desconnectat</span></div>
+    <div class="dispatcher-warning"><strong>Seguretat:</strong> el control DCC real està desactivat per defecte. L'automàtic només admet rutes sense desviaments fins que existeixi una comprovació d'alineació i bloqueig de desviaments. En qualsevol estat desconegut es demana aturada d'emergència. La reserva no és un enclavament ferroviari certificat.</div>
+    <div class="traffic-connection">
+      <label>Host WiThrottle <input id="trafficHost" value="127.0.0.1"></label>
+      <label>Port WiThrottle <input id="trafficPort" type="number" value="12090"></label>
+      <button id="trafficConnect" type="button">Connectar pont</button>
+      <button id="trafficArm" type="button" disabled>Armar DCC</button>
+      <button id="trafficEmergencyAll" type="button" class="danger">EMERGÈNCIA GLOBAL</button>
+    </div>
+    <p id="trafficDccNote" class="dispatcher-help">DCC desactivat al pont local. La maqueta no rebrà ordres de moviment.</p>
+    <div class="traffic-columns">
+      <section class="dispatcher-subpanel">
+        <h3>Locomotores Märklin DCC</h3>
+        <div class="traffic-form">
+          <input id="trafficLocoName" placeholder="Nom de la locomotora" aria-label="Nom de la locomotora">
+          <select id="trafficLocoType" aria-label="Tipus d'adreça"><option value="S">Adreça curta</option><option value="L">Adreça llarga</option></select>
+          <input id="trafficLocoAddress" type="number" min="1" max="10239" placeholder="Adreça DCC" aria-label="Adreça DCC">
+          <button id="trafficAddLoco" type="button">Afegir locomotora</button>
+        </div>
+        <p class="dispatcher-help">Adreça curta: 1–127. Adreça llarga: 128–10239. El protocol de descodificador s'ha de configurar i provar prèviament a JMRI.</p>
+        <p><strong>Locomotores registrades: <span id="trafficLocoCount">0</span></strong></p>
+        <div class="traffic-form">
+          <select id="trafficLoco" aria-label="Locomotora"></select>
+          <select id="trafficRoute" aria-label="Itinerari"></select>
+          <select id="trafficMode" aria-label="Mode de circulació"><option value="MANUAL">Manual</option><option value="AUTO">Automàtic</option></select>
+          <label>Velocitat màxima (1–126) <input id="trafficMaxSpeed" type="number" min="1" max="126" value="20"></label>
+          <button id="trafficCreateRun" class="primary" type="button">Planificar circulació</button>
+        </div>
+      </section>
+      <section class="dispatcher-subpanel">
+        <h3>Conducció manual</h3>
+        <p class="dispatcher-help">Disponible quan una circulació manual està iniciada, la locomotora està adquirida i el DCC està armat.</p>
+        <div class="traffic-controls"><label><input id="deadmanEnabled" type="checkbox" checked> Home mort activat</label><div class="deadman-key-config"><span>Tecla assignada: <strong id="deadmanKeyValue">Espai</strong></span><button id="deadmanKeyConfigure" type="button">Configurar tecla</button></div><span id="deadmanStatus" role="status">Mantén premuda la tecla assignada per iniciar la vigilància</span><button id="deadmanRearm" type="button" hidden>Rearmar home mort després d’inspecció</button><div class="deadman-lamps"><span id="deadmanBlue" class="deadman-lamp blue" title="Avís blau 30 s"></span><span id="deadmanOrange" class="deadman-lamp orange" title="Avís taronja 33 s"></span><span id="deadmanRed" class="deadman-lamp red" title="Frenat d’emergència 36 s"></span></div><label class="deadman-audio">MP3 del timbre/brunzit <input id="deadmanMp3" type="file" accept="audio/mpeg,.mp3"></label><audio id="deadmanAudio" preload="auto"></audio>
+          <button id="trafficReverse" type="button">◀ Marxa enrere</button>
+          <button id="trafficForward" type="button">Marxa endavant ▶</button>
+          <button id="trafficStop" type="button" class="danger">Aturar / E-STOP</button>
+        </div>
+        <label class="traffic-speed">Velocitat <strong id="trafficSpeedValue">0</strong><input id="trafficSpeed" type="range" min="0" max="126" value="0"></label>
+      </section>
+    </div>
+    <h3>Circulacions planificades i actives</h3>
+    <div id="trafficRunList" class="dispatcher-route-list"><p class="dispatcher-empty">Encara no hi ha circulacions planificades.</p></div>
+    <p id="trafficMessage" class="dispatcher-message" role="status" aria-live="polite">Preparat. Registra locomotores i itineraris abans de començar.</p>
+  </section>
+  <section class="signalling-panel">
+    <h2>Senyalització ferroviària ADIF</h2><div class="signalling-grid">
+      <label><input id="signalHighSpeed" type="checkbox"> Línia d'alta velocitat</label><label><input id="signalErtms" type="checkbox"> ERTMS instal·lat</label><label>Nivell ERTMS <select id="signalErtmsLevel"><option value="">No configurat</option><option value="BCA">BCA</option><option value="N2">Nivell 2</option></select></label>
+      <label><input id="signalNextCanStop" type="checkbox" checked> Senyal següent pot ordenar parada</label><label><input id="signalFollowingEntryReverse" type="checkbox"> Agulles desviades després de l'entrada següent</label><label><input id="signalDepartureReverse" type="checkbox"> Agulles desviades després d'aquesta entrada/sortida</label>
+      <label><input id="signalAlsoPreadvanced" type="checkbox"> També preavançada de l'estació següent</label><label><input id="signalAlsoAdvancedGlobal" type="checkbox"> També avançada de l'estació següent</label><label><input id="signalReleaseEquipped" type="checkbox"> Estació amb senyal d'alliberament</label>
+      <label><input id="signalPrecededStop" type="checkbox"> Precedida per senyals que poden indicar parada</label><label><input id="signalFromMainTrack" type="checkbox"> Sortida des de via general</label>
+    </div><p class="small muted">Deu aspectes fonamentals amb disponibilitat condicionada al tipus de senyal i a la infraestructura. Simulació de maqueta; no és un enclavament homologat.</p>
+    <div class="signalling-grid">
+      <label>Identificador <input id="signalId" value="S-001"></label><label>Nom <input id="signalName" value="Senyal nova"></label><label>Funció / ubicació <select id="signalType"></select></label>
+      <label>Disseny físic <select id="signalHead"><option value="HIGH">Alta</option><option value="LOW">Baixa</option><option value="SINGLE">Monocap (mono)</option><option value="MULTI">Múltiples caps</option></select></label>
+      <label>Sistema de bloqueig <select id="signalBlockSystem"><option>BA</option><option>BLA</option><option>BAB</option><option>BSL</option><option>BT</option></select></label><label>Velocitat màxima (km/h) <input id="signalVmax" type="number" min="1" max="350" value="120"></label>
+      <label>També fa funció d'avançada <input id="signalAlsoAdvanced" type="checkbox"></label><label>Bloc protegit <select id="signalProtectedBlock"></select></label><label>Peça de via / ancoratge visual <select id="signalTrackId"><option value="">Ancoratge automàtic del bloc</option></select></label><label>Itinerari associat <select id="signalRouteId"></select></label><label>Senyal 1 · primera senyal a continuació <select id="signalNextSignal1Id"></select></label><label>Senyal 2 · senyal posterior a la Senyal 1 <select id="signalNextSignal2Id"></select></label><label>Desviaments requerits (system name:2 recte / :4 branca) <input id="signalTurnoutRequirements" placeholder="LT1:2, LT2:4"></label><label>Aspecte <select id="signalAspect"></select></label>
+    </div><p id="signalAspectHelp" class="signal-small"></p><div class="signal-controls"><button id="signalNew" type="button">Nova senyal</button><button id="signalSave" type="button" class="primary">Desar</button><button id="signalDelete" type="button" class="danger">Eliminar</button></div>
+    <div class="signalling-grid"><div><h3>Senyals del projecte</h3><div id="signalRegistry"></div></div><div><h3>Simulador</h3>
+      <label>Bloc protegit <select id="signalBlockState"><option value="UNKNOWN">Desconegut</option><option value="FREE">Lliure</option><option value="OCCUPIED">Ocupat</option></select></label>
+      <label>Aspecte següent <select id="signalNextAspect"><option value="">No definit</option><option value="PARADA">Parada</option><option value="PREANUNCIO_PARADA">Preanunci de parada</option><option value="VIA_LIBRE_CONDICIONAL">Via lliure condicional</option><option value="VIA_LIBRE">Via lliure</option></select></label>
+      <label><input id="signalRouteReserved" type="checkbox"> Itinerari reservat</label><label><input id="signalTurnoutsVerified" type="checkbox"> Desviaments verificats</label><label><input id="signalTurnoutsAligned" type="checkbox"> Desviaments alineats</label><label><input id="signalTurnoutReverse" type="checkbox"> Agulles desviades protegides</label><label><input id="signalShortDistance" type="checkbox"> Distància de frenada insuficient</label>
+      <label>Autorització <select id="signalAuthorisation"><option value="">Cap</option><option value="REBASE">Rebasament</option><option value="MOVEMENT">Moviment</option></select></label><label><input id="signalExplicitAuth" type="checkbox"> Autorització explícita</label><label><input id="signalProtectionChecks" type="checkbox"> Comprovacions de rebasament</label><label><input id="signalEmergency" type="checkbox"> Emergència activa</label><button id="signalEvaluate" type="button" class="primary">Calcular aspecte</button>
+    </div></div><p class="signal-status" id="signalCurrentAspect" data-aspect="PARADA">Parada</p><p id="signalMessage" role="status" aria-live="polite">Crea o selecciona una senyal. Si les dades no són fiables, s'aplica criteri restrictiu.</p>
+  </section>
+  <section class="signal-topology-panel" aria-labelledby="signalTopologyTitle"><h3 id="signalTopologyTitle">Vinculació visual i diagnòstic topològic</h3><p class="small muted">Relació senyal → peça de via → bloc protegit → itinerari → desviaments. Les línies del tauler són una representació de validació, no una ordre de comandament.</p><div id="signalTopologyDiagnostics" class="signal-topology-list" aria-live="polite"></div></section>
+  <section class="signal-diagnostics-panel" aria-labelledby="signalDiagnosticsTitle"><h3 id="signalDiagnosticsTitle">Diagnòstic per nivell i selecció de dependències</h3><p id="selectedSignalRelations" class="small muted">Selecciona una senyal al registre per ressaltar les seves dependències al tauler.</p><div id="signalLevelDiagnostics" class="signal-level-diagnostics" aria-live="polite"></div></section>
+  <section class="signal-diagnostics-panel metge-quiral-panel" aria-labelledby="metgeQuiralTitle"><h3 id="metgeQuiralTitle">Metge Quiral · salut del sistema</h3><p class="validation-safety-note">Diagnòstic local basat en regles explicables. No modifica el projecte ni activa JMRI, DCC o sortides físiques. No substitueix les proves de regressió, fail-safe ni les comprovacions físiques.</p><div class="quiral-toolbar"><strong id="metgeQuiralStatus" data-status="UNKNOWN">Pendent de diagnòstic</strong><button id="metgeQuiralRun" type="button" class="primary">Executar autodiagnòstic</button></div><p id="metgeQuiralSummary" class="small muted">Encara no s’ha executat cap diagnòstic.</p><div id="metgeQuiralResults" class="quiral-results" aria-live="polite"></div></section>
+  <section class="signal-diagnostics-panel" aria-labelledby="physicalValidationTitle"><h3 id="physicalValidationTitle">Matriu individual de validació</h3><p class="validation-safety-note"><strong>Només registre i diagnòstic:</strong> marcar aquestes caselles no és una prova instrumental, no habilita sortides físiques i no arma DCC. La parada d’emergència independent i les proteccions elèctriques s’han de verificar separadament.</p><div id="physicalValidationMatrix" class="validation-matrix" aria-live="polite"></div></section>
+  <section class="signal-diagnostics-panel" aria-labelledby="validationMasterRegistryTitle"><h3 id="validationMasterRegistryTitle">Validation Master Registry · registre mestre</h3><p class="validation-safety-note">Identificadors individuals, persistència, historial auditable i generació d’actes. El registre no autoritza cap sortida ni automatització.</p><div id="validationMasterRegistry" class="validation-matrix" aria-live="polite"></div></section>
+  <section class="resource-grid">
+    <article class="panel-card resource-card"><h3>Blocs lògics · nivell actual</h3><p class="small muted">Els blocs són agrupacions de disseny; no reserven trens ni activen automatismes.</p><div class="resource-create"><input id="newBlockName" placeholder="Nom del bloc (p. ex. B01)" aria-label="Nom del bloc"><button id="addBlockBtn">Crear bloc</button></div><div id="blockRegistry" class="resource-list">Sense blocs definits.</div></article>
+    <article class="panel-card resource-card"><h3>Sensors JMRI · nivell actual</h3><p class="small muted">System name JMRI únic. Cada sensor nou queda no verificat fins a contrastar-lo amb el maquinari.</p><div class="resource-create"><input id="newSensorSystemName" placeholder="System name (p. ex. LS101)" aria-label="System name del sensor"><input id="newSensorUserName" placeholder="Nom visible (opcional)" aria-label="Nom visible del sensor"><button id="addSensorBtn">Registrar sensor</button></div><div id="sensorRegistry" class="resource-list">Sense sensors registrats.</div></article>
+  </section>
+  <section class="monitor-grid"><div class="panel-card"><h3>Connexió JMRI · només lectura</h3><p id="connectionText" class="muted">No hi ha cap sessió activa.</p><p class="small">WebSocket: <code id="endpointText">ws://127.0.0.1:12080/json/</code></p></div><div class="panel-card"><h3>Estat dels sensors assignats</h3><div id="sensorSummary" class="muted small">Encara no hi ha sensors assignats a peces.</div></div><div class="panel-card"><h3>Registre</h3><ol id="eventLog" class="event-log"><li>Editor 0.6 iniciat.</li></ol></div></section>
+  <section id="modernPanel" class="modern-panel hidden"><h2>Vista moderna · resum de peces i sensors</h2><div id="modernBlocks" class="modern-blocks"></div></section>
+</main><footer>JMRI TC Gold Custom · implementació independent · sense recursos propietaris de TrainController.</footer><script src="catalogue.js"></script><script src="project-file-interop.js"></script><script src="viewport-core.js"></script><script src="selection-move-core.js"></script><script src="track-junction-core.js"></script><script src="vertical-track-core.js"></script><script src="dispatcher-core.js"></script><script src="jmri-turnout-supervision-core.js"></script><script src="traffic-core.js"></script><script src="deadman-core.js"></script><script src="safety-core.js"></script><script src="metge-quiral-core.js"></script><script src="app.js"></script><script src="vertical-track-ui.js"></script><script src="dispatcher.js"></script><script src="traffic.js"></script><script src="protocol-core.js"></script><script src="protocol-catalogue-ui.js"></script><script src="signalling-core.js"></script><script src="signalling-ui.js"></script><script src="signalling-topology-core.js"></script><script src="signalling-sequence-core.js"></script><script src="signalling-integration-core.js"></script><script src="signalling-integration.js"></script><script src="jmri-dispatcher-diagnostics-core.js"></script><script src="jmri-dispatcher-diagnostics.js"></script><script src="jmri-turnout-supervision.js"></script><script src="signalling-topology-ui.js"></script><script src="physical-validation-core.js"></script><script src="physical-validation-ui.js"></script>
+<script src="validation-master-registry-core.js"></script><script src="validation-master-registry-ui.js"></script><script src="command-station-core.js"></script><script src="command-station-ui.js"></script><script src="locomotive-dmi-core.js"></script><script src="locomotive-dmi-ui.js"></script><script src="spielewelt-core.js"></script><script src="spielewelt-ui.js"></script><script src="train-protection-core.js"></script><script src="train-protection-ui.js"></script><script src="train-ground-core.js"></script><script src="train-ground-ui.js"></script>
+<script src="metge-quiral-ui.js"></script>
+</body></html>

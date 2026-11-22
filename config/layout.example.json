@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 3,
+  "name": "Maqueta Märklin H0 · 5 nivells",
+  "scale": "H0",
+  "trackSystem": "Märklin C",
+  "room": {
+    "widthMm": 3000,
+    "heightMm": 1800
+  },
+  "levelSpacingMm": 110,
+  "commandStation": {
+    "manufacturer": "Märklin",
+    "model": "Central Station 2",
+    "article": "60215",
+    "protocol": "Märklin CAN over TCP/IP"
+  },
+  "feedback": {
+    "bus": "S88",
+    "modules": [
+      "60881",
+      "60882"
+    ],
+    "gateway": "60883 L88 (pendent de confirmar instal·lació física)"
+  },
+  "levels": [
+    {
+      "id": 1,
+      "name": "Nivell 1",
+      "elevationMm": 0,
+      "tracks": [],
+      "blocks": [],
+      "sensors": []
+    },
+    {
+      "id": 2,
+      "name": "Nivell 2",
+      "elevationMm": 110,
+      "tracks": [],
+      "blocks": [],
+      "sensors": []
+    },
+    {
+      "id": 3,
+      "name": "Nivell 3",
+      "elevationMm": 220,
+      "tracks": [],
+      "blocks": [],
+      "sensors": []
+    },
+    {
+      "id": 4,
+      "name": "Nivell 4",
+      "elevationMm": 330,
+      "tracks": [],
+      "blocks": [],
+      "sensors": []
+    },
+    {
+      "id": 5,
+      "name": "Nivell 5",
+      "elevationMm": 440,
+      "tracks": [],
+      "blocks": [],
+      "sensors": []
+    }
+  ],
+  "connections": [],
+  "_note": "Cap via, bloc o sensor real definit. El XTrackCAD original només conté el contorn de 3000 × 1800 mm i notes. Les primitives de l'editor són esquemàtiques i no representen referències comercials Märklin."
+}

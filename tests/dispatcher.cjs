@@ -1,0 +1,65 @@
+const assert=require('node:assert/strict');
+const core=require('../dispatcher-core.js');
+const state=core.createState();
+core.ensureBlocks(state,['B01','B02','B03']);
+assert.equal(state.blockStates.B01,'UNKNOWN');
+assert.equal(core.addRoute(state,{id:'R1',name:'Ruta nord',blockIds:['B01','B02']},['B01','B02','B03']).ok,true);
+assert.equal(core.addRoute(state,{id:'R2',name:'Ruta sud',blockIds:['B02','B03']},['B01','B02','B03']).ok,true);
+assert.equal(core.reserveRoute(state,'R1').ok,false,'unknown blocks must never be reserved');
+for(const id of ['B01','B02','B03'])core.setBlockState(state,id,'FREE');
+assert.equal(core.reserveRoute(state,'R1').ok,true);
+assert.equal(state.reservations.B01,'R1');
+assert.equal(core.reserveRoute(state,'R2').ok,false,'overlapping routes must conflict');
+const occupied=core.setBlockState(state,'B02','OCCUPIED');
+assert.deepEqual(occupied.releasedRoutes,['R1']);
+assert.equal(state.reservations.B01,undefined);
+assert.equal(state.reservations.B02,undefined);
+assert.equal(core.reserveRoute(state,'R1').ok,false);
+core.setBlockState(state,'B02','UNKNOWN');
+assert.equal(core.reserveRoute(state,'R1').ok,false);
+core.setBlockState(state,'B02','FREE');
+assert.equal(core.reserveRoute(state,'R1').ok,true);
+assert.equal(core.releaseRoute(state,'R1').ok,true);
+assert.equal(state.reservations.B01,undefined);
+assert.equal(core.addRoute(state,{id:'R3',name:'Ruta nord',blockIds:['B03']},['B01','B02','B03']).ok,false);
+assert.equal(core.addRoute(state,{id:'R4',name:'Ruta invalida',blockIds:['NOPE']},['B01','B02','B03']).ok,false);
+assert.equal(core.addRoute(state,{id:'R5',name:'Ruta duplicada',blockIds:['B03','B03']},['B01','B02','B03']).route.blockIds.length,1);
+core.setBlockState(state,'B01','FREE');
+core.setBlockState(state,'B03','FREE');
+assert.equal(core.reserveRoute(state,'R2').ok,true);
+assert.equal(state.reservations.B03,'R2');
+core.ensureBlocks(state,['B01','B03']);
+assert.equal(state.blockStates.B02,undefined);
+assert.equal(state.blockStates.B03,'FREE');
+assert.equal(state.reservations.B03,undefined,'removing one block must release the route reservation on every other block');
+
+const sensorDefs=[
+ {id:'S1',systemName:'LS101',verified:true,invert:false},
+ {id:'S2',systemName:'LS102',verified:true,invert:false}
+];
+const sensorBlock={id:'B-SENSOR',verified:true,sensorIds:['S1','S2']};
+assert.equal(core.normalizeSensorState(2),'OCCUPIED');
+assert.equal(core.normalizeSensorState('ACTIVE'),'OCCUPIED');
+assert.equal(core.normalizeSensorState(4),'FREE');
+assert.equal(core.normalizeSensorState('INACTIVE'),'FREE');
+assert.equal(core.normalizeSensorState('not-a-state'),'UNKNOWN');
+assert.equal(core.normalizeSensorState(4,true),'OCCUPIED');
+assert.equal(core.deriveBlockState(sensorBlock,sensorDefs,{LS101:4,LS102:4}),'FREE','all verified inactive sensors mean free');
+assert.equal(core.deriveBlockState(sensorBlock,sensorDefs,{LS101:2,LS102:4}),'OCCUPIED','any active sensor means occupied');
+assert.equal(core.deriveBlockState(sensorBlock,sensorDefs,{LS101:4}),'UNKNOWN','missing sensor reading fails closed');
+assert.equal(core.deriveBlockState({...sensorBlock,verified:false},sensorDefs,{LS101:4,LS102:4}),'UNKNOWN','unverified block fails closed');
+assert.equal(core.deriveBlockState(sensorBlock,[{...sensorDefs[0],verified:false},sensorDefs[1]],{LS101:4,LS102:4}),'UNKNOWN','unverified sensor fails closed');
+assert.equal(core.deriveBlockState(sensorBlock,sensorDefs,{LS101:4,LS102:'bad'}),'UNKNOWN','invalid sensor state fails closed');
+// A train may reserve an occupied first block while every following block is confirmed free.
+const trafficState=core.createState();
+core.ensureBlocks(trafficState,['B01','B02']);
+core.addRoute(trafficState,{id:'TR1',name:'Train route',blockIds:['B01','B02']},['B01','B02']);
+core.setBlockState(trafficState,'B01','OCCUPIED');
+core.setBlockState(trafficState,'B02','FREE');
+assert.equal(core.reserveRoute(trafficState,'TR1').ok,false,'ordinary route reservation still rejects occupied blocks');
+assert.equal(core.reserveRoute(trafficState,'TR1',{allowOccupiedFirst:true}).ok,true,'traffic reservation accepts only the occupied first block');
+assert.equal(core.setBlockState(trafficState,'B01','OCCUPIED',{preserveReservation:true}).ok,true);
+assert.equal(trafficState.reservations.B01,'TR1','occupied train block retains route protection');
+core.setBlockState(trafficState,'B02','UNKNOWN');
+assert.equal(trafficState.reservations.B01,undefined,'unknown next block releases the full route reservation');
+console.log('PASS: dispatcher core, route interlocking, JMRI sensor state mapping and fail-safe unknown handling');

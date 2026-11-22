@@ -1,0 +1,316 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/jmri-tc-gold-custom/layout-v3.schema.json",
+  "title": "JMRI TC Gold Custom layout v3",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "name",
+    "scale",
+    "trackSystem",
+    "room",
+    "levelSpacingMm",
+    "levels",
+    "connections"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 3
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scale": {
+      "const": "H0"
+    },
+    "trackSystem": {
+      "type": "string"
+    },
+    "room": {
+      "type": "object",
+      "required": [
+        "widthMm",
+        "heightMm"
+      ],
+      "properties": {
+        "widthMm": {
+          "const": 3000
+        },
+        "heightMm": {
+          "const": 1800
+        }
+      },
+      "additionalProperties": false
+    },
+    "levelSpacingMm": {
+      "type": "number",
+      "const": 110
+    },
+    "levels": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "$ref": "#/$defs/level"
+      }
+    },
+    "connections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/connection"
+      }
+    },
+    "commandStation": {
+      "type": "object"
+    },
+    "feedback": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "level": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "elevationMm",
+        "tracks",
+        "blocks",
+        "sensors"
+      ],
+      "properties": {
+        "id": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "elevationMm": {
+          "type": "number"
+        },
+        "tracks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/track"
+          }
+        },
+        "blocks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/block"
+          }
+        },
+        "sensors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sensor"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "track": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "name",
+        "x",
+        "y",
+        "rotation",
+        "levelId",
+        "blockId",
+        "sensorName"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "enum": [
+            "straight",
+            "curve",
+            "turnout",
+            "block",
+            "special"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3000
+        },
+        "y": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1800
+        },
+        "rotation": {
+          "type": "number"
+        },
+        "levelId": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "blockId": {
+          "type": "string"
+        },
+        "sensorName": {
+          "type": "string"
+        },
+        "geometry": {
+          "type": "object",
+          "properties": {
+            "lengthMm": {
+              "type": "number"
+            },
+            "radiusMm": {
+              "type": "number"
+            },
+            "angleDeg": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "block": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "trackIds",
+        "lengthMm",
+        "sensorIds",
+        "verified"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string"
+        },
+        "trackIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "lengthMm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "sensorIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "verified": {
+          "type": "boolean"
+        },
+        "importedPlaceholder": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "sensor": {
+      "type": "object",
+      "required": [
+        "id",
+        "systemName",
+        "invert",
+        "verified"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "systemName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "userName": {
+          "type": "string"
+        },
+        "invert": {
+          "type": "boolean"
+        },
+        "verified": {
+          "type": "boolean"
+        },
+        "importedPlaceholder": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "connection": {
+      "type": "object",
+      "required": [
+        "id",
+        "levelId",
+        "from",
+        "to",
+        "verified"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "levelId": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "from": {
+          "$ref": "#/$defs/portRef"
+        },
+        "to": {
+          "$ref": "#/$defs/portRef"
+        },
+        "verified": {
+          "type": "boolean"
+        },
+        "method": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "portRef": {
+      "type": "object",
+      "required": [
+        "pieceId",
+        "port"
+      ],
+      "properties": {
+        "pieceId": {
+          "type": "string"
+        },
+        "port": {
+          "type": "string",
+          "enum": ["A", "B", "C"]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

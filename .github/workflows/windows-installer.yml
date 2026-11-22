@@ -1,0 +1,101 @@
+name: Platinum Edition 1.4.0 — Windows 11 NSIS installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'README.md'
+      - 'docs/**'
+      - 'traffic-bridge.js'
+      - 'electron/**'
+      - '.github/workflows/windows-installer.yml'
+      - '**.js'
+      - '**.html'
+      - '**.css'
+      - '**.cjs'
+      - 'tests/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'README.md'
+      - 'docs/**'
+      - 'traffic-bridge.js'
+      - 'electron/**'
+      - '.github/workflows/windows-installer.yml'
+      - '**.js'
+      - '**.html'
+      - '**.css'
+      - '**.cjs'
+      - 'tests/**'
+
+permissions:
+  contents: read
+
+jobs:
+  windows-installer:
+    name: Build and verify Platinum Edition 1.4.0 Windows x64 installer
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Install dependencies (repository has no lockfile)
+        run: npm install --no-audit --no-fund --no-package-lock
+
+      - name: Run complete regression suite
+        run: npm test
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install chromium
+
+      - name: Run real-browser integration tests
+        run: npm run test:browser
+
+      - name: Editor XYZ, parallel tracks, curves and topology acceptance gate
+        run: node tests/editor-geometry-acceptance.cjs
+
+      - name: Build NSIS installer
+        run: npm run dist:win
+
+      - name: Verify installer and calculate SHA-256
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Get-ChildItem -Path dist -Filter '*.exe' -File | Select-Object -First 1
+          if (-not $installer) {
+            throw 'No NSIS installer .exe was generated.'
+          }
+          if ($installer.Length -le 0) {
+            throw 'The NSIS installer is empty.'
+          }
+          $hash = (Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $manifest = "$hash  $($installer.Name)"
+          Set-Content -LiteralPath "$($installer.FullName).sha256" -Value $manifest -Encoding ascii
+          Write-Host "Installer: $($installer.Name)"
+          Write-Host "Size: $($installer.Length) bytes"
+          Write-Host "SHA-256: $hash"
+          if ((Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ne $hash) {
+            throw 'SHA-256 verification mismatch.'
+          }
+
+      - name: Upload installer and SHA-256 manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: Platinum-Edition-1.4.0-Windows-x64-NSIS
+          path: |
+            dist/*.exe
+            dist/*.exe.sha256
+          if-no-files-found: error
+          retention-days: 30

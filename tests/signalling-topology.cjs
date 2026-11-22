@@ -1,0 +1,16 @@
+const assert=require('node:assert/strict');
+const core=require('../signalling-topology-core.js');
+const catalogue=[{type:'TURNOUT',systemName:'LT1',verified:true},{type:'TURNOUT',systemName:'LT2',verified:true}];
+global.JMRI_TC_DIGITAL_CATALOGUE={getDatabase:()=>({accessories:catalogue})};
+const config={levels:[{id:1,name:'Nivell 1',blocks:[{id:'B1',name:'Bloc 1',trackIds:['T1','T2'],sensorIds:[],verified:true},{id:'B2',name:'Bloc 2',trackIds:['T3'],sensorIds:[],verified:true}],tracks:[{id:'T1',type:'straight',blockId:'B1',x:10,y:20},{id:'T2',type:'turnout',blockId:'B1',turnoutSystemName:'LT1',x:100,y:20},{id:'T3',type:'turnout',blockId:'B2',turnoutSystemName:'LT2',x:200,y:20}],sensors:[]}],dispatcher:{routes:[{id:'R1',name:'Ruta nord',blockIds:['B1','B2']}] }};
+const signal={id:'S1',protectedBlockId:'B1',routeId:'R1',trackId:'T1',turnoutRequirements:[{systemName:'LT1',expectedState:2},{systemName:'LT2',expectedState:4}]};
+let r=core.inspect(config,[signal])['S1'];
+assert.equal(r.ok,true);assert.deepEqual(r.routeBlockIds,['B1','B2']);assert.deepEqual(r.trackIds,['T1','T2','T3']);assert.equal(r.anchorTrackId,'T1');assert.deepEqual(r.turnoutNames,['LT1','LT2']);
+r=core.inspect(config,[{...signal,trackId:'T3'}])['S1'];assert.equal(r.ok,false);assert.ok(r.issues.some(x=>x.includes('no pertany')));
+r=core.inspect(config,[{...signal,routeId:'missing'}])['S1'];assert.equal(r.ok,false);assert.ok(r.issues.some(x=>x.includes('Itinerari')));
+r=core.inspect(config,[{...signal,turnoutRequirements:[]}])['S1'];assert.equal(r.ok,false);assert.ok(r.issues.some(x=>x.includes('sense posició requerida')));
+r=core.inspect(config,[{...signal,turnoutRequirements:[{systemName:'LT3',expectedState:4}]}])['S1'];assert.equal(r.ok,false);assert.ok(r.issues.some(x=>x.includes('no pertany')));
+const broken={...config,levels:[{...config.levels[0],blocks:[{...config.levels[0].blocks[0],trackIds:['missing']}]}]};
+r=core.inspect(broken,[signal])['S1'];assert.equal(r.ok,false);assert.ok(r.issues.some(x=>x.includes('inexistents')));
+assert.deepEqual(core.summarize(core.inspect(config,[signal])),{total:1,valid:1,invalid:0,warnings:0});
+console.log('PASS: signal-to-track/block/route/turnout topology mapping');

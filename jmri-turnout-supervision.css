@@ -1,0 +1,10 @@
+.dispatcher-create #dispatcherRouteTurnouts{grid-column:1/-1;width:100%}
+.turnout-supervision{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border,#34465a)}
+.turnout-supervision-metrics{display:flex;gap:1.25rem;flex-wrap:wrap;margin:.5rem 0}
+.turnout-supervision-metrics span{font-size:.9rem}
+.turnout-indicator.supervision-aligned circle{stroke:#22c55e;stroke-width:4}
+.turnout-indicator.supervision-misaligned circle{stroke:#ef4444;stroke-width:5;fill:#7f1d1d}
+.turnout-indicator.supervision-unknown circle{stroke:#f59e0b;stroke-width:5;stroke-dasharray:4 3}
+.turnout-indicator.supervision-aligned text{fill:#86efac}
+.turnout-indicator.supervision-misaligned text{fill:#fca5a5}
+.turnout-indicator.supervision-unknown text{fill:#fcd34d}
