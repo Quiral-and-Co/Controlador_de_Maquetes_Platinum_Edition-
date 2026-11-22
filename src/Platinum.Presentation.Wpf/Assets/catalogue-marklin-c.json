@@ -409,7 +409,10 @@
       "category": "desviament",
       "type": "turnout",
       "geometryStatus": "unverified",
-      "notes": "Geometria de ports pendent de verificació; es representa com a símbol esquemàtic."
+      "notes": "Geometria de ports pendent de verificació; es representa com a símbol esquemàtic.",
+      "lengthMm": 188.3,
+      "radiusMm": 437.5,
+      "angleDeg": 24.3
     },
     {
       "ref": "24630",
@@ -419,7 +422,8 @@
       "lengthMm": 188.3,
       "radiusMm": 437.5,
       "geometryStatus": "partial",
-      "notes": "Longitud nominal i radi documentats; geometria de ramals pendent de fitxa tècnica."
+      "notes": "Longitud nominal i radi documentats; geometria de ramals pendent de fitxa tècnica.",
+      "angleDeg": 24.3
     },
     {
       "ref": "24640",
@@ -428,7 +432,8 @@
       "type": "special",
       "angleDeg": 24.3,
       "geometryStatus": "partial",
-      "notes": "Fitxa geomètrica completa pendent de verificació; representació esquemàtica quan correspongui."
+      "notes": "Fitxa geomètrica completa pendent de verificació; representació esquemàtica quan correspongui.",
+      "lengthMm": 188.3
     },
     {
       "ref": "24649",
@@ -437,7 +442,8 @@
       "type": "special",
       "angleDeg": 48.6,
       "geometryStatus": "partial",
-      "notes": "Angle nominal conegut; longitud i coordenades dels ports pendents de verificació."
+      "notes": "Angle nominal conegut; longitud i coordenades dels ports pendents de verificació.",
+      "lengthMm": 103.3
     },
     {
       "ref": "24671",
@@ -446,7 +452,8 @@
       "type": "turnout",
       "radiusMm": 360,
       "geometryStatus": "unverified",
-      "notes": "Geometria detallada pendent de fitxa tècnica."
+      "notes": "Geometria detallada pendent de fitxa tècnica.",
+      "angleDeg": 30
     },
     {
       "ref": "24672",
@@ -455,7 +462,8 @@
       "type": "turnout",
       "radiusMm": 360,
       "geometryStatus": "unverified",
-      "notes": "Geometria detallada pendent de fitxa tècnica."
+      "notes": "Geometria detallada pendent de fitxa tècnica.",
+      "angleDeg": 30
     },
     {
       "ref": "24711",
@@ -493,7 +501,8 @@
       "type": "special",
       "angleDeg": 12.1,
       "geometryStatus": "unverified",
-      "notes": "Fitxa geomètrica completa pendent de verificació; representació esquemàtica quan correspongui."
+      "notes": "Fitxa geomètrica completa pendent de verificació; representació esquemàtica quan correspongui.",
+      "lengthMm": 236.1
     },
     {
       "ref": "24771",
@@ -502,7 +511,8 @@
       "type": "turnout",
       "radiusMm": 515,
       "geometryStatus": "unverified",
-      "notes": "Fitxa geomètrica completa pendent de verificació; representació esquemàtica quan correspongui."
+      "notes": "Fitxa geomètrica completa pendent de verificació; representació esquemàtica quan correspongui.",
+      "angleDeg": 30
     },
     {
       "ref": "24772",
@@ -511,7 +521,8 @@
       "type": "turnout",
       "radiusMm": 515,
       "geometryStatus": "unverified",
-      "notes": "Fitxa geomètrica completa pendent de verificació; representació esquemàtica quan correspongui."
+      "notes": "Fitxa geomètrica completa pendent de verificació; representació esquemàtica quan correspongui.",
+      "angleDeg": 30
     },
     {
       "ref": "24912",
