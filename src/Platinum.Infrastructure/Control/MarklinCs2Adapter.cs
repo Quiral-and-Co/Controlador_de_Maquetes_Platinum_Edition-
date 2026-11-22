@@ -27,15 +27,15 @@ public sealed class MarklinCs2Adapter : IControlStationAdapter
     private readonly int _feedbackPort;
     private readonly TimeSpan _timeout;
     private UdpClient? _udp;
-    private readonly SemaphoreSlim _ioLock = new(1, 1);
 
     public MarklinCs2Adapter(ControlStationProfile profile, TimeSpan? timeout = null)
     {
         Profile = profile ?? throw new ArgumentNullException(nameof(profile));
         if (profile.Kind != ControlStationKind.MarklinCs2)
             throw new ArgumentException("El perfil ha de ser Märklin CS2.", nameof(profile));
-        if (!IPAddress.TryParse(profile.Host, out _address!))
+        if (!IPAddress.TryParse(profile.Host, out var parsedAddress))
             throw new ArgumentException("Indica la IP numèrica de la CS2 (no s'accepten noms DNS en aquesta fase).", nameof(profile));
+        _address = parsedAddress;
         _commandPort = profile.Port == 0 ? DefaultCommandPort : profile.Port;
         if (_commandPort is < 1 or > 65535) throw new ArgumentOutOfRangeException(nameof(profile), "Port CS2 no vàlid.");
         _feedbackPort = DefaultFeedbackPort;
@@ -106,7 +106,6 @@ public sealed class MarklinCs2Adapter : IControlStationAdapter
         IsConnected = false;
         _udp?.Dispose();
         _udp = null;
-        _ioLock.Dispose();
         return ValueTask.CompletedTask;
     }
 }
