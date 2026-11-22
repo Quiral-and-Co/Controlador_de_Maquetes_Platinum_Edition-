@@ -27,29 +27,29 @@ Regles:
 |---|---|---|
 | `index.html`, `styles.css`, `app.js` | MainWindow, recursos WPF, shell MVVM | Pendent d'equivalència |
 | `catalogue.js` | Catalogue service + WPF catalogue browser | Parcial: catàleg JSON inicial |
-| `viewport-core.js` | Editor viewport domain/application + WPF canvas | Parcial: editor 2D/3D |
+| `viewport-core.js` | Editor viewport domain/application + WPF canvas | Parcial: editor 2D/3D, sincronització 2D/3D i historial d'edició per geometria, peces i connexions; falta paritat completa |
 | `selection-move-core.js` | Selection/move commands + undo stack | Pendent |
 | `track-junction-core.js` | Märklin geometry/topology services | Parcial; peces especials per validar |
 | `vertical-track-core.js`, `vertical-track-ui.js` | Level/elevation editor | Pendent d'equivalència |
 | `project-file-interop.js` | Import/export services | Pendent |
 | `automation-core.js` | RailwayAutomationEngine | Parcial; verificar paritat |
-| `dispatcher-core.js`, `dispatcher.js`, `dispatcher.css` | Dispatcher application service + WPF panel | Parcial |
+| `dispatcher-core.js`, `dispatcher.js`, `dispatcher.css` | Dispatcher application service + WPF panel | Parcial: blocs, ocupació lògica, itineraris i reserves persistents al model `.platinum`; falta integració de sensors i supervisió de camp |
 | `traffic-core.js`, `traffic.js`, `traffic-bridge.js` | Traffic orchestration + infrastructure adapters | Pendent |
 | `deadman-core.js` | Deadman/watchdog safety service | Pendent de proves |
 | `safety-core.js` | PhysicalControlGate + safety state machine | Parcial; sortides bloquejades |
 | `command-station-core.js`, `command-station-ui.js` | Control station adapters + WPF diagnostics | Parcial; CS2 presence/ping only |
-| `protocol-core.js`, `protocol-catalogue-ui.js` | Protocol catalogue + typed codecs | Pendent |
-| `signalling-core.js`, `signalling-ui.js`, `signalling.css` | Signalling domain + WPF panel | Pendent |
+| `protocol-core.js`, `protocol-catalogue-ui.js` | Protocol catalogue + typed codecs | Parcial: perfils de CS2/CS3/Z21/ECoS/DCC persistents; només CS2 té ping natiu, ordres físiques bloquejades |
+| `signalling-core.js`, `signalling-ui.js`, `signalling.css` | Signalling domain + WPF panel | Parcial: senyals i aspectes lògics persistents; falta seqüenciador i interbloqueig |
 | `signalling-integration-core.js`, `signalling-integration.js` | Signal/interlocking application service | Pendent |
 | `signalling-sequence-core.js` | Signal aspect sequencing engine | Pendent |
 | `signalling-topology-core.js`, `signalling-topology-ui.js`, `signalling-topology.css` | Signal topology editor/validator | Pendent |
 | `jmri-json-adapter.js` | Optional JMRI compatibility adapter | Pendent; no runtime dependency in final |
 | `jmri-dispatcher-diagnostics-core.js`, `jmri-dispatcher-diagnostics.js` | JMRI diagnostics adapter + WPF view | Pendent |
 | `jmri-turnout-supervision-core.js`, `jmri-turnout-supervision.js`, `jmri-turnout-supervision.css` | Turnout supervision service + WPF view | Pendent |
-| `locomotive-dmi-core.js`, `locomotive-dmi-ui.js`, `locomotive-dmi.css` | Locomotive profile/DMI + WPF cab | Pendent |
-| `train-protection-core.js`, `train-protection-ui.js`, `train-protection.css` | Train protection simulator/service | Pendent; simulation only |
-| `train-ground-core.js`, `train-ground-ui.js`, `train-ground.css` | Train-ground terminal simulator | Pendent; simulation only |
-| `spielewelt-core.js`, `spielewelt-ui.js`, `spielewelt.css` | Món de Jocs WPF module | Pendent |
+| `locomotive-dmi-core.js`, `locomotive-dmi-ui.js`, `locomotive-dmi.css` | Locomotive profile/DMI + WPF cab | Parcial: perfils persistents i cabina simulada; funcions físiques pendents |
+| `train-protection-core.js`, `train-protection-ui.js`, `train-protection.css` | Train protection simulator/service | Parcial: perfils de límit i desacceleració persistents; simulació educativa, no certificada |
+| `train-ground-core.js`, `train-ground-ui.js`, `train-ground.css` | Train-ground terminal simulator | Parcial: missatges locals persistents; sense transmissió de ràdio |
+| `spielewelt-core.js`, `spielewelt-ui.js`, `spielewelt.css` | Món de Jocs WPF module | Parcial: estat de combustible virtual persistent; funcions mfx+ pendents |
 | `physical-validation-core.js`, `physical-validation-ui.js`, `physical-validation.css` | Inspection/audit registry + WPF validation panel | Pendent; declarations are not certification |
 | `validation-master-registry-core.js`, `validation-master-registry-ui.js` | Unified validation registry | Pendent |
 | `metge-quiral-core.js`, `metge-quiral-ui.js` | Quiral diagnostics/assistant domain + WPF view | Pendent |
@@ -99,4 +99,16 @@ Un mòdul antic només es pot retirar quan:
 
 ## Estat d'aquesta branca
 
-Aquesta branca inicia la migració integral i no declara que els mòduls pendents estiguin completats. La versió antiga es manté intacta fins a complir els criteris anteriors.
+Aquesta branca ha migrat una primera part funcional de l'editor, dispatcher, senyalització, perfils de protocol, cabina DMI i simuladors. No declara paritat completa: la geometria exacta de peces complexes, sensors reals, interbloquejos, protocols de sortida i validació física continuen pendents. Les ordres físiques romanen bloquejades. La versió antiga es manté intacta fins a complir els criteris anteriors.
+
+
+## Punt de control funcional — 2026-11-22
+
+- Editor 2D: historial desfer/refer per trams, peces del catàleg, rotacions i connexions; notificacions per sincronitzar el model compartit i l'editor 3D.
+- Dispatcher: blocs, ocupació manual, itineraris i reserves lògiques persistents.
+- Senyalització: senyals i aspectes lògics persistents, sense transmissió física.
+- Protocols: perfils persistents; CS2 només ping/presència; CS3, Z21, ECoS i DCC encara sense adaptadors operatius.
+- Cabina: perfils de locomotora i control de velocitat/direcció/funcions només en simulació.
+- Protecció, tren-terra i Món de Jocs: perfils i estat local persistents, sense frens, ràdio ni mfx+ físics.
+- Porta de seguretat pròpia: no depèn de JMRI i exigeix central connectada, feedback saludable, E-stop físic verificat, watchdog, interbloquejos, reconeixement de l'operador i armament explícit. Tots els valors per defecte són falsos.
+- CI: els canvis fins al commit `6b08463` han passat la compilació i proves .NET 10 WPF; els commits posteriors de seguretat requereixen el seu propi resultat CI.
