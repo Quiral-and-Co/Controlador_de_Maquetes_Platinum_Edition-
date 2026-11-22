@@ -15,11 +15,14 @@ public sealed class PlatinumPackageStoreTests
         {
             var levelId = Guid.NewGuid();
             var pieceId = Guid.NewGuid();
+            var secondPieceId = Guid.NewGuid();
+            var connection = new TrackConnection(Guid.NewGuid(), pieceId, "logical", secondPieceId, "logical", false);
             var layout = new TrackLayout
             {
                 Name = "Circuit de prova",
                 Levels = [new TrackLevel(levelId, "Principal", 0m)],
-                Pieces = [new TrackPiece(pieceId, "24188", 120m, 240m, 90m, levelId, "partial")],
+                Pieces = [new TrackPiece(pieceId, "24188", 120m, 240m, 90m, levelId, "partial"), new TrackPiece(secondPieceId, "24172", 300m, 240m, 0m, levelId, "confirmed")],
+                Connections = [connection],
                 GeometrySegments = [new TrackGeometrySegment(Guid.NewGuid(), TrackGeometryKind.Curve, 100m, 100m, 400m, 250m, 230m, 20m, levelId)],
                 Blocks = [new LogicalBlock(Guid.NewGuid(), "Bloc A", levelId, [pieceId])],
                 Sensors = [new FeedbackSensor(Guid.NewGuid(), "CS2:S88:1", "Sensor 1")],
@@ -33,6 +36,8 @@ public sealed class PlatinumPackageStoreTests
             Assert.Equal(layout.Id, loaded.Id);
             Assert.Equal(layout.Name, loaded.Name);
             Assert.Equal(layout.Pieces, loaded.Pieces);
+            Assert.Equal(layout.Connections, loaded.Connections);
+            Assert.False(loaded.Connections[0].PhysicallyVerified);
             Assert.Equal("partial", loaded.Pieces[0].GeometryStatus);
             Assert.Equal(layout.GeometrySegments, loaded.GeometrySegments);
             Assert.Equal(layout.Blocks[0].PieceIds, loaded.Blocks[0].PieceIds);
