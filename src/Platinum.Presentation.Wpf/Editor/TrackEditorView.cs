@@ -26,6 +26,8 @@ public sealed class TrackEditorView : UserControl
     private Guid? _selectedId;
     private bool _draggingSelection;
     private double _zoomFactor = 1d;
+    private bool _snapToGrid = true;
+    private const decimal GridMillimetres = 10m;
 
     private enum Tool { Select, Straight, Curve, Turnout }
 
@@ -45,6 +47,10 @@ public sealed class TrackEditorView : UserControl
         AddButton(toolbar, "Zoom +", (_, _) => SetZoom(_zoomFactor * 1.2));
         AddButton(toolbar, "Zoom −", (_, _) => SetZoom(_zoomFactor / 1.2));
         AddButton(toolbar, "Ajustar", (_, _) => SetZoom(1));
+        var snap = new CheckBox { Content = "Ajustar a graella (10 mm)", IsChecked = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0), Foreground = Brushes.LightGray };
+        snap.Checked += (_, _) => _snapToGrid = true;
+        snap.Unchecked += (_, _) => _snapToGrid = false;
+        toolbar.Children.Add(snap);
         DockPanel.SetDock(toolbar, Dock.Top);
         root.Children.Add(toolbar);
 
@@ -102,6 +108,13 @@ public sealed class TrackEditorView : UserControl
     }
 
     private Point ToModel(Point viewPoint) => new((viewPoint.X / BaseScale) - 80, (viewPoint.Y / BaseScale) - 80);
+
+    private Point Snap(Point point)
+    {
+        if (!_snapToGrid) return point;
+        return new Point(Math.Round(point.X / (double)GridMillimetres) * (double)GridMillimetres,
+            Math.Round(point.Y / (double)GridMillimetres) * (double)GridMillimetres);
+    }
     private Point ToView(decimal x, decimal y) => new(((double)x + 80) * BaseScale, ((double)y + 80) * BaseScale);
 
     private void Surface_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -118,7 +131,7 @@ public sealed class TrackEditorView : UserControl
             return;
         }
 
-        _anchor = point;
+        _anchor = Snap(point);
         _surface.CaptureMouse();
         e.Handled = true;
     }
@@ -128,8 +141,10 @@ public sealed class TrackEditorView : UserControl
         var point = ToModel(e.GetPosition(_surface));
         if (_draggingSelection && _selectedId.HasValue && _lastPointer.HasValue && e.LeftButton == MouseButtonState.Pressed)
         {
-            var dx = (decimal)(point.X - _lastPointer.Value.X);
-            var dy = (decimal)(point.Y - _lastPointer.Value.Y);
+            var snappedPoint = Snap(point);
+            var previousPoint = Snap(_lastPointer.Value);
+            var dx = (decimal)(snappedPoint.X - previousPoint.X);
+            var dy = (decimal)(snappedPoint.Y - previousPoint.Y);
             var index = _segments.FindIndex(s => s.Id == _selectedId.Value);
             if (index >= 0)
             {
@@ -157,6 +172,7 @@ public sealed class TrackEditorView : UserControl
         }
         if (!_anchor.HasValue) return;
         var start = _anchor.Value;
+        point = Snap(point);
         _anchor = null;
         _surface.ReleaseMouseCapture();
         if ((point - start).Length < 8) { Draw(); return; }
