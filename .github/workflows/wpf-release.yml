@@ -31,7 +31,7 @@ jobs:
           } else {
             $version = "${{ github.ref_name }}".TrimStart('v')
           }
-          if ($version -notmatch '^\d+\.\d+\.\d+(\.\d+)?$') { throw "Invalid version: $version" }
+          if ($version -notmatch '^\\d+\\.\\d+\\.\\d+(\\.\\d+)?$') { throw "Invalid version: $version" }
           "version=$version" >> $env:GITHUB_OUTPUT
 
       - name: Set up .NET 10
@@ -63,7 +63,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          $iscc = "${env:ProgramFiles(x86)}\\Inno Setup 6\\ISCC.exe"
           if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found: $iscc" }
           & $iscc "/DMyAppVersion=${{ steps.version.outputs.version }}" "installer/QuiralPlatinum.iss"
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
@@ -73,6 +73,16 @@ jobs:
           Set-Content -LiteralPath "$($installer.FullName).sha256" -Value "$hash  $($installer.Name)" -Encoding ascii
           Write-Host "Installer: $($installer.FullName)"
           Write-Host "SHA-256: $hash"
+
+      - name: Upload installer as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Quiral-Platinum-Setup-${{ steps.version.outputs.version }}
+          path: |
+            dist/Quiral-Platinum-Setup-*.exe
+            dist/Quiral-Platinum-Setup-*.exe.sha256
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
