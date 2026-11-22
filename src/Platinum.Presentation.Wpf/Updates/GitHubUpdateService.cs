@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -39,6 +40,7 @@ public sealed class GitHubUpdateService
             foreach (var asset in assets.EnumerateArray())
             {
                 var file = asset.TryGetProperty("name", out var fn) ? fn.GetString() : null;
+                if (string.IsNullOrWhiteSpace(file)) continue;
                 var url = asset.TryGetProperty("browser_download_url", out var u) ? u.GetString() : null;
                 if (!Uri.TryCreate(url, UriKind.Absolute, out var parsed) || parsed.Scheme != Uri.UriSchemeHttps || !parsed.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase)) continue;
                 if (file.EndsWith(".exe.sha256", StringComparison.OrdinalIgnoreCase)) checksum = parsed;
