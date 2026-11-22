@@ -26,8 +26,9 @@ public sealed class TrackEditorView : UserControl
     private Guid? _pendingConnectionPieceId;
     private string? _pendingConnectionPortId;
     private bool _connectMode;
-    private readonly Stack<List<TrackGeometrySegment>> _undo = new();
-    private readonly Stack<List<TrackGeometrySegment>> _redo = new();
+    private sealed record EditorSnapshot(List<TrackGeometrySegment> Segments, List<TrackPiece> Pieces, List<TrackConnection> Connections);
+    private readonly Stack<EditorSnapshot> _undo = new();
+    private readonly Stack<EditorSnapshot> _redo = new();
     private Guid _levelId;
     private Tool _tool = Tool.Select;
     private Point? _anchor;
@@ -132,6 +133,7 @@ public sealed class TrackEditorView : UserControl
         var index = _pieces.FindIndex(piece => piece.Id == _selectedPieceId.Value);
         if (index < 0) return;
         var piece = _pieces[index];
+        PushUndo();
         _pieces[index] = piece with { RotationDegrees = ((piece.RotationDegrees + degrees) % 360m + 360m) % 360m };
         _hint.Text = $"Peça {piece.CatalogueCode}: girada a {_pieces[index].RotationDegrees:0.#}°.";
         Draw();
@@ -214,6 +216,7 @@ public sealed class TrackEditorView : UserControl
         if (_placementItem is not null)
         {
             var item = _placementItem;
+            PushUndo();
             var placed = new TrackPiece(Guid.NewGuid(), item.Ref, (decimal)point.X, (decimal)point.Y, 0m, _levelId, item.GeometryStatus);
             _pieces.Add(placed);
             _placementItem = null;
@@ -260,6 +263,7 @@ public sealed class TrackEditorView : UserControl
                         _hint.Text = "Connexió entre ports creada; un dels extrems és estimat i cal verificar-lo amb plànol Märklin.";
                     else
                         _hint.Text = "Connexió entre extrems creada a partir de dimensions de catàleg; no certifica l'encaix físic.";
+                    PushUndo();
                     var connection = new TrackConnection(Guid.NewGuid(), fromPiece, fromPort, pieceId, portId, false);
                     _connections.Add(connection);
                     ConnectionCreated?.Invoke(connection);
@@ -278,6 +282,7 @@ public sealed class TrackEditorView : UserControl
             _selectedPieceId = HitTestPiece(point);
             if (_selectedPieceId.HasValue)
             {
+                PushUndo();
                 _selectedId = null;
                 _lastPointer = point;
                 _draggingSelection = true;
@@ -379,30 +384,36 @@ public sealed class TrackEditorView : UserControl
         Draw();
     }
 
+    private EditorSnapshot CaptureSnapshot() => new(_segments.ToList(), _pieces.ToList(), _connections.ToList());
+
+    private void RestoreSnapshot(EditorSnapshot snapshot)
+    {
+        _segments.Clear(); _segments.AddRange(snapshot.Segments);
+        _pieces.Clear(); _pieces.AddRange(snapshot.Pieces);
+        _connections.Clear(); _connections.AddRange(snapshot.Connections);
+        _selectedId = null; _selectedPieceId = null;
+        _pendingConnectionPieceId = null; _pendingConnectionPortId = null;
+        Draw();
+    }
+
     private void PushUndo()
     {
-        _undo.Push(_segments.ToList());
+        _undo.Push(CaptureSnapshot());
         _redo.Clear();
     }
 
     private void Undo()
     {
         if (_undo.Count == 0) return;
-        _redo.Push(_segments.ToList());
-        _segments.Clear();
-        _segments.AddRange(_undo.Pop());
-        _selectedId = null;
-        Draw();
+        _redo.Push(CaptureSnapshot());
+        RestoreSnapshot(_undo.Pop());
     }
 
     private void Redo()
     {
         if (_redo.Count == 0) return;
-        _undo.Push(_segments.ToList());
-        _segments.Clear();
-        _segments.AddRange(_redo.Pop());
-        _selectedId = null;
-        Draw();
+        _undo.Push(CaptureSnapshot());
+        RestoreSnapshot(_redo.Pop());
     }
 
     private CataloguePort? FindPort(Guid pieceId, string portId)
