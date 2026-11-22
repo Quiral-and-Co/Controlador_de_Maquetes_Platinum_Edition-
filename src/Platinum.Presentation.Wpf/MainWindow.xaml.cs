@@ -59,39 +59,86 @@ public partial class MainWindow : Window
         StatusText.Text = "Projecte nou creat. Encara no s'ha desat.";
     }
 
-    private async void OpenProject_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new OpenFileDialog
-        {
-            Title = "Obrir projecte Platinum",
-            Filter = "Projecte Quiral Platinum (*.platinum)|*.platinum",
-            DefaultExt = ".platinum",
-            CheckFileExists = true
-        };
-        if (dialog.ShowDialog(this) != true) return;
+    private void OpenProject_Click(object sender, RoutedEventArgs e) => ImportJsonV3_Click(sender, e);
 
+    private async void OpenNativeProject_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog { Title = "Obrir projecte Platinum", Filter = "Projecte Quiral Platinum (*.platinum)|*.platinum", CheckFileExists = true };
+        if (dialog.ShowDialog(this) != true) return;
         try
         {
             _currentLayout = await _projects.LoadAsync(dialog.FileName);
             _currentPath = dialog.FileName;
             _isDirty = false;
-            OperationsView.SetLayout(_currentLayout);
-            if (_currentLayout.Levels.Count == 0) _currentLayout.Levels.Add(new TrackLevel(Guid.NewGuid(), "Nivell principal", 0m));
-            TrackEditor.SetActiveLevel(ActiveLevelId);
-            TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
-            TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
-            TrackEditor.LoadPieces(_currentLayout.Pieces);
-            TrackEditor.LoadConnections(_currentLayout.Connections);
-            RefreshLevelSelector();
-            UpdateProjectStatus();
-            Sync3DEditor();
-            StatusText.Text = "Projecte carregat i validat.";
+            RefreshEditorsFromLayout();
+            StatusText.Text = "Projecte Platinum carregat i validat.";
         }
         catch (Exception ex)
         {
             MessageBox.Show(this, ex.Message, "No s'ha pogut obrir el projecte", MessageBoxButton.OK, MessageBoxImage.Error);
             StatusText.Text = "Error en obrir el projecte.";
         }
+    }
+
+    private void ImportJsonV3_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog { Title = "Importar disseny JSON v3", Filter = "Disseny JSON v3 (*.json)|*.json|Tots els fitxers (*.*)|*.*", DefaultExt = ".json", CheckFileExists = true };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            var imported = new JsonV3LayoutImporter().Import(File.ReadAllText(dialog.FileName));
+            var answer = MessageBox.Show(this, $"S'importarà «{imported.Name}» amb {imported.Pieces.Count} vies, {imported.Blocks.Count} blocs i {imported.Sensors.Count} sensors. Se substituirà el projecte obert. Continuar?",
+                "Confirmar importació JSON v3", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (answer != MessageBoxResult.Yes) return;
+            _currentLayout = imported;
+            _currentPath = null;
+            _isDirty = true;
+            RefreshEditorsFromLayout();
+            StatusText.Text = "JSON v3 importat. Les vies i els elements físics continuen sense verificar.";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "No s'ha pogut importar el JSON v3", MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusText.Text = "Error en importar el JSON v3.";
+        }
+    }
+
+    private void ExportJsonV3_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SaveFileDialog { Title = "Exportar disseny JSON v3", Filter = "Disseny JSON v3 (*.json)|*.json", DefaultExt = ".json", AddExtension = true, FileName = _currentLayout.Name };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            SyncLayoutFromEditors();
+            File.WriteAllText(dialog.FileName, new JsonV3LayoutExporter().Export(_currentLayout), new System.Text.UTF8Encoding(false));
+            StatusText.Text = "Disseny JSON v3 exportat. Les verificacions físiques no s'han transferit.";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "No s'ha pogut exportar el JSON v3", MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusText.Text = "Error en exportar el JSON v3.";
+        }
+    }
+
+    private void RefreshEditorsFromLayout()
+    {
+        OperationsView.SetLayout(_currentLayout);
+        TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
+        TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
+        TrackEditor.LoadPieces(_currentLayout.Pieces);
+        TrackEditor.LoadConnections(_currentLayout.Connections);
+        RefreshLevelSelector();
+        Sync3DEditor();
+        UpdateProjectStatus();
+    }
+
+    private void SyncLayoutFromEditors()
+    {
+        _currentLayout.GeometrySegments = TrackEditor.Segments.ToList();
+        _currentLayout.Pieces.Clear();
+        _currentLayout.Pieces.AddRange(TrackEditor.Pieces);
+        _currentLayout.Connections.Clear();
+        _currentLayout.Connections.AddRange(TrackEditor.Connections);
     }
 
     private async void SaveProject_Click(object sender, RoutedEventArgs e)
@@ -113,11 +160,7 @@ public partial class MainWindow : Window
 
         try
         {
-            _currentLayout.GeometrySegments = TrackEditor.Segments.ToList();
-            _currentLayout.Pieces.Clear();
-            _currentLayout.Pieces.AddRange(TrackEditor.Pieces);
-            _currentLayout.Connections.Clear();
-            _currentLayout.Connections.AddRange(TrackEditor.Connections);
+            SyncLayoutFromEditors();
             await _projects.SaveAsync(_currentLayout, path);
             _currentPath = path;
             _isDirty = false;
@@ -245,11 +288,7 @@ public partial class MainWindow : Window
     private void OnEditorDataChanged(object? sender, EventArgs e)
     {
         _isDirty = true;
-        _currentLayout.GeometrySegments = TrackEditor.Segments.ToList();
-        _currentLayout.Pieces.Clear();
-        _currentLayout.Pieces.AddRange(TrackEditor.Pieces);
-        _currentLayout.Connections.Clear();
-        _currentLayout.Connections.AddRange(TrackEditor.Connections);
+        SyncLayoutFromEditors();
         Sync3DEditor();
         UpdateProjectStatus();
     }

@@ -131,7 +131,12 @@ public sealed class JsonV3LayoutImporter
     private static Guid Resolve(Dictionary<string, Guid> map, string id, string kind) =>
         map.TryGetValue(id, out var value) ? value : throw new InvalidDataException("Referència a " + kind + " inexistent: " + id);
 
-    private static Guid StableGuid(string value) => new(SHA256.HashData(Encoding.UTF8.GetBytes(value)).AsSpan(0, 16));
+    private static Guid StableGuid(string value)
+    {
+        var separator = value.IndexOf(':');
+        if (separator >= 0 && Guid.TryParse(value[(separator + 1)..], out var existing)) return existing;
+        return new Guid(SHA256.HashData(Encoding.UTF8.GetBytes(value)).AsSpan(0, 16));
+    }
 
     private static string RequiredString(JsonElement element, string property)
     {
