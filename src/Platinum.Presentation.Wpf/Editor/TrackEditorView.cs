@@ -387,7 +387,7 @@ public sealed class TrackEditorView : UserControl
 
     private Guid? HitTestPiece(Point point)
     {
-        const double tolerance = 28;
+        const double tolerance = 115;
         foreach (var piece in _pieces.Where(piece => piece.LevelId == _levelId).Reverse())
         {
             var center = new Point((double)piece.X, (double)piece.Y);
