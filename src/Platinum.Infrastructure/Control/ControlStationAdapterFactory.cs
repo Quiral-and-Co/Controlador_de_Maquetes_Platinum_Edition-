@@ -17,6 +17,9 @@ public static class ControlStationAdapterFactory
         if (profile.Kind == ControlStationKind.Simulation || profile.IsSimulation)
             return new LocalSimulationAdapter(profile.Name);
 
+        if (profile.Kind == ControlStationKind.MarklinCs2)
+            return new MarklinCs2Adapter(profile);
+
         throw new NotSupportedException(
             $"El protocol {profile.Kind} encara no està implementat a Platinum. " +
             "No s'intentarà connectar ni delegar el control a JMRI.");
