@@ -59,7 +59,10 @@ public sealed class GitHubUpdateService
             throw new InvalidOperationException("La Release no inclou instal·lador i fitxer SHA-256.");
         ValidateReleaseAssetUrl(release.Installer);
         ValidateReleaseAssetUrl(release.Checksum);
-        var directory = Path.Combine(Path.GetTempPath(), "QuiralPlatinum", release.Tag);
+        var safeTag = new string(release.Tag.Where(ch => char.IsAsciiLetterOrDigit(ch) || ch is '.' or '-' or '_').ToArray());
+        if (string.IsNullOrWhiteSpace(safeTag) || !safeTag.Equals(release.Tag, StringComparison.Ordinal))
+            throw new InvalidDataException("El tag de la Release conté caràcters no permesos.");
+        var directory = Path.Combine(Path.GetTempPath(), "QuiralPlatinum", safeTag);
         Directory.CreateDirectory(directory);
         var installerPath = Path.Combine(directory, "Quiral-Platinum-Setup.exe");
         using (var response = await Client.GetAsync(release.Installer, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
