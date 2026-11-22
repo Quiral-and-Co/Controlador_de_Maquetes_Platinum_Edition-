@@ -45,6 +45,7 @@ public partial class MainWindow : Window
         TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
         TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
         TrackEditor.LoadPieces(_currentLayout.Pieces);
+        TrackEditor.LoadConnections(_currentLayout.Connections);
         RefreshLevelSelector();
         UpdateProjectStatus();
         StatusText.Text = "Projecte nou creat. Encara no s'ha desat.";
@@ -70,6 +71,7 @@ public partial class MainWindow : Window
             TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
             TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
             TrackEditor.LoadPieces(_currentLayout.Pieces);
+            TrackEditor.LoadConnections(_currentLayout.Connections);
             RefreshLevelSelector();
             UpdateProjectStatus();
             StatusText.Text = "Projecte carregat i validat.";
