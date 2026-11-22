@@ -19,8 +19,12 @@ public sealed class TrackEditorView : UserControl
     private readonly TextBlock _hint = new() { Foreground = Brushes.LightGray, Margin = new Thickness(10, 4, 0, 4) };
     private readonly List<TrackGeometrySegment> _segments = [];
     private readonly List<TrackPiece> _pieces = [];
+    private readonly List<TrackConnection> _connections = [];
     private readonly Dictionary<string, CatalogueItem> _catalogueByCode = new(StringComparer.OrdinalIgnoreCase);
     private CatalogueItem? _placementItem;
+    private Guid? _selectedPieceId;
+    private Guid? _pendingConnectionPieceId;
+    private bool _connectMode;
     private readonly Stack<List<TrackGeometrySegment>> _undo = new();
     private readonly Stack<List<TrackGeometrySegment>> _redo = new();
     private Guid _levelId;
@@ -51,6 +55,10 @@ public sealed class TrackEditorView : UserControl
         AddButton(toolbar, "Zoom +", (_, _) => SetZoom(_zoomFactor * 1.2));
         AddButton(toolbar, "Zoom −", (_, _) => SetZoom(_zoomFactor / 1.2));
         AddButton(toolbar, "Ajustar", (_, _) => SetZoom(1));
+        AddButton(toolbar, "Girar −15°", (_, _) => RotateSelected(-15m));
+        AddButton(toolbar, "Girar +15°", (_, _) => RotateSelected(15m));
+        AddButton(toolbar, "Girar 90°", (_, _) => RotateSelected(90m));
+        AddButton(toolbar, "Connectar peces", (_, _) => ToggleConnectMode());
         var snap = new CheckBox { Content = "Ajustar a graella (10 mm)", IsChecked = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0), Foreground = Brushes.LightGray };
         snap.Checked += (_, _) => _snapToGrid = true;
         snap.Unchecked += (_, _) => _snapToGrid = false;
@@ -76,12 +84,17 @@ public sealed class TrackEditorView : UserControl
 
     public IReadOnlyList<TrackGeometrySegment> Segments => _segments;
     public IReadOnlyList<TrackPiece> Pieces => _pieces;
+    public IReadOnlyList<TrackConnection> Connections => _connections;
     public event Action<TrackPiece>? CataloguePiecePlaced;
+    public event Action<TrackConnection>? ConnectionCreated;
 
     public void SetActiveLevel(Guid levelId)
     {
         _levelId = levelId;
         _selectedId = null;
+        _selectedPieceId = null;
+        _pendingConnectionPieceId = null;
+        _connectMode = false;
         _anchor = null;
         _draggingSelection = false;
         Draw();
@@ -98,7 +111,37 @@ public sealed class TrackEditorView : UserControl
     {
         _pieces.Clear();
         if (pieces is not null) _pieces.AddRange(pieces);
+        _selectedPieceId = null;
         Draw();
+    }
+
+    public void LoadConnections(IEnumerable<TrackConnection>? connections)
+    {
+        _connections.Clear();
+        if (connections is not null) _connections.AddRange(connections);
+        _pendingConnectionPieceId = null;
+        Draw();
+    }
+
+    private void RotateSelected(decimal degrees)
+    {
+        if (!_selectedPieceId.HasValue) { _hint.Text = "Selecciona una peça del catàleg abans de girar-la."; return; }
+        var index = _pieces.FindIndex(piece => piece.Id == _selectedPieceId.Value);
+        if (index < 0) return;
+        var piece = _pieces[index];
+        _pieces[index] = piece with { RotationDegrees = ((piece.RotationDegrees + degrees) % 360m + 360m) % 360m };
+        _hint.Text = $"Peça {piece.CatalogueCode}: girada a {_pieces[index].RotationDegrees:0.#}°.";
+        Draw();
+    }
+
+    private void ToggleConnectMode()
+    {
+        _connectMode = !_connectMode;
+        _pendingConnectionPieceId = null;
+        _placementItem = null;
+        _hint.Text = _connectMode
+            ? "Connexió lògica: clica dues peces del mateix nivell. No implica connexió física verificada."
+            : "Mode de connexió desactivat.";
     }
 
     public void BeginCataloguePlacement(CatalogueItem item)
@@ -176,8 +219,55 @@ public sealed class TrackEditorView : UserControl
             e.Handled = true;
             return;
         }
+        if (_connectMode)
+        {
+            var pieceId = HitTestPiece(point);
+            if (!pieceId.HasValue) { _hint.Text = "Clica una peça del catàleg per iniciar o completar la connexió."; return; }
+            if (!_pendingConnectionPieceId.HasValue)
+            {
+                _pendingConnectionPieceId = pieceId;
+                _selectedPieceId = pieceId;
+                _hint.Text = "Primera peça seleccionada. Ara clica la segona peça.";
+            }
+            else if (_pendingConnectionPieceId.Value == pieceId.Value)
+            {
+                _hint.Text = "Tria una peça diferent per completar la connexió.";
+            }
+            else
+            {
+                var exists = _connections.Any(connection =>
+                    (connection.FromPieceId == _pendingConnectionPieceId.Value && connection.ToPieceId == pieceId.Value) ||
+                    (connection.FromPieceId == pieceId.Value && connection.ToPieceId == _pendingConnectionPieceId.Value));
+                if (!exists)
+                {
+                    var connection = new TrackConnection(Guid.NewGuid(), _pendingConnectionPieceId.Value, "logical", pieceId.Value, "logical", false);
+                    _connections.Add(connection);
+                    ConnectionCreated?.Invoke(connection);
+                    _hint.Text = "Connexió lògica creada (no verificada físicament).";
+                }
+                else _hint.Text = "Aquestes peces ja tenen una connexió.";
+                _pendingConnectionPieceId = null;
+            }
+            Draw();
+            e.Handled = true;
+            return;
+        }
+
         if (_tool == Tool.Select)
         {
+            _selectedPieceId = HitTestPiece(point);
+            if (_selectedPieceId.HasValue)
+            {
+                _selectedId = null;
+                _lastPointer = point;
+                _draggingSelection = true;
+                _surface.CaptureMouse();
+                _hint.Text = "Peça seleccionada: arrossega per moure-la; usa els botons de gir.";
+                Draw();
+                e.Handled = true;
+                return;
+            }
+            _selectedPieceId = null;
             _selectedId = HitTest(point);
             _lastPointer = point;
             if (_selectedId.HasValue) PushUndo();
@@ -201,7 +291,15 @@ public sealed class TrackEditorView : UserControl
             var previousPoint = Snap(_lastPointer.Value);
             var dx = (decimal)(snappedPoint.X - previousPoint.X);
             var dy = (decimal)(snappedPoint.Y - previousPoint.Y);
-            var index = _segments.FindIndex(s => s.Id == _selectedId.Value);
+            var pieceIndex = _selectedPieceId.HasValue ? _pieces.FindIndex(piece => piece.Id == _selectedPieceId.Value) : -1;
+            if (pieceIndex >= 0)
+            {
+                var piece = _pieces[pieceIndex];
+                _pieces[pieceIndex] = piece with { X = piece.X + dx, Y = piece.Y + dy };
+                _lastPointer = point;
+                Draw();
+            }
+            var index = _selectedId.HasValue ? _segments.FindIndex(s => s.Id == _selectedId.Value) : -1;
             if (index >= 0)
             {
                 var s = _segments[index];
@@ -287,6 +385,17 @@ public sealed class TrackEditorView : UserControl
         Draw();
     }
 
+    private Guid? HitTestPiece(Point point)
+    {
+        const double tolerance = 28;
+        foreach (var piece in _pieces.Where(piece => piece.LevelId == _levelId).Reverse())
+        {
+            var center = new Point((double)piece.X, (double)piece.Y);
+            if ((point - center).Length <= tolerance) return piece.Id;
+        }
+        return null;
+    }
+
     private Guid? HitTest(Point point)
     {
         const double tolerance = 55;
@@ -333,6 +442,23 @@ public sealed class TrackEditorView : UserControl
             for (var y = 0; y < _surface.Height; y += 22) dc.DrawLine(pen, new Point(0, y), new Point(_surface.Width, y));
         }
         _surface.Background = new DrawingBrush(grid) { Stretch = Stretch.None };
+        foreach (var connection in _connections)
+        {
+            var from = _pieces.FirstOrDefault(piece => piece.Id == connection.FromPieceId && piece.LevelId == _levelId);
+            var to = _pieces.FirstOrDefault(piece => piece.Id == connection.ToPieceId && piece.LevelId == _levelId);
+            if (from is null || to is null) continue;
+            var a = ToView(from.X, from.Y);
+            var b = ToView(to.X, to.Y);
+            _surface.Children.Add(new System.Windows.Shapes.Line
+            {
+                X1 = a.X, Y1 = a.Y, X2 = b.X, Y2 = b.Y,
+                Stroke = connection.PhysicallyVerified ? Brushes.LimeGreen : Brushes.Orange,
+                StrokeThickness = 2,
+                StrokeDashArray = connection.PhysicallyVerified ? null : new DoubleCollection { 2, 3 },
+                IsHitTestVisible = false,
+                ToolTip = connection.PhysicallyVerified ? "Connexió verificada físicament" : "Connexió lògica pendent de verificació física"
+            });
+        }
         foreach (var piece in _pieces.Where(p => p.LevelId == _levelId))
             DrawCataloguePiece(piece);
         foreach (var segment in _segments.Where(s => s.LevelId == _levelId))
@@ -388,7 +514,7 @@ public sealed class TrackEditorView : UserControl
         {
             Data = geometry,
             Stroke = new SolidColorBrush(color),
-            StrokeThickness = 4,
+            StrokeThickness = piece.Id == _selectedPieceId ? 7 : 4,
             StrokeDashArray = status == "confirmed" ? null : new DoubleCollection { 3, 2 },
             IsHitTestVisible = false,
             ToolTip = $"{piece.CatalogueCode} · {item?.Name ?? "Peça de catàleg"} · geometria {status} · símbol no a escala"
