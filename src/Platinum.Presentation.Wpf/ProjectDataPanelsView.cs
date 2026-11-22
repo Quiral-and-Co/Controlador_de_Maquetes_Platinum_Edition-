@@ -36,6 +36,8 @@ public sealed class ProjectDataPanelsView : UserControl
         Content = root;
     }
 
+    public event EventHandler? ProjectDataChanged;
+
     public void SetLayout(TrackLayout layout)
     {
         _layout = layout ?? throw new ArgumentNullException(nameof(layout));
@@ -60,6 +62,7 @@ public sealed class ProjectDataPanelsView : UserControl
         {
             if (string.IsNullOrWhiteSpace(levelName.Text) || !decimal.TryParse(elevation.Text, out var z)) { SetStatus("Nom o cota invàlids."); return; }
             _layout.Levels.Add(new TrackLevel(Guid.NewGuid(), levelName.Text.Trim(), z));
+            ProjectDataChanged?.Invoke(this, EventArgs.Empty);
             Render();
         });
         foreach (var level in _layout.Levels)
@@ -73,6 +76,7 @@ public sealed class ProjectDataPanelsView : UserControl
                 _layout.Sensors.Any(s => string.Equals(s.SystemName, sensorSystem.Text.Trim(), StringComparison.OrdinalIgnoreCase)))
             { SetStatus("Sensor invàlid o identificador duplicat."); return; }
             _layout.Sensors.Add(new FeedbackSensor(Guid.NewGuid(), sensorSystem.Text.Trim(), sensorName.Text.Trim(), false));
+            ProjectDataChanged?.Invoke(this, EventArgs.Empty);
             Render();
         });
         foreach (var sensor in _layout.Sensors)
@@ -89,6 +93,7 @@ public sealed class ProjectDataPanelsView : UserControl
             if (string.IsNullOrWhiteSpace(signalName.Text)) { SetStatus("El senyal necessita un nom."); return; }
             var selected = block.SelectedItem as LogicalBlock;
             _layout.Signals.Add(new SignalDefinition(Guid.NewGuid(), signalName.Text.Trim(), aspect.SelectedItem?.ToString() ?? "unknown", selected?.Id, false));
+            ProjectDataChanged?.Invoke(this, EventArgs.Empty);
             Render();
         });
         foreach (var signal in _layout.Signals)
@@ -104,6 +109,7 @@ public sealed class ProjectDataPanelsView : UserControl
             if (string.IsNullOrWhiteSpace(locoName.Text) || !int.TryParse(address.Text, out var number) || number is < 1 or > 10239)
             { SetStatus("Nom o adreça de locomotora invàlids."); return; }
             _layout.Locomotives.Add(new LocomotiveProfile(Guid.NewGuid(), locoName.Text.Trim(), number, protocol.SelectedItem?.ToString() ?? "simulation", true));
+            ProjectDataChanged?.Invoke(this, EventArgs.Empty);
             Render();
         });
         foreach (var loco in _layout.Locomotives)
@@ -126,6 +132,7 @@ public sealed class ProjectDataPanelsView : UserControl
             Add(_inspections, "Desar declaració", () =>
             {
                 _layout.Inspections.Add(new PhysicalInspectionRecord(Guid.NewGuid(), item, check.IsChecked == true, notes.Text.Trim(), DateTimeOffset.UtcNow));
+                ProjectDataChanged?.Invoke(this, EventArgs.Empty);
                 Render();
             });
         }
