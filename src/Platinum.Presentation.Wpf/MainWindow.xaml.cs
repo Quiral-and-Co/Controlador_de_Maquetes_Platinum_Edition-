@@ -29,6 +29,7 @@ public partial class MainWindow : Window
         TrackEditor.LoadConnections(_currentLayout.Connections);
         RefreshLevelSelector();
         UpdateProjectStatus();
+        Sync3DEditor();
     }
 
     private static TrackLayout CreateNewLayout() => new()
@@ -48,6 +49,7 @@ public partial class MainWindow : Window
         TrackEditor.LoadConnections(_currentLayout.Connections);
         RefreshLevelSelector();
         UpdateProjectStatus();
+        Sync3DEditor();
         StatusText.Text = "Projecte nou creat. Encara no s'ha desat.";
     }
 
@@ -74,6 +76,7 @@ public partial class MainWindow : Window
             TrackEditor.LoadConnections(_currentLayout.Connections);
             RefreshLevelSelector();
             UpdateProjectStatus();
+            Sync3DEditor();
             StatusText.Text = "Projecte carregat i validat.";
         }
         catch (Exception ex)
@@ -261,7 +264,19 @@ public partial class MainWindow : Window
     {
         if (TrackEditor is null || LevelSelector.SelectedValue is not Guid levelId) return;
         TrackEditor.SetActiveLevel(levelId);
+        Sync3DEditor();
         StatusText.Text = "Editant: " + (_currentLayout.Levels.FirstOrDefault(x => x.Id == levelId)?.Name ?? "Nivell");
+    }
+
+    private void EditorTabs_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (e.OriginalSource is System.Windows.Controls.TabControl) Sync3DEditor();
+    }
+
+    private void Sync3DEditor()
+    {
+        if (TrackEditor3D is null || TrackEditor is null) return;
+        TrackEditor3D.SetData(TrackEditor.Segments, TrackEditor.Pieces, _currentLayout.Levels, _catalogueItems, ActiveLevelId);
     }
 
     private void UpdateProjectStatus()
