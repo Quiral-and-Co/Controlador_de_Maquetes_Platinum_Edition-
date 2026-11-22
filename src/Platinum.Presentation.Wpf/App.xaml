@@ -1,0 +1,1 @@
+<Application x:Class="Platinum.Presentation.Wpf.App" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" StartupUri="MainWindow.xaml"><Application.Resources><SolidColorBrush x:Key="AccentBrush" Color="#FFB8872B"/><SolidColorBrush x:Key="PanelBrush" Color="#FF202833"/></Application.Resources></Application>
