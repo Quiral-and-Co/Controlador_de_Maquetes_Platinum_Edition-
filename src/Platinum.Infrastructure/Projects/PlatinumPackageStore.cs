@@ -131,7 +131,14 @@ public sealed class PlatinumPackageStore : IProjectStore
         };
         using var reader = System.Xml.XmlReader.Create(input, settings);
         var serializer = new XmlSerializer(typeof(T));
-        return (T)(serializer.Deserialize(reader) ?? throw new InvalidDataException($"No s'ha pogut llegir {name}."));
+        try
+        {
+            return (T)(serializer.Deserialize(reader) ?? throw new InvalidDataException($"No s'ha pogut llegir {name}."));
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw new InvalidDataException($"L'entrada XML {name} no té un format vàlid.", ex);
+        }
     }
 
     [XmlRoot("PlatinumManifest")]
