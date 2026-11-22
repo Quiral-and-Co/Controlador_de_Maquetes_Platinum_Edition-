@@ -5,6 +5,7 @@ using Platinum.Domain.Layout;
 using Platinum.Infrastructure.Projects;
 using Platinum.Presentation.Wpf.Updates;
 using Platinum.Presentation.Wpf.Editor;
+using Platinum.Presentation.Wpf.Catalogue;
 
 namespace Platinum.Presentation.Wpf;
 
@@ -13,10 +14,12 @@ public partial class MainWindow : Window
     private readonly ProjectService _projects = new(new PlatinumPackageStore());
     private TrackLayout _currentLayout = CreateNewLayout();
     private string? _currentPath;
+    private List<CatalogueItem> _catalogueItems = [];
 
     public MainWindow()
     {
         InitializeComponent();
+        LoadCatalogue();
         TrackEditor.SetActiveLevel(ActiveLevelId);
         TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
         TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
@@ -134,6 +137,46 @@ public partial class MainWindow : Window
             MessageBox.Show(this, "No s'ha pogut consultar GitHub.\n\n" + ex.Message, "Error en cercar actualitzacions", MessageBoxButton.OK, MessageBoxImage.Warning);
             StatusText.Text = "No s'ha pogut consultar GitHub.";
         }
+    }
+
+    private void LoadCatalogue()
+    {
+        try
+        {
+            var path = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "catalogue-marklin-c.json");
+            var catalogue = MarklinCCatalogue.Load(path);
+            _catalogueItems = catalogue.Items;
+            CatalogueList.ItemsSource = _catalogueItems;
+            CatalogueCount.Text = $"{_catalogueItems.Count} referències · {catalogue.Brand} {catalogue.System} · {catalogue.Scale}";
+        }
+        catch (Exception ex)
+        {
+            _catalogueItems = [];
+            CatalogueCount.Text = "No s'ha pogut carregar el catàleg.";
+            CatalogueDetails.Text = ex.Message;
+        }
+    }
+
+    private void CatalogueSearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        if (CatalogueList is null) return;
+        var query = CatalogueSearch.Text.Trim();
+        var filtered = string.IsNullOrWhiteSpace(query)
+            ? _catalogueItems
+            : _catalogueItems.Where(item =>
+                item.Ref.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                item.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                item.Category.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+        CatalogueList.ItemsSource = filtered;
+        CatalogueCount.Text = $"{filtered.Count} de {_catalogueItems.Count} referències";
+    }
+
+    private void CatalogueList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (CatalogueList.SelectedItem is not CatalogueItem item) return;
+        var geometry = string.IsNullOrWhiteSpace(item.GeometrySummary) ? "Geometria dimensional no disponible." : item.GeometrySummary;
+        CatalogueDetails.Text = $"{item.DisplayName}\\nCategoria: {item.Category}\\nTipus: {item.Type}\\nGeometria: {geometry}\\nEstat: {item.GeometryStatus}" +
+            (string.IsNullOrWhiteSpace(item.Notes) ? string.Empty : $"\\nNota: {item.Notes}");
     }
 
     private Guid ActiveLevelId => LevelSelector.SelectedValue is Guid selected ? selected : _currentLayout.Levels.FirstOrDefault()?.Id ?? Guid.Empty;
