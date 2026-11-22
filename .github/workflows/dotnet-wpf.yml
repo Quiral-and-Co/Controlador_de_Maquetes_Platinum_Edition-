@@ -1,6 +1,7 @@
 name: .NET 10 WPF
 
 on:
+  workflow_dispatch:
   push:
     branches: [main, migration/dotnet10-wpf-native]
     paths:
