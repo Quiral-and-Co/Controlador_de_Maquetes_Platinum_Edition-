@@ -373,11 +373,18 @@
     }catch(err){log('No s’ha obert el fitxer: '+err.message);window.alert?.('No s’ha pogut obrir el fitxer. '+err.message);}
   }
   async function saveNativeProject(saveAs=false){
-    if(!window.jmriDesktop?.saveProject){downloadText(JSON.stringify(state.config,null,2),'JMRI_TC_Gold_Custom_layout.json','application/json');log('Projecte exportat en JSON.');return;}
-    state.config.levels.forEach(syncRelations);
-    const result=await window.jmriDesktop.saveProject({content:JSON.stringify(state.config,null,2),filePath:state.filePath,saveAs,defaultPath:state.filePath||'JMRI_TC_Gold_Custom_layout.json',filters:[{name:'Projecte JMRI TC (JSON)',extensions:['json']}]});
-    if(result.canceled)return;
-    state.filePath=result.filePath;state.isDirty=false;setProjectName(result.fileName);log('Projecte desat: '+result.fileName);
+    try{
+      const config=validateConfig(state.config);config.levels.forEach(syncRelations);
+      const content=JSON.stringify(config,null,2);
+      if(!window.jmriDesktop?.saveProject){
+        downloadText(content,'JMRI_TC_Gold_Custom_layout.json','application/json');
+        state.config=config;state.isDirty=false;setProjectName(config.name);log('Projecte JSON v3 validat i exportat.');
+        return;
+      }
+      const result=await window.jmriDesktop.saveProject({content,filePath:state.filePath,saveAs,defaultPath:state.filePath||'JMRI_TC_Gold_Custom_layout.json',filters:[{name:'Projecte JMRI TC (JSON)',extensions:['json']}]});
+      if(result.canceled)return;
+      state.config=config;state.filePath=result.filePath;state.isDirty=false;setProjectName(result.fileName);log('Projecte JSON v3 validat i desat: '+result.fileName);
+    }catch(err){log('No s’ha desat el projecte: '+err.message);window.alert?.('El projecte no s’ha desat perquè no compleix el contracte JSON v3. '+err.message);}
   }
   async function newProject(){
     if(!await confirmDiscard())return;
@@ -386,7 +393,7 @@
   }
   async function exportXtc(){
     try{
-      const result=window.JMRI_TC_PROJECT_FILES.exportXtc(state.config);
+      const config=validateConfig(state.config);config.levels.forEach(syncRelations);const result=window.JMRI_TC_PROJECT_FILES.exportXtc(config);
       if(window.jmriDesktop?.saveProject){
         const saved=await window.jmriDesktop.saveProject({content:result.content,saveAs:true,defaultPath:'JMRI_TC_Gold_Custom_layout.xtc',filters:[{name:'XTrackCAD Layout (*.xtc)',extensions:['xtc']}]});
         if(!saved.canceled)log('Exportació XTrackCAD: '+result.report.exported+' peces.');
