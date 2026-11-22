@@ -1,0 +1,89 @@
+name: Build Windows installer when a GitHub Release is published
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: quiral-platinum-published-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-attach:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout native WPF implementation
+        uses: actions/checkout@v4
+        with:
+          # The WPF migration is currently maintained on this branch.
+          ref: migration/dotnet10-wpf-native
+
+      - name: Determine release version
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.release.tag_name }}"
+          $version = $tag.TrimStart('v')
+          if ($version -notmatch '^\d+\.\d+\.\d+(\.\d+)?$') {
+            throw "Release tag must be a semantic version such as v0.2.1. Received: $tag"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore and test
+        shell: pwsh
+        run: |
+          dotnet restore Platinum.sln
+          if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed" }
+          dotnet test tests/Platinum.Infrastructure.Tests/Platinum.Infrastructure.Tests.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw "dotnet test failed" }
+
+      - name: Publish self-contained WPF application
+        shell: pwsh
+        run: |
+          dotnet publish src/Platinum.Presentation.Wpf/Platinum.Presentation.Wpf.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=${{ steps.version.outputs.version }} -p:AssemblyVersion=${{ steps.version.outputs.version }} -p:FileVersion=${{ steps.version.outputs.version }} -p:InformationalVersion=${{ steps.version.outputs.version }} -o dist/publish
+          if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
+
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build installer and SHA-256 manifest
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found: $iscc" }
+          & $iscc "/DMyAppVersion=${{ steps.version.outputs.version }}" "installer/QuiralPlatinum.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed" }
+          $installer = Get-ChildItem dist -Filter 'Quiral-Platinum-Setup-*.exe' -File | Select-Object -First 1
+          if (-not $installer) { throw "Installer was not generated" }
+          $hash = (Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -LiteralPath "$($installer.FullName).sha256" -Value "$hash  $($installer.Name)" -Encoding ascii
+          Write-Host "SHA-256: $hash"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Quiral-Platinum-Setup-${{ steps.version.outputs.version }}
+          path: |
+            dist/Quiral-Platinum-Setup-*.exe
+            dist/Quiral-Platinum-Setup-*.exe.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Attach installer to the published GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: |
+            dist/Quiral-Platinum-Setup-*.exe
+            dist/Quiral-Platinum-Setup-*.exe.sha256
+          fail_on_unmatched_files: true
