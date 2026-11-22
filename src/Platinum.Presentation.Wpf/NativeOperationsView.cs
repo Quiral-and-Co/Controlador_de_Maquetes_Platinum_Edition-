@@ -24,6 +24,7 @@ public sealed class NativeOperationsView : UserControl
     private ListBox? _signalsList;
     private ComboBox? _signalBlockSelector;
     private ComboBox? _signalAspectSelector;
+    private ListBox? _protocolProfilesList;
     public event EventHandler? ProjectDataChanged;
 
     private readonly RailwayControlService _controlService = new(new LocalSimulationAdapter());
@@ -258,6 +259,7 @@ public sealed class NativeOperationsView : UserControl
         _layout = layout ?? throw new ArgumentNullException(nameof(layout));
         RefreshDispatcher();
         RefreshSignalling();
+        RefreshProtocolProfiles();
     }
 
     private void RefreshDispatcher()
@@ -274,6 +276,8 @@ public sealed class NativeOperationsView : UserControl
     private void NotifyProjectChanged()
     {
         RefreshDispatcher();
+        RefreshSignalling();
+        RefreshProtocolProfiles();
         ProjectDataChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -439,31 +443,58 @@ public sealed class NativeOperationsView : UserControl
         return Scroll(panel);
     }
 
+    private void RefreshProtocolProfiles()
+    {
+        if (_layout is null || _protocolProfilesList is null) return;
+        var selectedId = (_protocolProfilesList.SelectedItem as RailwayProtocolProfile)?.Id;
+        _protocolProfilesList.ItemsSource = _layout.ProtocolProfiles.ToArray();
+        _protocolProfilesList.DisplayMemberPath = nameof(RailwayProtocolProfile.Name);
+        if (selectedId.HasValue)
+            _protocolProfilesList.SelectedItem = _layout.ProtocolProfiles.FirstOrDefault(x => x.Id == selectedId.Value);
+    }
+
     private UIElement BuildStations()
     {
-        var panel = Panel("Perfils de centrals digitals");
-        var manufacturer = new ComboBox { ItemsSource = new[] { "Märklin", "Roco", "ESU", "Uhlenbrock", "Z21", "DCC genèric" }, SelectedIndex = 0, Margin = new Thickness(0, 6, 0, 8) };
-        var model = new TextBox { Text = "CS2 / CS3 / model", Margin = new Thickness(0, 4, 0, 8) };
-        var host = new TextBox { Text = "192.168.1.50", Margin = new Thickness(0, 4, 0, 8) };
+        var panel = Panel("Perfils de protocols i centrals digitals");
+        var manufacturer = new ComboBox
+        {
+            ItemsSource = new[] { "Simulació", "Märklin CS2", "Märklin CS3", "Z21", "ESU ECoS", "DCC genèric" },
+            SelectedIndex = 0, Margin = new Thickness(0, 6, 0, 8)
+        };
+        var model = new TextBox { Text = "Central principal", Margin = new Thickness(0, 4, 0, 8) };
+        var host = new TextBox { Text = "127.0.0.1", Margin = new Thickness(0, 4, 0, 8) };
         var port = new TextBox { Text = "15731", Margin = new Thickness(0, 4, 0, 8) };
-        var profiles = new ListBox { ItemsSource = _stations, MinHeight = 130, Background = Brush("#FF111820"), Foreground = Brushes.White };
-        panel.Children.Add(Label("Fabricant")); panel.Children.Add(manufacturer); panel.Children.Add(Label("Model")); panel.Children.Add(model);
-        panel.Children.Add(Label("Host / IP")); panel.Children.Add(host); panel.Children.Add(Label("Port")); panel.Children.Add(port);
-        panel.Children.Add(Button("Desar perfil local", (_, _) =>
+        var profiles = new ListBox { MinHeight = 130, Background = Brush("#FF111820"), Foreground = Brushes.White };
+        _protocolProfilesList = profiles;
+        panel.Children.Add(Label("Protocol")); panel.Children.Add(manufacturer); panel.Children.Add(Label("Nom del perfil")); panel.Children.Add(model);
+        panel.Children.Add(Label("Host / IP (només configuració)")); panel.Children.Add(host); panel.Children.Add(Label("Port")); panel.Children.Add(port);
+        panel.Children.Add(Button("Desar perfil al projecte", (_, _) =>
         {
-            if (!int.TryParse(port.Text, out var p) || p is < 1 or > 65535) { _stationStatus.Text = "Port invàlid."; return; }
-            _stations.Add($"{manufacturer.SelectedItem} · {model.Text.Trim()} · {host.Text.Trim()}:{p} · NO CONNECTAT");
-            _stationStatus.Text = "Perfil desat en memòria d'aquesta sessió. No s'ha obert cap connexió.";
+            if (_layout is null) { _stationStatus.Text = "No hi ha projecte actiu."; return; }
+            var name = model.Text.Trim();
+            var kind = manufacturer.SelectedItem?.ToString() ?? "Simulació";
+            var address = host.Text.Trim();
+            if (name.Length == 0 || address.Length == 0 || !int.TryParse(port.Text, out var p) || p is < 1 or > 65535 ||
+                _layout.ProtocolProfiles.Any(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))
+            { _stationStatus.Text = "Nom duplicat/buit, host buit o port invàlid."; return; }
+            _layout.ProtocolProfiles.Add(new RailwayProtocolProfile(Guid.NewGuid(), name, kind, address, p, false));
+            NotifyProjectChanged();
+            RefreshProtocolProfiles();
+            _stationStatus.Text = $"Perfil «{name}» desat al projecte. Cap ordre física habilitada.";
         }));
-        panel.Children.Add(profiles);
-        panel.Children.Add(Button("Provar connexió nativa Märklin CS2 (ping)", async (_, _) =>
+        panel.Children.Add(Label("Perfils desats")); panel.Children.Add(profiles);
+        panel.Children.Add(Button("Provar connexió nativa Märklin CS2 (només ping)", async (_, _) =>
         {
+            if (manufacturer.SelectedItem?.ToString() != "Märklin CS2")
+            {
+                _stationStatus.Text = "Selecciona Märklin CS2 per fer la prova de presència.";
+                return;
+            }
             if (!int.TryParse(port.Text, out var commandPort) || commandPort is < 1 or > 65535)
             {
                 _stationStatus.Text = "Port CS2 invàlid. El valor habitual és 15731.";
                 return;
             }
-
             MarklinCs2Adapter? candidate = null;
             try
             {
@@ -472,14 +503,13 @@ public sealed class NativeOperationsView : UserControl
                     await _cs2Adapter.DisposeAsync();
                     _cs2Adapter = null;
                 }
-
                 var profile = new ControlStationProfile("Märklin CS2", ControlStationKind.MarklinCs2, host.Text.Trim(), commandPort);
                 candidate = (MarklinCs2Adapter)ControlStationAdapterFactory.Create(profile);
                 _stationStatus.Text = "Enviant consulta de presència a la CS2...";
                 await candidate.ConnectAsync();
                 _cs2Adapter = candidate;
                 candidate = null;
-                _stationStatus.Text = "CS2 DETECTADA · protocol CAN natiu · ping confirmat. Tracció i accessoris continuen bloquejats.";
+                _stationStatus.Text = "CS2 DETECTADA · ping confirmat. Tracció, accessoris i senyals continuen bloquejats.";
             }
             catch (Exception ex)
             {
@@ -497,7 +527,8 @@ public sealed class NativeOperationsView : UserControl
             _stationStatus.Text = "Adaptador CS2 desconnectat.";
         }));
         panel.Children.Add(_stationStatus);
-        panel.Children.Add(Label("La prova utilitza UDP 15731 (comandes) i 15730 (respostes). Només envia ping; no activa la via ni mou locomotores o desviaments."));
+        panel.Children.Add(Label("CS2: UDP 15731 (comandes) i 15730 (respostes). Aquesta prova només envia ping. CS3, Z21, ECoS i DCC genèric són perfils de configuració sense adaptador actiu. La propietat PhysicalCommandsEnabled queda sempre a false."));
+        RefreshProtocolProfiles();
         return Scroll(panel);
     }
 
