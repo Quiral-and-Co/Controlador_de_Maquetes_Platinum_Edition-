@@ -30,5 +30,5 @@ public sealed record RouteDefinition(Guid Id, string Name, IReadOnlyList<Guid> B
 
 public sealed record SignalDefinition(Guid Id, string Name, string Aspect, Guid? ProtectedBlockId, bool PhysicallyVerified = false);
 public sealed record LocomotiveProfile(Guid Id, string Name, int Address, string Protocol, bool SimulationOnly = true);
+public sealed record RailwayProtocolProfile(Guid Id, string Name, string Kind, string Host, int Port, bool PhysicalCommandsEnabled = false);
 public sealed record PhysicalInspectionRecord(Guid Id, string Item, bool OperatorDeclaredComplete, string Notes, DateTimeOffset CheckedUtc);
-\n
