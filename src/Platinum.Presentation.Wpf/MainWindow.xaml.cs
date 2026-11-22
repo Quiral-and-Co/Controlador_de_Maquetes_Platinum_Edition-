@@ -20,13 +20,14 @@ public partial class MainWindow : Window
         TrackEditor.SetActiveLevel(ActiveLevelId);
         TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
         TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
+        RefreshLevelSelector();
         UpdateProjectStatus();
     }
 
     private static TrackLayout CreateNewLayout() => new()
     {
         Name = "Nova maqueta",
-        Levels = [new TrackLevel(Guid.NewGuid(), "Nivell principal", 0m)]
+        Levels = Enumerable.Range(0, 5).Select(i => new TrackLevel(Guid.NewGuid(), "Nivell " + (i + 1), i * 110m)).ToList()
     };
 
     private void NewProject_Click(object sender, RoutedEventArgs e)
@@ -36,6 +37,7 @@ public partial class MainWindow : Window
         TrackEditor.SetActiveLevel(ActiveLevelId);
         TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
         TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
+        RefreshLevelSelector();
         UpdateProjectStatus();
         StatusText.Text = "Projecte nou creat. Encara no s'ha desat.";
     }
@@ -59,6 +61,7 @@ public partial class MainWindow : Window
             TrackEditor.SetActiveLevel(ActiveLevelId);
             TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
             TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
+            RefreshLevelSelector();
             UpdateProjectStatus();
             StatusText.Text = "Projecte carregat i validat.";
         }
@@ -133,7 +136,23 @@ public partial class MainWindow : Window
         }
     }
 
-    private Guid ActiveLevelId => _currentLayout.Levels.FirstOrDefault()?.Id ?? Guid.Empty;
+    private Guid ActiveLevelId => LevelSelector.SelectedValue is Guid selected ? selected : _currentLayout.Levels.FirstOrDefault()?.Id ?? Guid.Empty;
+
+    private void RefreshLevelSelector()
+    {
+        LevelSelector.ItemsSource = _currentLayout.Levels;
+        LevelSelector.DisplayMemberPath = nameof(TrackLevel.Name);
+        LevelSelector.SelectedValuePath = nameof(TrackLevel.Id);
+        LevelSelector.SelectedValue = _currentLayout.Levels.FirstOrDefault()?.Id;
+        TrackEditor.SetActiveLevel(ActiveLevelId);
+    }
+
+    private void LevelSelector_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (TrackEditor is null || LevelSelector.SelectedValue is not Guid levelId) return;
+        TrackEditor.SetActiveLevel(levelId);
+        StatusText.Text = "Editant: " + (_currentLayout.Levels.FirstOrDefault(x => x.Id == levelId)?.Name ?? "Nivell");
+    }
 
     private void UpdateProjectStatus()
     {
