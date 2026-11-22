@@ -19,7 +19,7 @@ public sealed class TrackEditorView : UserControl
     private readonly List<TrackGeometrySegment> _segments = [];
     private readonly Stack<List<TrackGeometrySegment>> _undo = new();
     private readonly Stack<List<TrackGeometrySegment>> _redo = new();
-    private readonly Guid _levelId;
+    private Guid _levelId;
     private Tool _tool = Tool.Select;
     private Point? _anchor;
     private Point? _lastPointer;
@@ -28,6 +28,8 @@ public sealed class TrackEditorView : UserControl
     private double _zoomFactor = 1d;
 
     private enum Tool { Select, Straight, Curve, Turnout }
+
+    public TrackEditorView() : this(Guid.Empty) { }
 
     public TrackEditorView(Guid levelId)
     {
@@ -63,6 +65,8 @@ public sealed class TrackEditorView : UserControl
     }
 
     public IReadOnlyList<TrackGeometrySegment> Segments => _segments;
+
+    public void SetActiveLevel(Guid levelId) => _levelId = levelId;
 
     public void LoadSegments(IEnumerable<TrackGeometrySegment>? segments)
     {
