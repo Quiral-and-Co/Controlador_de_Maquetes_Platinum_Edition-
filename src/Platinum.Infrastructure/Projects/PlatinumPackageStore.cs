@@ -65,7 +65,7 @@ public sealed class PlatinumPackageStore : IProjectStore
         var document = await ReadXmlAsync<LayoutDocument>(archive, LayoutEntry, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         if (document.Levels is null || document.Pieces is null || document.Connections is null ||
-            document.Blocks is null || document.Sensors is null || document.Routes is null)
+            document.Blocks is null || document.Sensors is null || document.Routes is null || document.GeometrySegments is null)
             throw new InvalidDataException("El document XML conté col·leccions nul·les.");
         var layout = document.ToDomain();
         Validate(layout);
