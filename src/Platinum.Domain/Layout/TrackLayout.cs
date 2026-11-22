@@ -18,7 +18,7 @@ public sealed class TrackLayout
 }
 
 public sealed record TrackLevel(Guid Id, string Name, decimal ElevationMillimetres);
-public sealed record TrackPiece(Guid Id, string CatalogueCode, decimal X, decimal Y, decimal RotationDegrees, Guid LevelId);
+public sealed record TrackPiece(Guid Id, string CatalogueCode, decimal X, decimal Y, decimal RotationDegrees, Guid LevelId, string GeometryStatus = "unverified");
 public sealed record TrackConnection(Guid Id, Guid FromPieceId, string FromPort, Guid ToPieceId, string ToPort, bool PhysicallyVerified = false);
 public sealed record LogicalBlock(Guid Id, string Name, Guid LevelId, IReadOnlyList<Guid> PieceIds);
 public sealed record FeedbackSensor(Guid Id, string SystemName, string DisplayName, bool PhysicallyVerified = false);
