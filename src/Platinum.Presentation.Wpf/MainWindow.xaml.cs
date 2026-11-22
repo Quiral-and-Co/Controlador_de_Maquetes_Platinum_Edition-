@@ -42,6 +42,7 @@ public partial class MainWindow : Window
         TrackEditor.SetActiveLevel(ActiveLevelId);
         TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
         TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
+        TrackEditor.LoadPieces(_currentLayout.Pieces);
         RefreshLevelSelector();
         UpdateProjectStatus();
         StatusText.Text = "Projecte nou creat. Encara no s'ha desat.";
