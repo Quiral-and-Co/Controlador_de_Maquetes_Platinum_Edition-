@@ -56,9 +56,6 @@ public sealed record CatalogueItem(
             if (Ref is "74861" or "74862")
                 return TurntablePorts();
 
-            if (Ref is "74920" or "74924")
-                return StraightPorts();
-
             // Sets are compositions, not individual track pieces.
             return [];
         }
@@ -122,8 +119,8 @@ public sealed record CatalogueItem(
         var halfLength = (LengthMm ?? 188.3m) / 2m;
         var angle = (double)(AngleDeg ?? 24.3m) * Math.PI / 180d;
         var radius = (double)(RadiusMm ?? 437.5m);
-        var branchX = (decimal)(radius * Math.Sin(angle));
-        var branchY = (decimal)(radius * (1d - Math.Cos(angle)));
+        var branchX = halfLength;
+        var branchY = (decimal)((double)halfLength * Math.Tan(angle));
         return [
             new("IN", -halfLength, 0m, "estimated"),
             new("STRAIGHT", halfLength, 0m, "estimated"),
