@@ -5,6 +5,9 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using Platinum.Application.Control;
+using Platinum.Domain.Control;
+using Platinum.Infrastructure.Control;
 
 namespace Platinum.Presentation.Wpf;
 
@@ -14,6 +17,7 @@ namespace Platinum.Presentation.Wpf;
 /// </summary>
 public sealed class NativeOperationsView : UserControl
 {
+    private readonly RailwayControlService _controlService = new(new LocalSimulationAdapter());
     private readonly ObservableCollection<string> _blocks = [];
     private readonly HashSet<string> _occupied = new(StringComparer.OrdinalIgnoreCase);
     private readonly ObservableCollection<string> _routes = [];
@@ -33,6 +37,7 @@ public sealed class NativeOperationsView : UserControl
     {
         Background = Brush("#FF18212B");
         var tabs = new TabControl { Background = Brush("#FF18212B"), Foreground = Brushes.White, BorderThickness = new Thickness(0) };
+        tabs.Items.Add(Tab("Control propi", BuildNativeControl()));
         tabs.Items.Add(Tab("Dispatcher", BuildDispatcher()));
         tabs.Items.Add(Tab("Senyalització", BuildSignalling()));
         tabs.Items.Add(Tab("Centrals", BuildStations()));
@@ -54,10 +59,99 @@ public sealed class NativeOperationsView : UserControl
         Background = Brush("#FF3A2D1B"), Padding = new Thickness(12), Margin = new Thickness(8, 8, 8, 4),
         Child = new TextBlock
         {
-            Text = "MODE NATIU WPF · SIMULACIÓ I PLANIFICACIÓ LOCAL. No hi ha connexió amb JMRI, CS2/CS3 ni maquinari. DCC i totes les sortides físiques romanen bloquejades.",
+            Text = "MOTOR PROPI PLATINUM · WPF NATIU. No depèn de JMRI. Aquesta versió opera amb central virtual; CS2/CS3 i les sortides físiques continuen bloquejades.",
             TextWrapping = TextWrapping.Wrap, Foreground = Brush("#FFFFD58A"), FontWeight = FontWeights.SemiBold
         }
     };
+
+    private UIElement BuildNativeControl()
+    {
+        var panel = Panel("Motor de control propi · central virtual");
+        var connection = Status("Central virtual desconnectada.");
+        var address = new TextBox { Text = "3", Margin = new Thickness(0, 4, 0, 8), Width = 120, HorizontalAlignment = HorizontalAlignment.Left };
+        var speed = new Slider { Minimum = 0, Maximum = 1000, Value = 0, TickFrequency = 50, Margin = new Thickness(0, 8, 0, 8) };
+        var reverse = new CheckBox { Content = "Marxa enrere", Foreground = Brushes.White, Margin = new Thickness(0, 5, 0, 8) };
+        var function = new ComboBox { ItemsSource = Enumerable.Range(0, 29).Select(x => $"F{x}"), SelectedIndex = 0, Width = 120, HorizontalAlignment = HorizontalAlignment.Left };
+        var functionOn = new CheckBox { Content = "Activar funció", Foreground = Brushes.White, Margin = new Thickness(0, 5, 0, 8) };
+        var accessoryAddress = new TextBox { Text = "1", Width = 120, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 4, 0, 8) };
+        var accessoryState = new ComboBox
+        {
+            ItemsSource = Enum.GetValues<AccessoryState>(),
+            SelectedIndex = 0,
+            Width = 180,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Margin = new Thickness(0, 4, 0, 8)
+        };
+
+        panel.Children.Add(connection);
+        panel.Children.Add(Button("Connectar central virtual", async (_, _) =>
+        {
+            try
+            {
+                await _controlService.ConnectAsync();
+                connection.Text = "CONNECTAT · Platinum Simulation Station · cap connexió física.";
+            }
+            catch (Exception ex) { connection.Text = "Error de connexió virtual: " + ex.Message; }
+        }));
+        panel.Children.Add(Button("Desconnectar", async (_, _) =>
+        {
+            await _controlService.DisconnectAsync();
+            connection.Text = "Central virtual desconnectada.";
+        }));
+
+        panel.Children.Add(Label("Adreça de locomotora"));
+        panel.Children.Add(address);
+        panel.Children.Add(Label("Velocitat (passos interns 0–1000)"));
+        panel.Children.Add(speed);
+        panel.Children.Add(reverse);
+        panel.Children.Add(Button("Enviar velocitat a simulació", async (_, _) =>
+        {
+            if (!int.TryParse(address.Text, out var locoAddress))
+            {
+                connection.Text = "Adreça de locomotora no vàlida.";
+                return;
+            }
+            var result = await _controlService.SetLocomotiveSpeedAsync(locoAddress, (int)speed.Value, reverse.IsChecked == true);
+            connection.Text = result.Message;
+        }));
+
+        panel.Children.Add(Label("Funcions de locomotora"));
+        panel.Children.Add(function);
+        panel.Children.Add(functionOn);
+        panel.Children.Add(Button("Enviar funció a simulació", async (_, _) =>
+        {
+            if (!int.TryParse(address.Text, out var locoAddress))
+            {
+                connection.Text = "Adreça de locomotora no vàlida.";
+                return;
+            }
+            var functionNumber = function.SelectedIndex;
+            var result = await _controlService.SetFunctionAsync(locoAddress, functionNumber, functionOn.IsChecked == true);
+            connection.Text = result.Message;
+        }));
+
+        panel.Children.Add(Label("Accessori / desviament"));
+        panel.Children.Add(accessoryAddress);
+        panel.Children.Add(accessoryState);
+        panel.Children.Add(Button("Enviar accessori a simulació", async (_, _) =>
+        {
+            if (!int.TryParse(accessoryAddress.Text, out var accessory))
+            {
+                connection.Text = "Adreça d'accessori no vàlida.";
+                return;
+            }
+            var result = await _controlService.SetAccessoryAsync(accessory, (AccessoryState)accessoryState.SelectedItem);
+            connection.Text = result.Message;
+        }));
+        panel.Children.Add(Button("ATURADA D'EMERGÈNCIA VIRTUAL", async (_, _) =>
+        {
+            var result = await _controlService.EmergencyStopAsync();
+            speed.Value = 0;
+            connection.Text = result.Message;
+        }));
+        panel.Children.Add(Label("Aquest panell ja utilitza els contractes i el servei de control propis de Platinum. La central virtual és local; no envia ordres a vies, locomotores ni accessoris reals."));
+        return Scroll(panel);
+    }
 
     private UIElement BuildDispatcher()
     {
