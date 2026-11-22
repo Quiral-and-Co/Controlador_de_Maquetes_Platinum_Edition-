@@ -10,7 +10,11 @@ dotnet build Platinum.sln -c Release
 dotnet run --project src/Platinum.Presentation.Wpf/Platinum.Presentation.Wpf.csproj
 ```
 
-Consulta [la guia de migració WPF](docs/native-wpf-migration.md) per veure què ja s'ha portat i què queda pendent. Les pantalles noves de simulació són locals i no controlen maquinari real.
+Consulta [la guia de migració WPF](docs/native-wpf-migration.md) per veure què ja s'ha portat i què queda pendent.
+
+### Dispatcher natiu WPF (.NET 10)
+
+La branca `main` incorpora el panell Dispatcher WPF connectat al `TrackLayout` actiu: consulta de blocs per nivell, estats lògics Desconegut/Lliure/Ocupat, creació d'itineraris amb blocs seleccionats, reserva atòmica sense conflictes i alliberament de reserves quan un bloc deixa d'estar lliure. Les ocupacions i reserves es desen al paquet `.platinum`. Aquesta interfície és de simulació local: no envia ordres a locomotores, desviaments, senyals, JMRI ni centrals digitals. Proves de domini: `dotnet test Platinum.sln -c Release` (inclou `DispatcherServiceTests`). Les pantalles noves de simulació són locals i no controlen maquinari real.
 
 ## Instal·lació i actualitzacions (WPF)
 
