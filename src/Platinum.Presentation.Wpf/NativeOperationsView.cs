@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -39,8 +42,9 @@ public sealed class NativeOperationsView : UserControl
         tabs.Items.Add(Tab("Món de Jocs", BuildGame()));
         tabs.Items.Add(Tab("Validació", BuildValidation()));
         var root = new DockPanel();
-        DockPanel.SetDock(Notice(), Dock.Top);
-        root.Children.Add(Notice());
+        var notice = Notice();
+        DockPanel.SetDock(notice, Dock.Top);
+        root.Children.Add(notice);
         root.Children.Add(tabs);
         Content = root;
     }
