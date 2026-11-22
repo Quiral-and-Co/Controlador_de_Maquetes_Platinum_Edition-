@@ -19,6 +19,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        OperationsView.SetLayout(_currentLayout);
+        OperationsView.ProjectDataChanged += (_, _) => { UpdateProjectStatus(); StatusText.Text = "Dades del dispatcher modificades; desa el projecte per conservar-les."; };
         LoadCatalogue();
         TrackEditor.CataloguePiecePlaced += OnCataloguePiecePlaced;
         TrackEditor.ConnectionCreated += OnConnectionCreated;
@@ -42,6 +44,7 @@ public partial class MainWindow : Window
     {
         _currentLayout = CreateNewLayout();
         _currentPath = null;
+        OperationsView.SetLayout(_currentLayout);
         TrackEditor.SetActiveLevel(ActiveLevelId);
         TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
         TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
@@ -68,6 +71,7 @@ public partial class MainWindow : Window
         {
             _currentLayout = await _projects.LoadAsync(dialog.FileName);
             _currentPath = dialog.FileName;
+            OperationsView.SetLayout(_currentLayout);
             if (_currentLayout.Levels.Count == 0) _currentLayout.Levels.Add(new TrackLevel(Guid.NewGuid(), "Nivell principal", 0m));
             TrackEditor.SetActiveLevel(ActiveLevelId);
             TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
