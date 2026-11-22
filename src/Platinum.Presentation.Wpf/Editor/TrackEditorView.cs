@@ -127,7 +127,7 @@ public sealed class TrackEditorView : UserControl
     {
         if (!_snapToGrid) return point;
         return new Point(Math.Round(point.X / (double)_gridMillimetres) * (double)_gridMillimetres,
-            Math.Round(point.Y / (double)_gridMillimetres) * (double)GridMillimetres);
+            Math.Round(point.Y / (double)_gridMillimetres) * (double)_gridMillimetres);
     }
     private Point ToView(decimal x, decimal y) => new(((double)x + 80) * BaseScale, ((double)y + 80) * BaseScale);
 
