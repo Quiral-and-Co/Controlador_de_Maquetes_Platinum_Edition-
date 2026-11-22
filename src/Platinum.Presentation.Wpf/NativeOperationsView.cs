@@ -21,6 +21,9 @@ public sealed class NativeOperationsView : UserControl
     private TrackLayout? _layout;
     private ListBox? _dispatcherBlocksList;
     private ListBox? _dispatcherRoutesList;
+    private ListBox? _signalsList;
+    private ComboBox? _signalBlockSelector;
+    private ComboBox? _signalAspectSelector;
     public event EventHandler? ProjectDataChanged;
 
     private readonly RailwayControlService _controlService = new(new LocalSimulationAdapter());
@@ -254,6 +257,7 @@ public sealed class NativeOperationsView : UserControl
     {
         _layout = layout ?? throw new ArgumentNullException(nameof(layout));
         RefreshDispatcher();
+        RefreshSignalling();
     }
 
     private void RefreshDispatcher()
@@ -356,15 +360,82 @@ public sealed class NativeOperationsView : UserControl
         return root;
     }
 
+    private void RefreshSignalling()
+    {
+        if (_layout is null) return;
+        if (_signalsList is not null)
+        {
+            var selectedId = (_signalsList.SelectedItem as SignalDefinition)?.Id;
+            _signalsList.ItemsSource = _layout.Signals.ToArray();
+            _signalsList.DisplayMemberPath = nameof(SignalDefinition.Name);
+            if (selectedId.HasValue)
+                _signalsList.SelectedItem = _layout.Signals.FirstOrDefault(x => x.Id == selectedId.Value);
+        }
+        if (_signalBlockSelector is not null)
+        {
+            var selectedId = (_signalBlockSelector.SelectedItem as LogicalBlock)?.Id;
+            _signalBlockSelector.ItemsSource = _layout.Blocks.ToArray();
+            _signalBlockSelector.DisplayMemberPath = nameof(LogicalBlock.Name);
+            if (selectedId.HasValue)
+                _signalBlockSelector.SelectedItem = _layout.Blocks.FirstOrDefault(x => x.Id == selectedId.Value);
+        }
+    }
+
     private UIElement BuildSignalling()
     {
-        var panel = Panel("Senyalització ferroviària · simulador local");
-        var signal = new ComboBox { ItemsSource = new[] { "S1 · Entrada", "S2 · Sortida", "S3 · Bloqueig", "S4 · Maniobres" }, SelectedIndex = 0, Margin = new Thickness(0, 6, 0, 10) };
-        var aspect = new ComboBox { ItemsSource = new[] { "Desconegut", "Via lliure (simulat)", "Precaució (simulat)", "Parada (simulat)", "Maniobres (simulat)" }, SelectedIndex = 0, Margin = new Thickness(0, 6, 0, 10) };
-        panel.Children.Add(Label("Senyal")); panel.Children.Add(signal); panel.Children.Add(Label("Aspecte")); panel.Children.Add(aspect);
-        panel.Children.Add(Button("Aplicar aspecte al simulador", (_, _) => _signalStatus.Text = $"{signal.SelectedItem}: {aspect.SelectedItem}. Estat fictici, no enviat a cap senyal real."));
+        var panel = Panel("Senyalització ferroviària · aspectes lògics i simulats");
+        var signalName = new TextBox { Text = "S1 · Entrada", Margin = new Thickness(0, 6, 0, 8), Width = 280 };
+        var block = new ComboBox { Margin = new Thickness(0, 6, 0, 8), Width = 280 };
+        var aspect = new ComboBox
+        {
+            ItemsSource = new[] { "unknown", "stop", "caution", "proceed", "shunting" },
+            SelectedIndex = 0,
+            Margin = new Thickness(0, 6, 0, 10),
+            Width = 220
+        };
+        var list = new ListBox { MinHeight = 140, Background = Brush("#FF111820"), Foreground = Brushes.White };
+        _signalsList = list;
+        _signalBlockSelector = block;
+        _signalAspectSelector = aspect;
+        list.SelectionChanged += (_, _) =>
+        {
+            if (list.SelectedItem is SignalDefinition selected)
+            {
+                aspect.SelectedItem = selected.Aspect;
+                block.SelectedItem = _layout?.Blocks.FirstOrDefault(x => x.Id == selected.ProtectedBlockId);
+                _signalStatus.Text = $"{selected.Name}: {selected.Aspect} · sortida física bloquejada.";
+            }
+        };
+        panel.Children.Add(Label("Nom del senyal")); panel.Children.Add(signalName);
+        panel.Children.Add(Label("Bloc protegit (opcional)")); panel.Children.Add(block);
+        panel.Children.Add(Button("Crear senyal al projecte", (_, _) =>
+        {
+            if (_layout is null) { _signalStatus.Text = "No hi ha projecte actiu."; return; }
+            var name = signalName.Text.Trim();
+            if (name.Length == 0 || _layout.Signals.Any(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))
+            { _signalStatus.Text = "Nom buit o senyal duplicat."; return; }
+            var protectedBlock = block.SelectedItem as LogicalBlock;
+            _layout.Signals.Add(new SignalDefinition(Guid.NewGuid(), name, "unknown", protectedBlock?.Id, false));
+            NotifyProjectChanged();
+            RefreshSignalling();
+            _signalStatus.Text = $"Senyal «{name}» creat al projecte. No hi ha cap sortida física.";
+        }));
+        panel.Children.Add(Label("Senyals del projecte")); panel.Children.Add(list);
+        panel.Children.Add(Label("Aspecte lògic")); panel.Children.Add(aspect);
+        panel.Children.Add(Button("Desar aspecte simulat", (_, _) =>
+        {
+            if (_layout is null || list.SelectedItem is not SignalDefinition selected) return;
+            var index = _layout.Signals.FindIndex(x => x.Id == selected.Id);
+            if (index < 0) return;
+            var value = aspect.SelectedItem?.ToString() ?? "unknown";
+            _layout.Signals[index] = _layout.Signals[index] with { Aspect = value, PhysicallyVerified = false };
+            NotifyProjectChanged();
+            RefreshSignalling();
+            _signalStatus.Text = $"{selected.Name}: aspecte «{value}» desat al projecte. No enviat a cap senyal real.";
+        }));
         panel.Children.Add(_signalStatus);
-        panel.Children.Add(Label("La representació ADIF/JMRI i l'enclavament real requereixen dades de camp, protocols i validació independents."));
+        panel.Children.Add(Label("La senyalització és una dada lògica del projecte. La indicació d'aspecte no controla descodificadors ni substitueix un enclavament ferroviari certificat."));
+        RefreshSignalling();
         return Scroll(panel);
     }
 
