@@ -12,7 +12,7 @@ AppPublisher=Quiral-and-Co
 DefaultDirName={autopf}\Quiral Platinum
 DefaultGroupName=Quiral Platinum
 UninstallDisplayIcon={app}\{#MyAppExeName}
-OutputDir=dist
+OutputDir=..\dist
 OutputBaseFilename=Quiral-Platinum-Setup-{#MyAppVersion}
 Compression=lzma2
 SolidCompression=yes
@@ -26,7 +26,7 @@ SetupLogging=yes
 UsePreviousAppDir=yes
 
 [Files]
-Source: "dist\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\Quiral Platinum"; Filename: "{app}\{#MyAppExeName}"
