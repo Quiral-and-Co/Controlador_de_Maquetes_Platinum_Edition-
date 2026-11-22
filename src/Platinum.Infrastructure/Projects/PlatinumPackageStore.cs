@@ -132,9 +132,8 @@ public sealed class PlatinumPackageStore : IProjectStore
             layout.Routes.GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase).Any(x => x.Count() > 1))
             throw new InvalidDataException("Hi ha itineraris amb blocs inexistents o referències duplicades.");
         var reservedBlockIds = layout.Routes.Where(x => x.Reserved).SelectMany(x => x.BlockIds).ToArray();
-        if (reservedBlockIds.Distinct().Count() != reservedBlockIds.Length ||
-            layout.Routes.Any(route => route.Reserved && route.BlockIds.Any(id => layout.Blocks.First(block => block.Id == id).Occupied)))
-            throw new InvalidDataException("Les reserves lògiques se solapen o inclouen blocs ocupats.");
+        if (reservedBlockIds.Distinct().Count() != reservedBlockIds.Length)
+            throw new InvalidDataException("Les reserves lògiques se solapen entre itineraris.");
 
         if (layout.Signals.Any(x => string.IsNullOrWhiteSpace(x.Name) || string.IsNullOrWhiteSpace(x.Aspect) ||
             (x.ProtectedBlockId.HasValue && !blockIds.Contains(x.ProtectedBlockId.Value))))
