@@ -28,6 +28,8 @@ public sealed class ThreeDTrackEditorView : UserControl
     private double _yaw = -42;
     private double _pitch = 42;
     private double _distance = 2200;
+    private bool _showAllLevels = true;
+    private static readonly Color[] LevelColors = [Colors.LightSkyBlue, Colors.LightGreen, Colors.Khaki, Colors.Plum, Colors.Coral, Colors.Turquoise];
 
     public ThreeDTrackEditorView()
     {
@@ -39,6 +41,10 @@ public sealed class ThreeDTrackEditorView : UserControl
         AddButton(toolbar, "Apropar", (_, _) => Zoom(0.8));
         AddButton(toolbar, "Allunyar", (_, _) => Zoom(1.25));
         AddButton(toolbar, "Actualitzar 3D", (_, _) => Render());
+        var allLevels = new CheckBox { Content = "Mostra tots els nivells", IsChecked = true, Foreground = Brushes.Gainsboro, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 8, 0) };
+        allLevels.Checked += (_, _) => { _showAllLevels = true; Render(); };
+        allLevels.Unchecked += (_, _) => { _showAllLevels = false; Render(); };
+        toolbar.Children.Add(allLevels);
         DockPanel.SetDock(toolbar, Dock.Top);
         root.Children.Add(toolbar);
         DockPanel.SetDock(_status, Dock.Bottom);
@@ -85,15 +91,38 @@ public sealed class ThreeDTrackEditorView : UserControl
         _scene.Children.Add(new DirectionalLight(Color.FromRgb(110, 130, 160), new Vector3D(0.7, 0.2, -0.4)));
         AddGround();
         var level = _levels.FirstOrDefault(x => x.Id == _activeLevel);
-        var elevation = level is null ? 0d : (double)level.ElevationMillimetres;
-        foreach (var segment in _segments.Where(x => x.LevelId == _activeLevel))
+        var visibleLevels = _levels
+            .Select((item, index) => new { Level = item, Index = index })
+            .Where(x => _showAllLevels || x.Level.Id == _activeLevel)
+            .ToArray();
+
+        foreach (var entry in visibleLevels)
         {
-            DrawTrack(BuildSegmentPoints(segment), elevation, Colors.Silver);
-            if (segment.Kind == TrackGeometryKind.Turnout) DrawTurnoutBranch(segment, elevation);
+            var current = entry.Level;
+            var elevation = (double)current.ElevationMillimetres;
+            var isActive = current.Id == _activeLevel;
+            var baseColor = LevelColors[entry.Index % LevelColors.Length];
+            var trackColor = isActive ? baseColor : Color.FromRgb(
+                (byte)(baseColor.R * 0.58), (byte)(baseColor.G * 0.58), (byte)(baseColor.B * 0.58));
+
+            // Vertical datum marker relates each stored elevation to the ground grid.
+            AddCylinder(new Point3D(-1700, -1100, -5), new Point3D(-1700, -1100, elevation + 5),
+                isActive ? 4 : 2.5, new DiffuseMaterial(new SolidColorBrush(trackColor)));
+
+            foreach (var segment in _segments.Where(x => x.LevelId == current.Id))
+            {
+                DrawTrack(BuildSegmentPoints(segment), elevation, trackColor);
+                if (segment.Kind == TrackGeometryKind.Turnout) DrawTurnoutBranch(segment, elevation);
+            }
+            foreach (var piece in _pieces.Where(x => x.LevelId == current.Id))
+                DrawPiece(piece, elevation, trackColor);
         }
-        foreach (var piece in _pieces.Where(x => x.LevelId == _activeLevel))
-            DrawPiece(piece, elevation);
-        _status.Text = $"Editor 3D natiu · {level?.Name ?? "Nivell actiu"} · {_pieces.Count(x => x.LevelId == _activeLevel)} peces · {_segments.Count(x => x.LevelId == _activeLevel)} traçats · Arrossega per orbitar, roda per zoom";
+
+        var levelSummary = string.Join(" · ", visibleLevels.Select(x =>
+            $"{x.Level.Name}: {x.Level.ElevationMillimetres:0.##} mm"));
+        var activePieces = _pieces.Count(x => x.LevelId == _activeLevel);
+        var activeSegments = _segments.Count(x => x.LevelId == _activeLevel);
+        _status.Text = $"Editor 3D natiu · Actiu: {level?.Name ?? "Nivell"} · {activePieces} peces · {activeSegments} traçats · {levelSummary} · Alçades visuals, sense rampes físiques";
     }
 
     private void AddGround()
@@ -109,7 +138,7 @@ public sealed class ThreeDTrackEditorView : UserControl
         for (var y = -1200; y <= 1200; y += 100) AddCylinder(new Point3D(-1800, y, -5), new Point3D(1800, y, -5), 0.7, gridMaterial);
     }
 
-    private void DrawPiece(TrackPiece piece, double elevation)
+    private void DrawPiece(TrackPiece piece, double elevation, Color levelColor)
     {
         if (!_catalogue.TryGetValue(piece.CatalogueCode, out var item) || item.TrackPaths.Count == 0)
         {
@@ -142,7 +171,7 @@ public sealed class ThreeDTrackEditorView : UserControl
                 }
             }
             else { points.Add(start); points.Add(end); }
-            DrawTrack(points, elevation, item.GeometryStatus == "confirmed" ? Colors.LightSteelBlue : Colors.DarkOrange);
+            DrawTrack(points, elevation, item.GeometryStatus == "confirmed" ? levelColor : Colors.DarkOrange);
         }
     }
 
