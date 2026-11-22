@@ -222,7 +222,7 @@ public sealed class PlatinumPackageStore : IProjectStore
             Sensors=Sensors.Select(v=>new FeedbackSensor(v.Id,v.SystemName,v.DisplayName,v.PhysicallyVerified)).ToList(),
             Routes=Routes.Select(v=>new RouteDefinition(v.Id,v.Name,v.BlockIds)).ToList(),
             BlockOccupancies=BlockOccupancies.Select(v=>new BlockOccupancy(v.BlockId,v.State)).ToList(),
-            RouteReservations=RouteReservations.Select(v=>new RouteReservation(v.Id,v.RouteId,v.CreatedUtc)).ToList()
+            RouteReservations=RouteReservations.Select(v=>new RouteReservation(v.Id,v.RouteId,DateTimeOffset.Parse(v.CreatedUtc, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind))).ToList()
         };
     }
     public sealed class LevelDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public decimal ElevationMillimetres {get;set;} }
