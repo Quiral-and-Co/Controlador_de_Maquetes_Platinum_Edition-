@@ -19,6 +19,9 @@ public sealed class TrackLayout
     public List<LocomotiveProfile> Locomotives { get; init; } = [];
     public List<RailwayProtocolProfile> ProtocolProfiles { get; init; } = [];
     public List<PhysicalInspectionRecord> Inspections { get; init; } = [];
+    public List<TrainProtectionProfile> ProtectionProfiles { get; init; } = [];
+    public List<TrainGroundMessage> GroundMessages { get; init; } = [];
+    public decimal GameFuelPercent { get; set; } = 100m;
 }
 
 public sealed record TrackLevel(Guid Id, string Name, decimal ElevationMillimetres);
@@ -32,3 +35,5 @@ public sealed record SignalDefinition(Guid Id, string Name, string Aspect, Guid?
 public sealed record LocomotiveProfile(Guid Id, string Name, int Address, string Protocol, bool SimulationOnly = true);
 public sealed record RailwayProtocolProfile(Guid Id, string Name, string Kind, string Host, int Port, bool PhysicalCommandsEnabled = false);
 public sealed record PhysicalInspectionRecord(Guid Id, string Item, bool OperatorDeclaredComplete, string Notes, DateTimeOffset CheckedUtc);
+public sealed record TrainProtectionProfile(Guid Id, string Name, decimal PermittedSpeedKmh, decimal MaxSpeedKmh, decimal ServiceBrakeDeceleration, bool SimulationOnly = true);
+public sealed record TrainGroundMessage(Guid Id, string Destination, string Message, DateTimeOffset CreatedUtc);
