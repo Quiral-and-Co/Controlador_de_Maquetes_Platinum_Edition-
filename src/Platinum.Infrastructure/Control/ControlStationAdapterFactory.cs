@@ -4,8 +4,8 @@ using Platinum.Domain.Control;
 namespace Platinum.Infrastructure.Control;
 
 /// <summary>
-/// Crea l'adaptador propi segons el perfil. Només la simulació està disponible
-/// fins que els protocols físics tinguin implementació i proves verificables.
+/// Crea l'adaptador propi segons el perfil. La CS2 permet consulta nativa de presència;
+/// les ordres físiques continuen bloquejades fins a validació i proves verificables.
 /// </summary>
 public static class ControlStationAdapterFactory
 {
