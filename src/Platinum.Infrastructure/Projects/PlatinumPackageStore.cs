@@ -209,9 +209,9 @@ public sealed class PlatinumPackageStore : IProjectStore
             Pieces=x.Pieces.Select(v=>new PieceDocument{Id=v.Id,CatalogueCode=v.CatalogueCode,X=v.X,Y=v.Y,RotationDegrees=v.RotationDegrees,LevelId=v.LevelId,GeometryStatus=v.GeometryStatus}).ToList(),
             GeometrySegments=x.GeometrySegments.Select(v=>new GeometrySegmentDocument{Id=v.Id,Kind=v.Kind,StartX=v.StartX,StartY=v.StartY,EndX=v.EndX,EndY=v.EndY,ControlX=v.ControlX,ControlY=v.ControlY,LevelId=v.LevelId}).ToList(),
             Connections=x.Connections.Select(v=>new ConnectionDocument{Id=v.Id,FromPieceId=v.FromPieceId,FromPort=v.FromPort,ToPieceId=v.ToPieceId,ToPort=v.ToPort,PhysicallyVerified=v.PhysicallyVerified}).ToList(),
-            Blocks=x.Blocks.Select(v=>new BlockDocument{Id=v.Id,Name=v.Name,LevelId=v.LevelId,PieceIds=v.PieceIds.ToList()}).ToList(),
+            Blocks=x.Blocks.Select(v=>new BlockDocument{Id=v.Id,Name=v.Name,LevelId=v.LevelId,PieceIds=v.PieceIds.ToList(),Occupied=v.Occupied}).ToList(),
             Sensors=x.Sensors.Select(v=>new SensorDocument{Id=v.Id,SystemName=v.SystemName,DisplayName=v.DisplayName,PhysicallyVerified=v.PhysicallyVerified}).ToList(),
-            Routes=x.Routes.Select(v=>new RouteDocument{Id=v.Id,Name=v.Name,BlockIds=v.BlockIds.ToList()}).ToList(),
+            Routes=x.Routes.Select(v=>new RouteDocument{Id=v.Id,Name=v.Name,BlockIds=v.BlockIds.ToList(),Reserved=v.Reserved}).ToList(),
             Signals=x.Signals.Select(v=>new SignalDocument{Id=v.Id,Name=v.Name,Aspect=v.Aspect,ProtectedBlockId=v.ProtectedBlockId,PhysicallyVerified=v.PhysicallyVerified}).ToList(),
             Locomotives=x.Locomotives.Select(v=>new LocomotiveDocument{Id=v.Id,Name=v.Name,Address=v.Address,Protocol=v.Protocol,SimulationOnly=v.SimulationOnly}).ToList(),
             Inspections=x.Inspections.Select(v=>new InspectionDocument{Id=v.Id,Item=v.Item,OperatorDeclaredComplete=v.OperatorDeclaredComplete,Notes=v.Notes,CheckedUtc=v.CheckedUtc.ToString("O")}).ToList()
@@ -223,9 +223,9 @@ public sealed class PlatinumPackageStore : IProjectStore
             Pieces=Pieces.Select(v=>new TrackPiece(v.Id,v.CatalogueCode,v.X,v.Y,v.RotationDegrees,v.LevelId,string.IsNullOrWhiteSpace(v.GeometryStatus) ? "unverified" : v.GeometryStatus)).ToList(),
             GeometrySegments=GeometrySegments.Select(v=>new TrackGeometrySegment(v.Id,v.Kind,v.StartX,v.StartY,v.EndX,v.EndY,v.ControlX,v.ControlY,v.LevelId)).ToList(),
             Connections=Connections.Select(v=>new TrackConnection(v.Id,v.FromPieceId,v.FromPort,v.ToPieceId,v.ToPort,v.PhysicallyVerified)).ToList(),
-            Blocks=Blocks.Select(v=>new LogicalBlock(v.Id,v.Name,v.LevelId,v.PieceIds)).ToList(),
+            Blocks=Blocks.Select(v=>new LogicalBlock(v.Id,v.Name,v.LevelId,v.PieceIds,v.Occupied)).ToList(),
             Sensors=Sensors.Select(v=>new FeedbackSensor(v.Id,v.SystemName,v.DisplayName,v.PhysicallyVerified)).ToList(),
-            Routes=Routes.Select(v=>new RouteDefinition(v.Id,v.Name,v.BlockIds)).ToList(),
+            Routes=Routes.Select(v=>new RouteDefinition(v.Id,v.Name,v.BlockIds,v.Reserved)).ToList(),
             Signals=Signals.Select(v=>new SignalDefinition(v.Id,v.Name,v.Aspect,v.ProtectedBlockId,v.PhysicallyVerified)).ToList(),
             Locomotives=Locomotives.Select(v=>new LocomotiveProfile(v.Id,v.Name,v.Address,v.Protocol,v.SimulationOnly)).ToList(),
             Inspections=Inspections.Select(v=>new PhysicalInspectionRecord(v.Id,v.Item,v.OperatorDeclaredComplete,v.Notes,DateTimeOffset.Parse(v.CheckedUtc,System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind))).ToList()
@@ -235,9 +235,9 @@ public sealed class PlatinumPackageStore : IProjectStore
     public sealed class PieceDocument { public Guid Id {get;set;} public string CatalogueCode {get;set;}=""; public decimal X {get;set;} public decimal Y {get;set;} public decimal RotationDegrees {get;set;} public Guid LevelId {get;set;} public string GeometryStatus {get;set;}="unverified"; }
     public sealed class GeometrySegmentDocument { public Guid Id {get;set;} public TrackGeometryKind Kind {get;set;} public decimal StartX {get;set;} public decimal StartY {get;set;} public decimal EndX {get;set;} public decimal EndY {get;set;} public decimal ControlX {get;set;} public decimal ControlY {get;set;} public Guid LevelId {get;set;} }
     public sealed class ConnectionDocument { public Guid Id {get;set;} public Guid FromPieceId {get;set;} public string FromPort {get;set;}=""; public Guid ToPieceId {get;set;} public string ToPort {get;set;}=""; public bool PhysicallyVerified {get;set;} }
-    public sealed class BlockDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public Guid LevelId {get;set;} [XmlArrayItem("PieceId")] public List<Guid> PieceIds {get;set;}=[]; }
+    public sealed class BlockDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public Guid LevelId {get;set;} public bool Occupied {get;set;} [XmlArrayItem("PieceId")] public List<Guid> PieceIds {get;set;}=[]; }
     public sealed class SensorDocument { public Guid Id {get;set;} public string SystemName {get;set;}=""; public string DisplayName {get;set;}=""; public bool PhysicallyVerified {get;set;} }
-    public sealed class RouteDocument { public Guid Id {get;set;} public string Name {get;set;}=""; [XmlArrayItem("BlockId")] public List<Guid> BlockIds {get;set;}=[]; }
+    public sealed class RouteDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public bool Reserved {get;set;} [XmlArrayItem("BlockId")] public List<Guid> BlockIds {get;set;}=[]; }
     public sealed class SignalDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public string Aspect {get;set;}="unknown"; public Guid? ProtectedBlockId {get;set;} public bool PhysicallyVerified {get;set;} }
     public sealed class LocomotiveDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public int Address {get;set;} public string Protocol {get;set;}="simulation"; public bool SimulationOnly {get;set;}=true; }
     public sealed class InspectionDocument { public Guid Id {get;set;} public string Item {get;set;}=""; public bool OperatorDeclaredComplete {get;set;} public string Notes {get;set;}=""; public string CheckedUtc {get;set;}=""; }
