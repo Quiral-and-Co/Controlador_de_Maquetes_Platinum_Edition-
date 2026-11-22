@@ -14,6 +14,8 @@ public sealed class PlatinumPackageStore : IProjectStore
     private const string ManifestEntry = "manifest.xml";
     private const string LayoutEntry = "layout.xml";
     private const long MaxEntryBytes = 64 * 1024 * 1024;
+    private const long MaxPackageBytes = 128 * 1024 * 1024;
+    private const int MaxEntryCount = 32;
 
     public async Task SaveAsync(TrackLayout layout, string path, CancellationToken cancellationToken = default)
     {
@@ -47,12 +49,20 @@ public sealed class PlatinumPackageStore : IProjectStore
 
     public async Task<TrackLayout> LoadAsync(string path, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("Cal indicar el fitxer del projecte.", nameof(path));
+        cancellationToken.ThrowIfCancellationRequested();
         await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, true);
         using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
+        if (archive.Entries.Count > MaxEntryCount || archive.Entries.Sum(entry => entry.Length) > MaxPackageBytes)
+            throw new InvalidDataException("El paquet supera els límits de mida o nombre d'entrades.");
+        if (archive.Entries.GroupBy(entry => entry.FullName, StringComparer.OrdinalIgnoreCase).Any(group => group.Count() > 1))
+            throw new InvalidDataException("El paquet conté entrades ZIP duplicades.");
+        cancellationToken.ThrowIfCancellationRequested();
         var manifest = await ReadXmlAsync<ProjectManifest>(archive, ManifestEntry, cancellationToken);
         if (manifest.Format != "Quiral Platinum" || manifest.FormatVersion != TrackLayout.CurrentFormatVersion)
             throw new InvalidDataException($"Format de projecte no compatible: {manifest.Format} v{manifest.FormatVersion}.");
         var document = await ReadXmlAsync<LayoutDocument>(archive, LayoutEntry, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         var layout = document.ToDomain();
         Validate(layout);
         return layout;
@@ -61,6 +71,8 @@ public sealed class PlatinumPackageStore : IProjectStore
     private static void Validate(TrackLayout layout)
     {
         ArgumentNullException.ThrowIfNull(layout);
+        if (layout.Levels is null || layout.Pieces is null || layout.Connections is null || layout.Blocks is null || layout.Sensors is null || layout.Routes is null)
+            throw new InvalidDataException("El projecte conté col·leccions nul·les.");
         if (layout.Id == Guid.Empty || string.IsNullOrWhiteSpace(layout.Name) ||
             layout.WidthMillimetres <= 0 || layout.HeightMillimetres <= 0 || layout.GridMillimetres <= 0)
             throw new InvalidDataException("El projecte conté identificadors, nom o dimensions invàlids.");
@@ -73,6 +85,8 @@ public sealed class PlatinumPackageStore : IProjectStore
         }
 
         EnsureUniqueIds(layout.Levels, x => x.Id, "nivells");
+        if (layout.Levels.Any(x => string.IsNullOrWhiteSpace(x.Name)))
+            throw new InvalidDataException("Hi ha nivells sense nom.");
         EnsureUniqueIds(layout.Pieces, x => x.Id, "peces");
         EnsureUniqueIds(layout.Connections, x => x.Id, "connexions");
         EnsureUniqueIds(layout.Blocks, x => x.Id, "blocs");
@@ -97,7 +111,8 @@ public sealed class PlatinumPackageStore : IProjectStore
             x.PieceIds.Distinct().Count() != x.PieceIds.Count))
             throw new InvalidDataException("Hi ha blocs amb nivell, peces o noms invàlids.");
 
-        if (layout.Sensors.Any(x => string.IsNullOrWhiteSpace(x.SystemName) || string.IsNullOrWhiteSpace(x.DisplayName)))
+        if (layout.Sensors.Any(x => string.IsNullOrWhiteSpace(x.SystemName) || string.IsNullOrWhiteSpace(x.DisplayName)) ||
+            layout.Sensors.GroupBy(x => x.SystemName, StringComparer.OrdinalIgnoreCase).Any(x => x.Count() > 1))
             throw new InvalidDataException("Hi ha sensors sense identificador de sistema o nom visible.");
 
         if (layout.Routes.Any(x => string.IsNullOrWhiteSpace(x.Name) || x.BlockIds.Any(id => !blockIds.Contains(id)) ||
