@@ -6,6 +6,7 @@ using Platinum.Infrastructure.Projects;
 using Platinum.Presentation.Wpf.Updates;
 using Platinum.Presentation.Wpf.Editor;
 using Platinum.Presentation.Wpf.Catalogue;
+using Platinum.Presentation.Wpf.Dispatcher;
 
 namespace Platinum.Presentation.Wpf;
 
@@ -19,6 +20,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        DispatcherPanel.SetLayout(_currentLayout);
         LoadCatalogue();
         TrackEditor.CataloguePiecePlaced += OnCataloguePiecePlaced;
         TrackEditor.ConnectionCreated += OnConnectionCreated;
@@ -43,6 +45,7 @@ public partial class MainWindow : Window
     {
         _currentLayout = CreateNewLayout();
         _currentPath = null;
+        DispatcherPanel.SetLayout(_currentLayout);
         TrackEditor.SetActiveLevel(ActiveLevelId);
         TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
         TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
@@ -69,6 +72,7 @@ public partial class MainWindow : Window
         {
             _currentLayout = await _projects.LoadAsync(dialog.FileName);
             _currentPath = dialog.FileName;
+            DispatcherPanel.SetLayout(_currentLayout);
             if (_currentLayout.Levels.Count == 0) _currentLayout.Levels.Add(new TrackLevel(Guid.NewGuid(), "Nivell principal", 0m));
             TrackEditor.SetActiveLevel(ActiveLevelId);
             TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
@@ -106,6 +110,7 @@ public partial class MainWindow : Window
 
         try
         {
+            DispatcherPanel.SyncToLayout();
             _currentLayout.GeometrySegments = TrackEditor.Segments.ToList();
             _currentLayout.Pieces.Clear();
             _currentLayout.Pieces.AddRange(TrackEditor.Pieces);
