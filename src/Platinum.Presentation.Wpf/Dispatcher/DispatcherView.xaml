@@ -1,0 +1,72 @@
+<UserControl x:Class="Platinum.Presentation.Wpf.Dispatcher.DispatcherView"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Background="#FF18212B" Foreground="#FFE9EDF2">
+  <Grid Margin="16">
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+    <StackPanel Grid.Row="0" Margin="0,0,0,12">
+      <TextBlock Text="DISPATCHER" FontSize="22" FontWeight="Bold" Foreground="#FFFFC65C"/>
+      <TextBlock Text="Blocs, ocupació lògica, itineraris i reserves del TrackLayout actiu." Foreground="#FFB7C1CC" Margin="0,4,0,8"/>
+      <Border Background="#FF332B1D" BorderBrush="#FF80612D" BorderThickness="1" Padding="8" CornerRadius="4">
+        <TextBlock Text="SIMULACIÓ LÒGICA · No acciona desviaments, senyals, locomotores ni centrals digitals." TextWrapping="Wrap" Foreground="#FFFFD58A"/>
+      </Border>
+    </StackPanel>
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="1.15*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="0.85*"/></Grid.ColumnDefinitions>
+      <Border Grid.Column="0" Background="#FF202833" CornerRadius="5" Padding="12">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top">
+            <TextBlock Text="BLOCS DEL PROJECTE" FontWeight="Bold" Margin="0,0,0,8"/>
+            <TextBlock x:Name="BlockCountText" Foreground="#FFB7C1CC" Margin="0,0,0,8"/>
+          </StackPanel>
+          <DataGrid x:Name="BlocksGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended"
+                    Background="#FF111820" Foreground="#FFE9EDF2" RowBackground="#FF18212B"
+                    AlternatingRowBackground="#FF202833" BorderBrush="#FF394654" GridLinesVisibility="Horizontal">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Bloc" Binding="{Binding Name}" Width="*"/>
+              <DataGridTextColumn Header="Nivell" Binding="{Binding LevelName}" Width="110"/>
+              <DataGridTextColumn Header="Ocupació" Binding="{Binding OccupancyLabel}" Width="110"/>
+            </DataGrid.Columns>
+          </DataGrid>
+          <StackPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+            <TextBlock Text="Canvia l'estat lògic del bloc seleccionat:" Foreground="#FFB7C1CC" Margin="0,0,0,6"/>
+            <WrapPanel>
+              <Button Content="Desconegut" Click="SetUnknown_Click" Padding="10,6" Margin="0,0,6,0"/>
+              <Button Content="Lliure" Click="SetFree_Click" Padding="10,6" Margin="0,0,6,0"/>
+              <Button Content="Ocupat" Click="SetOccupied_Click" Padding="10,6"/>
+            </WrapPanel>
+          </StackPanel>
+        </DockPanel>
+      </Border>
+      <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center" Background="#FF394654"/>
+      <Grid Grid.Column="2">
+        <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="12"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Border Grid.Row="0" Background="#FF202833" CornerRadius="5" Padding="12">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Top">
+              <TextBlock Text="ITINERARIS" FontWeight="Bold" Margin="0,0,0,8"/>
+              <TextBox x:Name="RouteNameBox" Padding="7" Margin="0,0,0,8" ToolTip="Nom del nou itinerari"/>
+              <Button Content="Crear amb els blocs seleccionats" Click="CreateRoute_Click" Padding="8,6" Margin="0,0,0,8"/>
+            </StackPanel>
+            <ListBox x:Name="RoutesList" Background="#FF111820" Foreground="#FFE9EDF2" BorderBrush="#FF394654"
+                     SelectionChanged="RoutesList_SelectionChanged" DisplayMemberPath="DisplayName"/>
+          </DockPanel>
+        </Border>
+        <GridSplitter Grid.Row="1" Height="6" HorizontalAlignment="Stretch" Background="#FF394654"/>
+        <Border Grid.Row="2" Background="#FF202833" CornerRadius="5" Padding="12">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Top">
+              <TextBlock Text="RESERVES LÒGIQUES" FontWeight="Bold" Margin="0,0,0,8"/>
+              <TextBlock x:Name="ReservationStatusText" Text="Cap reserva activa." TextWrapping="Wrap" Foreground="#FFB7C1CC" Margin="0,0,0,8"/>
+              <WrapPanel>
+                <Button Content="Reservar itinerari" Click="ReserveRoute_Click" Padding="10,6" Margin="0,0,6,0"/>
+                <Button Content="Alliberar" Click="ReleaseRoute_Click" Padding="10,6"/>
+              </WrapPanel>
+            </StackPanel>
+            <ListBox x:Name="ReservationsList" Background="#FF111820" Foreground="#FFE9EDF2" BorderBrush="#FF394654"/>
+          </DockPanel>
+        </Border>
+      </Grid>
+    </Grid>
+  </Grid>
+</UserControl>
