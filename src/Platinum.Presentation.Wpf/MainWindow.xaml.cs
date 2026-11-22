@@ -159,7 +159,7 @@ public partial class MainWindow : Window
             var installer = await service.DownloadAndVerifyInstallerAsync(release);
             StatusText.Text = "SHA-256 correcte. Iniciant instal·lador...";
             GitHubUpdateService.StartInstaller(installer);
-            Application.Current.Shutdown();
+            System.Windows.Application.Current.Shutdown();
         }
         catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
         {
