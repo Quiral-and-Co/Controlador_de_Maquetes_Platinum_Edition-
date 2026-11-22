@@ -119,7 +119,8 @@ public sealed class PlatinumPackageStore : IProjectStore
 
         if (layout.Blocks.Any(x => string.IsNullOrWhiteSpace(x.Name) || x.PieceIds is null ||
             !levelIds.Contains(x.LevelId) || x.PieceIds.Any(id => !pieceIds.Contains(id)) ||
-            x.PieceIds.Distinct().Count() != x.PieceIds.Count))
+            x.PieceIds.Distinct().Count() != x.PieceIds.Count) ||
+            layout.Blocks.GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase).Any(x => x.Count() > 1))
             throw new InvalidDataException("Hi ha blocs amb nivell, peces o noms invàlids.");
 
         if (layout.Sensors.Any(x => string.IsNullOrWhiteSpace(x.SystemName) || string.IsNullOrWhiteSpace(x.DisplayName)) ||
@@ -127,8 +128,14 @@ public sealed class PlatinumPackageStore : IProjectStore
             throw new InvalidDataException("Hi ha sensors sense identificador de sistema o nom visible.");
 
         if (layout.Routes.Any(x => string.IsNullOrWhiteSpace(x.Name) || x.BlockIds is null || x.BlockIds.Any(id => !blockIds.Contains(id)) ||
-            x.BlockIds.Distinct().Count() != x.BlockIds.Count))
+            x.BlockIds.Distinct().Count() != x.BlockIds.Count) ||
+            layout.Routes.GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase).Any(x => x.Count() > 1))
             throw new InvalidDataException("Hi ha itineraris amb blocs inexistents o referències duplicades.");
+        var reservedBlockIds = layout.Routes.Where(x => x.Reserved).SelectMany(x => x.BlockIds).ToArray();
+        if (reservedBlockIds.Distinct().Count() != reservedBlockIds.Length ||
+            layout.Routes.Any(route => route.Reserved && route.BlockIds.Any(id => layout.Blocks.First(block => block.Id == id).Occupied)))
+            throw new InvalidDataException("Les reserves lògiques se solapen o inclouen blocs ocupats.");
+
         if (layout.Signals.Any(x => string.IsNullOrWhiteSpace(x.Name) || string.IsNullOrWhiteSpace(x.Aspect) ||
             (x.ProtectedBlockId.HasValue && !blockIds.Contains(x.ProtectedBlockId.Value))))
             throw new InvalidDataException("Hi ha senyals amb nom, aspecte o bloc protegit invàlid.");
