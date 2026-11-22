@@ -65,7 +65,7 @@ public sealed class PlatinumPackageStore : IProjectStore
         var document = await ReadXmlAsync<LayoutDocument>(archive, LayoutEntry, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         if (document.Levels is null || document.Pieces is null || document.Connections is null ||
-            document.Blocks is null || document.Sensors is null || document.Routes is null || document.GeometrySegments is null)
+            document.Blocks is null || document.Sensors is null || document.Routes is null || document.GeometrySegments is null || document.BlockOccupancies is null || document.RouteReservations is null)
             throw new InvalidDataException("El document XML conté col·leccions nul·les.");
         var layout = document.ToDomain();
         Validate(layout);
@@ -75,7 +75,7 @@ public sealed class PlatinumPackageStore : IProjectStore
     private static void Validate(TrackLayout layout)
     {
         ArgumentNullException.ThrowIfNull(layout);
-        if (layout.Levels is null || layout.Pieces is null || layout.Connections is null || layout.Blocks is null || layout.Sensors is null || layout.Routes is null || layout.GeometrySegments is null)
+        if (layout.Levels is null || layout.Pieces is null || layout.Connections is null || layout.Blocks is null || layout.Sensors is null || layout.Routes is null || layout.GeometrySegments is null || layout.BlockOccupancies is null || layout.RouteReservations is null)
             throw new InvalidDataException("El projecte conté col·leccions nul·les.");
         if (layout.Id == Guid.Empty || string.IsNullOrWhiteSpace(layout.Name) ||
             layout.WidthMillimetres <= 0 || layout.HeightMillimetres <= 0 || layout.GridMillimetres <= 0)
@@ -97,6 +97,7 @@ public sealed class PlatinumPackageStore : IProjectStore
         EnsureUniqueIds(layout.Sensors, x => x.Id, "sensors");
         EnsureUniqueIds(layout.Routes, x => x.Id, "itineraris");
         EnsureUniqueIds(layout.GeometrySegments, x => x.Id, "geometria de vies");
+        EnsureUniqueIds(layout.RouteReservations, x => x.Id, "reserves");
 
         var levelIds = layout.Levels.Select(x => x.Id).ToHashSet();
         var pieceIds = layout.Pieces.Select(x => x.Id).ToHashSet();
@@ -126,6 +127,13 @@ public sealed class PlatinumPackageStore : IProjectStore
         if (layout.Routes.Any(x => string.IsNullOrWhiteSpace(x.Name) || x.BlockIds is null || x.BlockIds.Any(id => !blockIds.Contains(id)) ||
             x.BlockIds.Distinct().Count() != x.BlockIds.Count))
             throw new InvalidDataException("Hi ha itineraris amb blocs inexistents o referències duplicades.");
+        if (layout.BlockOccupancies.Any(x => !blockIds.Contains(x.BlockId) || !Enum.IsDefined(x.State)) ||
+            layout.BlockOccupancies.Select(x => x.BlockId).Distinct().Count() != layout.BlockOccupancies.Count)
+            throw new InvalidDataException("Hi ha estats d'ocupació duplicats o associats a blocs inexistents.");
+        var routeIds = layout.Routes.Select(x => x.Id).ToHashSet();
+        if (layout.RouteReservations.Any(x => !routeIds.Contains(x.RouteId)) ||
+            layout.RouteReservations.Select(x => x.RouteId).Distinct().Count() != layout.RouteReservations.Count)
+            throw new InvalidDataException("Hi ha reserves duplicades o associades a itineraris inexistents.");
     }
 
     private static async Task WriteXmlAsync<T>(ZipArchive archive, string name, T value, CancellationToken ct)
@@ -187,6 +195,8 @@ public sealed class PlatinumPackageStore : IProjectStore
         [XmlArray] public List<BlockDocument> Blocks { get; set; } = [];
         [XmlArray] public List<SensorDocument> Sensors { get; set; } = [];
         [XmlArray] public List<RouteDocument> Routes { get; set; } = [];
+        [XmlArray] public List<BlockOccupancyDocument> BlockOccupancies { get; set; } = [];
+        [XmlArray] public List<RouteReservationDocument> RouteReservations { get; set; } = [];
 
         public static LayoutDocument From(TrackLayout x) => new()
         {
@@ -197,7 +207,9 @@ public sealed class PlatinumPackageStore : IProjectStore
             Connections=x.Connections.Select(v=>new ConnectionDocument{Id=v.Id,FromPieceId=v.FromPieceId,FromPort=v.FromPort,ToPieceId=v.ToPieceId,ToPort=v.ToPort,PhysicallyVerified=v.PhysicallyVerified}).ToList(),
             Blocks=x.Blocks.Select(v=>new BlockDocument{Id=v.Id,Name=v.Name,LevelId=v.LevelId,PieceIds=v.PieceIds.ToList()}).ToList(),
             Sensors=x.Sensors.Select(v=>new SensorDocument{Id=v.Id,SystemName=v.SystemName,DisplayName=v.DisplayName,PhysicallyVerified=v.PhysicallyVerified}).ToList(),
-            Routes=x.Routes.Select(v=>new RouteDocument{Id=v.Id,Name=v.Name,BlockIds=v.BlockIds.ToList()}).ToList()
+            Routes=x.Routes.Select(v=>new RouteDocument{Id=v.Id,Name=v.Name,BlockIds=v.BlockIds.ToList()}).ToList(),
+            BlockOccupancies=x.BlockOccupancies.Select(v=>new BlockOccupancyDocument{BlockId=v.BlockId,State=v.State}).ToList(),
+            RouteReservations=x.RouteReservations.Select(v=>new RouteReservationDocument{Id=v.Id,RouteId=v.RouteId,CreatedUtc=v.CreatedUtc}).ToList()
         };
         public TrackLayout ToDomain() => new()
         {
@@ -208,7 +220,9 @@ public sealed class PlatinumPackageStore : IProjectStore
             Connections=Connections.Select(v=>new TrackConnection(v.Id,v.FromPieceId,v.FromPort,v.ToPieceId,v.ToPort,v.PhysicallyVerified)).ToList(),
             Blocks=Blocks.Select(v=>new LogicalBlock(v.Id,v.Name,v.LevelId,v.PieceIds)).ToList(),
             Sensors=Sensors.Select(v=>new FeedbackSensor(v.Id,v.SystemName,v.DisplayName,v.PhysicallyVerified)).ToList(),
-            Routes=Routes.Select(v=>new RouteDefinition(v.Id,v.Name,v.BlockIds)).ToList()
+            Routes=Routes.Select(v=>new RouteDefinition(v.Id,v.Name,v.BlockIds)).ToList(),
+            BlockOccupancies=BlockOccupancies.Select(v=>new BlockOccupancy(v.BlockId,v.State)).ToList(),
+            RouteReservations=RouteReservations.Select(v=>new RouteReservation(v.Id,v.RouteId,v.CreatedUtc)).ToList()
         };
     }
     public sealed class LevelDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public decimal ElevationMillimetres {get;set;} }
@@ -218,4 +232,6 @@ public sealed class PlatinumPackageStore : IProjectStore
     public sealed class BlockDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public Guid LevelId {get;set;} [XmlArrayItem("PieceId")] public List<Guid> PieceIds {get;set;}=[]; }
     public sealed class SensorDocument { public Guid Id {get;set;} public string SystemName {get;set;}=""; public string DisplayName {get;set;}=""; public bool PhysicallyVerified {get;set;} }
     public sealed class RouteDocument { public Guid Id {get;set;} public string Name {get;set;}=""; [XmlArrayItem("BlockId")] public List<Guid> BlockIds {get;set;}=[]; }
+    public sealed class BlockOccupancyDocument { public Guid BlockId {get;set;} public BlockOccupancyState State {get;set;} }
+    public sealed class RouteReservationDocument { public Guid Id {get;set;} public Guid RouteId {get;set;} public DateTimeOffset CreatedUtc {get;set;} }
 }
