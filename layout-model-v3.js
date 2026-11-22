@@ -27,8 +27,6 @@
         }
         if(!Array.isArray(c.connections))c.connections=[];const connectionIds=new Set(),occupiedPorts=new Set(),connectionPairs=new Set();for(const x of c.connections){if(typeof x.id!=='string'||!x.id||connectionIds.has(x.id))throw Error(`ID de connexió absent o duplicat: ${x.id||'(buit)'}`);connectionIds.add(x.id);if(!portKeys.has(`${x.from?.pieceId}:${x.from?.port}`)||!portKeys.has(`${x.to?.pieceId}:${x.to?.port}`))throw Error(`Connexió ${x.id} referencia un port inexistent.`);if(!trackIds.has(x.from?.pieceId)||!trackIds.has(x.to?.pieceId))throw Error(`Connexió ${x.id} apunta a una peça inexistent.`);if(x.from.pieceId===x.to.pieceId)throw Error(`Connexió ${x.id} no pot unir una peça amb ella mateixa.`);if(trackLevel.get(x.from.pieceId)!==trackLevel.get(x.to.pieceId)||String(x.levelId)!==String(trackLevel.get(x.from.pieceId)))throw Error(`Connexió ${x.id} travessa nivells diferents o té levelId incorrecte.`);if(typeof x.verified!=='boolean')x.verified=false;if(x.method!==undefined&&!['manual','catalogue-gap-suggestion','legacy-import'].includes(x.method))throw Error(`Mètode de connexió no admès a ${x.id}: ${x.method}`);const portA=`${x.from.pieceId}:${x.from.port}`,portB=`${x.to.pieceId}:${x.to.port}`;if(portA===portB)throw Error(`Connexió ${x.id} no pot reutilitzar el mateix port.`);for(const key of [portA,portB]){if(occupiedPorts.has(key))throw Error(`El port ${key} ja està ocupat per una altra connexió.`);occupiedPorts.add(key);}const pair=[portA,portB].sort().join('|');if(connectionPairs.has(pair))throw Error(`Connexió duplicada entre ${portA} i ${portB}.`);connectionPairs.add(pair);}
         return c;
-      }
-    
   }
   return Object.freeze({validateConfig});
 });
