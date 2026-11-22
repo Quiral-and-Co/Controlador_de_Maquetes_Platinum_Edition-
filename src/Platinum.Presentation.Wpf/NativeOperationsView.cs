@@ -8,6 +8,7 @@ using System.Windows.Media;
 using Platinum.Application.Control;
 using Platinum.Domain.Control;
 using Platinum.Infrastructure.Control;
+using Platinum.Domain.Layout;
 
 namespace Platinum.Presentation.Wpf;
 
@@ -17,6 +18,7 @@ namespace Platinum.Presentation.Wpf;
 /// </summary>
 public sealed class NativeOperationsView : UserControl
 {
+    private TrackLayout? _projectLayout;
     private readonly RailwayControlService _controlService = new(new LocalSimulationAdapter());
     private readonly RailwayAutomationEngine _automation = new();
     private MarklinCs2Adapter? _cs2Adapter;
@@ -55,6 +57,57 @@ public sealed class NativeOperationsView : UserControl
         root.Children.Add(notice);
         root.Children.Add(tabs);
         Content = root;
+    }
+
+    /// <summary>Connecta els panells d'operacions amb el mateix model de projecte que utilitzen els editors 2D i 3D.</summary>
+    public void SetLayout(TrackLayout layout)
+    {
+        _projectLayout = layout ?? throw new ArgumentNullException(nameof(layout));
+        _blocks.Clear();
+        foreach (var block in layout.Blocks) _blocks.Add(block.Name);
+
+        _routes.Clear();
+        foreach (var route in layout.Routes)
+        {
+            var names = route.BlockIds
+                .Select(id => layout.Blocks.FirstOrDefault(block => block.Id == id)?.Name)
+                .Where(name => !string.IsNullOrWhiteSpace(name));
+            _routes.Add($"{route.Name} · {string.Join(" → ", names)} · NO RESERVAT");
+        }
+        _dispatcherStatus.Text = $"Model compartit carregat: {layout.Blocks.Count} blocs, {layout.Routes.Count} itineraris i {layout.Sensors.Count} sensors.";
+    }
+
+    /// <summary>Persisteix els blocs i itineraris del dispatcher dins del fitxer .platinum.</summary>
+    public void ApplyToLayout(TrackLayout layout)
+    {
+        ArgumentNullException.ThrowIfNull(layout);
+        var oldBlocks = layout.Blocks.ToDictionary(block => block.Name, StringComparer.OrdinalIgnoreCase);
+        var blocks = _blocks
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(name => oldBlocks.TryGetValue(name, out var existing)
+                ? existing
+                : new LogicalBlock(Guid.NewGuid(), name, layout.Levels.FirstOrDefault()?.Id ?? Guid.Empty, Array.Empty<Guid>()))
+            .ToList();
+
+        var idsByName = blocks.ToDictionary(block => block.Name, block => block.Id, StringComparer.OrdinalIgnoreCase);
+        var routes = new List<RouteDefinition>();
+        foreach (var item in _routes)
+        {
+            var parts = item.Split('·', StringSplitOptions.TrimEntries);
+            if (parts.Length < 2 || string.IsNullOrWhiteSpace(parts[0])) continue;
+            var blockNames = parts[1].Split('→', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            var blockIds = blockNames.Where(idsByName.ContainsKey).Select(name => idsByName[name]).ToArray();
+            if (blockIds.Length == 0) continue;
+            var old = layout.Routes.FirstOrDefault(route => string.Equals(route.Name, parts[0], StringComparison.OrdinalIgnoreCase));
+            routes.Add(new RouteDefinition(old?.Id ?? Guid.NewGuid(), parts[0], blockIds));
+        }
+
+        layout.Blocks.Clear();
+        layout.Blocks.AddRange(blocks);
+        layout.Routes.Clear();
+        layout.Routes.AddRange(routes);
+        _projectLayout = layout;
     }
 
     private static UIElement Notice() => new Border
