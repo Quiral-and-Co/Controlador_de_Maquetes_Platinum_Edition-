@@ -24,6 +24,7 @@ public partial class MainWindow : Window
         LoadCatalogue();
         TrackEditor.CataloguePiecePlaced += OnCataloguePiecePlaced;
         TrackEditor.ConnectionCreated += OnConnectionCreated;
+        TrackEditor.EditorDataChanged += OnEditorDataChanged;
         TrackEditor.SetActiveLevel(ActiveLevelId);
         TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
         TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
@@ -235,6 +236,17 @@ public partial class MainWindow : Window
         }
         TrackEditor.BeginCataloguePlacement(item);
         StatusText.Text = $"Fes clic al plànol per col·locar {item.Ref} al nivell actiu.";
+    }
+
+    private void OnEditorDataChanged(object? sender, EventArgs e)
+    {
+        _currentLayout.GeometrySegments = TrackEditor.Segments.ToList();
+        _currentLayout.Pieces.Clear();
+        _currentLayout.Pieces.AddRange(TrackEditor.Pieces);
+        _currentLayout.Connections.Clear();
+        _currentLayout.Connections.AddRange(TrackEditor.Connections);
+        Sync3DEditor();
+        UpdateProjectStatus();
     }
 
     private void OnConnectionCreated(TrackConnection connection)
