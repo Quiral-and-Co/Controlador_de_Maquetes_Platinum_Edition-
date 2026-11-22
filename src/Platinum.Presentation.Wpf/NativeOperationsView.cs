@@ -25,6 +25,10 @@ public sealed class NativeOperationsView : UserControl
     private ComboBox? _signalBlockSelector;
     private ListBox? _protocolProfilesList;
     private ListBox? _locomotiveProfilesList;
+    private ListBox? _protectionProfilesList;
+    private ListBox? _groundMessagesList;
+    private Slider? _gameFuelSlider;
+    private TextBlock? _gameFuelReadout;
     public event EventHandler? ProjectDataChanged;
 
     private readonly RailwayControlService _controlService = new(new LocalSimulationAdapter());
@@ -260,6 +264,10 @@ public sealed class NativeOperationsView : UserControl
         RefreshSignalling();
         RefreshProtocolProfiles();
         RefreshLocomotives();
+        RefreshProtectionProfiles();
+        RefreshGroundMessages();
+        if (_gameFuelSlider is not null && _layout is not null) _gameFuelSlider.Value = (double)_layout.GameFuelPercent;
+        if (_gameFuelReadout is not null && _layout is not null) _gameFuelReadout.Text = $"Combustible virtual: {_layout.GameFuelPercent:0}%";
     }
 
     private void RefreshDispatcher()
@@ -279,6 +287,8 @@ public sealed class NativeOperationsView : UserControl
         RefreshSignalling();
         RefreshProtocolProfiles();
         RefreshLocomotives();
+        RefreshProtectionProfiles();
+        RefreshGroundMessages();
         ProjectDataChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -608,25 +618,74 @@ public sealed class NativeOperationsView : UserControl
         return Scroll(panel);
     }
 
+    private void RefreshProtectionProfiles()
+    {
+        if (_layout is null || _protectionProfilesList is null) return;
+        var selectedId = (_protectionProfilesList.SelectedItem as TrainProtectionProfile)?.Id;
+        _protectionProfilesList.ItemsSource = _layout.ProtectionProfiles.ToArray();
+        _protectionProfilesList.DisplayMemberPath = nameof(TrainProtectionProfile.Name);
+        if (selectedId.HasValue)
+            _protectionProfilesList.SelectedItem = _layout.ProtectionProfiles.FirstOrDefault(x => x.Id == selectedId.Value);
+    }
+
     private UIElement BuildProtection()
     {
         var panel = Panel("Protecció ferroviària · simulador educatiu");
+        var profileName = new TextBox { Text = "Perfil de prova", Width = 260, Margin = new Thickness(0, 4, 0, 8) };
+        var profiles = new ListBox { MinHeight = 90, Background = Brush("#FF111820"), Foreground = Brushes.White };
+        _protectionProfilesList = profiles;
         var permitted = new Slider { Minimum = 0, Maximum = 160, Value = 80, TickFrequency = 10, Margin = new Thickness(0, 8, 0, 8) };
         var actual = new Slider { Minimum = 0, Maximum = 200, Value = 0, TickFrequency = 10, Margin = new Thickness(0, 8, 0, 8) };
         var readout = Label("Velocitat 0 · límit 80 km/h");
+        profiles.SelectionChanged += (_, _) =>
+        {
+            if (profiles.SelectedItem is TrainProtectionProfile profile)
+            {
+                profileName.Text = profile.Name;
+                permitted.Value = (double)profile.PermittedSpeedKmh;
+                actual.Maximum = (double)profile.MaxSpeedKmh;
+                _protectionStatus.Text = $"Perfil {profile.Name} carregat · només simulació.";
+            }
+        };
         void Evaluate()
         {
             readout.Text = $"Velocitat {actual.Value:0} · límit {permitted.Value:0} km/h";
             _protectionStatus.Text = actual.Value > permitted.Value ? "FRENADA VIRTUAL: s'ha superat el límit." : "Supervisió virtual dins del límit.";
         }
         permitted.ValueChanged += (_, _) => Evaluate(); actual.ValueChanged += (_, _) => Evaluate();
-        panel.Children.Add(Label("Velocitat permesa")); panel.Children.Add(permitted);
-        panel.Children.Add(Label("Velocitat del tren simulat")); panel.Children.Add(actual);
-        panel.Children.Add(readout); panel.Children.Add(Button("Reconèixer avís", (_, _) => _protectionStatus.Text = "Avís reconegut en el simulador."));
+        panel.Children.Add(Label("Nom del perfil")); panel.Children.Add(profileName);
+        panel.Children.Add(Button("Desar perfil de protecció", (_, _) =>
+        {
+            if (_layout is null) { _protectionStatus.Text = "No hi ha projecte actiu."; return; }
+            var name = profileName.Text.Trim();
+            if (name.Length == 0 || permitted.Value < 0 || permitted.Value > actual.Maximum)
+            { _protectionStatus.Text = "Nom o límit de velocitat invàlid."; return; }
+            var index = _layout.ProtectionProfiles.FindIndex(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
+            var profile = new TrainProtectionProfile(index >= 0 ? _layout.ProtectionProfiles[index].Id : Guid.NewGuid(),
+                name, (decimal)permitted.Value, (decimal)actual.Maximum, 0.8m, true);
+            if (index >= 0) _layout.ProtectionProfiles[index] = profile; else _layout.ProtectionProfiles.Add(profile);
+            NotifyProjectChanged();
+            _protectionStatus.Text = $"Perfil «{name}» desat. Protecció només simulada.";
+        }));
+        panel.Children.Add(Label("Perfils del projecte")); panel.Children.Add(profiles);
+        panel.Children.Add(Label("Velocitat permesa (km/h)")); panel.Children.Add(permitted);
+        panel.Children.Add(Label("Velocitat del tren simulat (km/h)")); panel.Children.Add(actual);
+        panel.Children.Add(readout);
+        panel.Children.Add(Button("Reconèixer avís", (_, _) => _protectionStatus.Text = "Avís reconegut en el simulador."));
         panel.Children.Add(Button("Emergència virtual", (_, _) => { actual.Value = 0; _protectionStatus.Text = "Emergència virtual: velocitat simulada a zero."; }));
         panel.Children.Add(_protectionStatus);
-        panel.Children.Add(Label("No és ETCS/ASFA/LZB/PZB certificat ni controla frens reals."));
+        panel.Children.Add(Label("No és ETCS/ASFA/LZB/PZB certificat ni controla frens reals. La desacceleració del perfil és només un paràmetre didàctic."));
+        RefreshProtectionProfiles();
         return Scroll(panel);
+    }
+
+    private void RefreshGroundMessages()
+    {
+        if (_layout is null || _groundMessagesList is null) return;
+        _groundMessagesList.ItemsSource = _layout.GroundMessages
+            .OrderByDescending(x => x.CreatedUtc)
+            .Select(x => $"{x.CreatedUtc.LocalDateTime:yyyy-MM-dd HH:mm:ss} · {x.Destination}: {x.Message}")
+            .ToArray();
     }
 
     private UIElement BuildGround()
@@ -634,25 +693,39 @@ public sealed class NativeOperationsView : UserControl
         var panel = Panel("Terminal tren-terra · missatgeria local");
         var destination = new TextBox { Text = "Tren 001", Margin = new Thickness(0, 6, 0, 8) };
         var message = new TextBox { AcceptsReturn = true, MinHeight = 70, Text = "Missatge de prova", Margin = new Thickness(0, 4, 0, 8) };
-        var log = new ListBox { ItemsSource = _events, MinHeight = 150, Background = Brush("#FF111820"), Foreground = Brushes.White };
+        var log = new ListBox { MinHeight = 150, Background = Brush("#FF111820"), Foreground = Brushes.White };
+        _groundMessagesList = log;
         panel.Children.Add(Label("Destinatari")); panel.Children.Add(destination); panel.Children.Add(Label("Missatge")); panel.Children.Add(message);
-        panel.Children.Add(Button("Registrar missatge local", (_, _) =>
+        panel.Children.Add(Button("Desar missatge local al projecte", (_, _) =>
         {
-            if (message.Text.Trim().Length == 0) return;
-            _events.Add($"{DateTime.Now:HH:mm:ss} · {destination.Text.Trim()}: {message.Text.Trim()}");
-            _groundStatus.Text = "Missatge registrat localment. No s'ha transmès per ràdio.";
+            if (_layout is null) { _groundStatus.Text = "No hi ha projecte actiu."; return; }
+            if (destination.Text.Trim().Length == 0 || message.Text.Trim().Length == 0) return;
+            _layout.GroundMessages.Add(new TrainGroundMessage(Guid.NewGuid(), destination.Text.Trim(), message.Text.Trim(), DateTimeOffset.UtcNow));
+            NotifyProjectChanged();
+            _groundStatus.Text = "Missatge desat al projecte. No s'ha transmès per ràdio.";
         }));
         panel.Children.Add(log); panel.Children.Add(_groundStatus);
+        panel.Children.Add(Label("Terminal local: els missatges són registres de projecte, no transmissió tren-terra."));
+        RefreshGroundMessages();
         return Scroll(panel);
     }
 
     private UIElement BuildGame()
     {
         var panel = Panel("Märklin · Món de Jocs (simulació)");
-        var fuel = new Slider { Minimum = 0, Maximum = 100, Value = 65, TickFrequency = 5, Margin = new Thickness(0, 8, 0, 8) };
-        var readout = Label("Combustible virtual: 65%");
+        var fuel = new Slider { Minimum = 0, Maximum = 100, Value = 100, TickFrequency = 5, Margin = new Thickness(0, 8, 0, 8) };
+        var readout = Label("Combustible virtual: 100%");
+        _gameFuelSlider = fuel;
+        _gameFuelReadout = readout;
         fuel.ValueChanged += (_, _) => readout.Text = $"Combustible virtual: {fuel.Value:0}%";
         panel.Children.Add(readout); panel.Children.Add(fuel);
+        panel.Children.Add(Button("Desar estat de joc al projecte", (_, _) =>
+        {
+            if (_layout is null) { _gameStatus.Text = "No hi ha projecte actiu."; return; }
+            _layout.GameFuelPercent = (decimal)fuel.Value;
+            NotifyProjectChanged();
+            _gameStatus.Text = "Estat de joc desat al projecte. Simulació local.";
+        }));
         panel.Children.Add(Button("Reomplir dipòsit virtual", (_, _) => fuel.Value = 100));
         panel.Children.Add(_gameStatus);
         panel.Children.Add(Label("No llegeix ni escriu recursos mfx+ i no envia ordres a la CS2."));
