@@ -87,6 +87,7 @@ public sealed class TrackEditorView : UserControl
     public IReadOnlyList<TrackGeometrySegment> Segments => _segments;
     public IReadOnlyList<TrackPiece> Pieces => _pieces;
     public IReadOnlyList<TrackConnection> Connections => _connections;
+    public event EventHandler? EditorDataChanged;
     public event Action<TrackPiece>? CataloguePiecePlaced;
     public event Action<TrackConnection>? ConnectionCreated;
 
@@ -137,6 +138,7 @@ public sealed class TrackEditorView : UserControl
         _pieces[index] = piece with { RotationDegrees = ((piece.RotationDegrees + degrees) % 360m + 360m) % 360m };
         _hint.Text = $"Peça {piece.CatalogueCode}: girada a {_pieces[index].RotationDegrees:0.#}°.";
         Draw();
+        EditorDataChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void ToggleConnectMode()
@@ -221,6 +223,7 @@ public sealed class TrackEditorView : UserControl
             _pieces.Add(placed);
             _placementItem = null;
             CataloguePiecePlaced?.Invoke(placed);
+            EditorDataChanged?.Invoke(this, EventArgs.Empty);
             _hint.Text = $"Peça {item.Ref} col·locada al nivell actiu. La geometria es conserva amb estat {item.GeometryStatus}.";
             Draw();
             e.Handled = true;
@@ -267,6 +270,7 @@ public sealed class TrackEditorView : UserControl
                     var connection = new TrackConnection(Guid.NewGuid(), fromPiece, fromPort, pieceId, portId, false);
                     _connections.Add(connection);
                     ConnectionCreated?.Invoke(connection);
+                    EditorDataChanged?.Invoke(this, EventArgs.Empty);
                 }
                 else _hint.Text = "Aquests dos ports ja estan connectats.";
                 _pendingConnectionPieceId = null;
@@ -347,6 +351,7 @@ public sealed class TrackEditorView : UserControl
             _draggingSelection = false;
             _surface.ReleaseMouseCapture();
             _lastPointer = null;
+            EditorDataChanged?.Invoke(this, EventArgs.Empty);
             return;
         }
         if (!_anchor.HasValue) return;
@@ -368,6 +373,7 @@ public sealed class TrackEditorView : UserControl
         _segments.Add(segment);
         _selectedId = segment.Id;
         Draw();
+        EditorDataChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void Surface_MouseWheel(object sender, MouseWheelEventArgs e)
@@ -394,6 +400,7 @@ public sealed class TrackEditorView : UserControl
         _selectedId = null; _selectedPieceId = null;
         _pendingConnectionPieceId = null; _pendingConnectionPortId = null;
         Draw();
+        EditorDataChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void PushUndo()
