@@ -20,9 +20,11 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         LoadCatalogue();
+        TrackEditor.CataloguePiecePlaced += OnCataloguePiecePlaced;
         TrackEditor.SetActiveLevel(ActiveLevelId);
         TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
         TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
+        TrackEditor.LoadPieces(_currentLayout.Pieces);
         RefreshLevelSelector();
         UpdateProjectStatus();
     }
@@ -64,6 +66,7 @@ public partial class MainWindow : Window
             TrackEditor.SetActiveLevel(ActiveLevelId);
             TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
             TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
+            TrackEditor.LoadPieces(_currentLayout.Pieces);
             RefreshLevelSelector();
             UpdateProjectStatus();
             StatusText.Text = "Projecte carregat i validat.";
@@ -95,6 +98,8 @@ public partial class MainWindow : Window
         try
         {
             _currentLayout.GeometrySegments = TrackEditor.Segments.ToList();
+            _currentLayout.Pieces.Clear();
+            _currentLayout.Pieces.AddRange(TrackEditor.Pieces);
             await _projects.SaveAsync(_currentLayout, path);
             _currentPath = path;
             UpdateProjectStatus();
@@ -147,6 +152,8 @@ public partial class MainWindow : Window
             var catalogue = MarklinCCatalogue.Load(path);
             _catalogueItems = catalogue.Items;
             CatalogueList.ItemsSource = _catalogueItems;
+            PlaceCatalogueButton.IsEnabled = false;
+            TrackEditor.SetCatalogue(_catalogueItems);
             CatalogueCount.Text = $"{_catalogueItems.Count} referències · {catalogue.Brand} {catalogue.System} · {catalogue.Scale}";
         }
         catch (Exception ex)
@@ -173,10 +180,33 @@ public partial class MainWindow : Window
 
     private void CatalogueList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
-        if (CatalogueList.SelectedItem is not CatalogueItem item) return;
+        if (CatalogueList.SelectedItem is not CatalogueItem item) { PlaceCatalogueButton.IsEnabled = false; return; }
+        PlaceCatalogueButton.IsEnabled = true;
         var geometry = string.IsNullOrWhiteSpace(item.GeometrySummary) ? "Geometria dimensional no disponible." : item.GeometrySummary;
         CatalogueDetails.Text = $"{item.DisplayName}\nCategoria: {item.Category}\nTipus: {item.Type}\nGeometria: {geometry}\nEstat: {item.GeometryStatus}" +
             (string.IsNullOrWhiteSpace(item.Notes) ? string.Empty : $"\nNota: {item.Notes}");
+    }
+
+    private void PlaceCatalogueButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (CatalogueList.SelectedItem is not CatalogueItem item) return;
+        if (item.Type == "special" && item.GeometryStatus == "unverified")
+        {
+            var answer = MessageBox.Show(this,
+                $"La referència {item.Ref} és un conjunt o peça especial sense geometria verificada. Es col·locarà només com a marcador esquemàtic, no a escala. Vols continuar?",
+                "Geometria no verificada", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (answer != MessageBoxResult.Yes) return;
+        }
+        TrackEditor.BeginCataloguePlacement(item);
+        StatusText.Text = $"Fes clic al plànol per col·locar {item.Ref} al nivell actiu.";
+    }
+
+    private void OnCataloguePiecePlaced(TrackPiece piece)
+    {
+        if (!_currentLayout.Pieces.Any(existing => existing.Id == piece.Id))
+            _currentLayout.Pieces.Add(piece);
+        StatusText.Text = $"Peça {piece.CatalogueCode} col·locada al nivell actiu. Desa el projecte per conservar els canvis.";
+        UpdateProjectStatus();
     }
 
     private Guid ActiveLevelId => LevelSelector.SelectedValue is Guid selected ? selected : _currentLayout.Levels.FirstOrDefault()?.Id ?? Guid.Empty;
