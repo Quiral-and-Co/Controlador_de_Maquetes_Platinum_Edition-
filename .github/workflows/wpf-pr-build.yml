@@ -1,0 +1,42 @@
+name: Native WPF build and tests
+
+on:
+  pull_request:
+    branches: [main, "feature/**"]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "Platinum.sln"
+      - ".github/workflows/wpf-pr-build.yml"
+  push:
+    branches: ["feature/**"]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "Platinum.sln"
+      - ".github/workflows/wpf-pr-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-wpf:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore solution
+        run: dotnet restore Platinum.sln
+
+      - name: Run infrastructure tests
+        run: dotnet test tests/Platinum.Infrastructure.Tests/Platinum.Infrastructure.Tests.csproj -c Release --no-restore
+
+      - name: Build native WPF application
+        run: dotnet build src/Platinum.Presentation.Wpf/Platinum.Presentation.Wpf.csproj -c Release --no-restore
