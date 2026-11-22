@@ -27,8 +27,8 @@ jobs:
         shell: pwsh
         run: |
           $version = "0.2.0"
-          if ("\${{ github.event_name }}" -eq "workflow_dispatch") {
-            $version = "\${{ inputs.version }}"
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $version = "${{ inputs.version }}"
           }
           if ($version -notmatch '^\d+\.\d+\.\d+(\.\d+)?$') { throw "Invalid version: $version" }
           "version=$version" >> $env:GITHUB_OUTPUT
@@ -49,10 +49,10 @@ jobs:
           -c Release -r win-x64 --self-contained true
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
-          -p:Version=\${{ steps.version.outputs.version }}
-          -p:AssemblyVersion=\${{ steps.version.outputs.version }}
-          -p:FileVersion=\${{ steps.version.outputs.version }}
-          -p:InformationalVersion=\${{ steps.version.outputs.version }}
+          -p:Version=${{ steps.version.outputs.version }}
+          -p:AssemblyVersion=${{ steps.version.outputs.version }}
+          -p:FileVersion=${{ steps.version.outputs.version }}
+          -p:InformationalVersion=${{ steps.version.outputs.version }}
           -o dist/publish
 
       - name: Install Inno Setup
@@ -64,7 +64,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found: $iscc" }
-          & $iscc "/DMyAppVersion=\${{ steps.version.outputs.version }}" "installer/QuiralPlatinum.iss"
+          & $iscc "/DMyAppVersion=${{ steps.version.outputs.version }}" "installer/QuiralPlatinum.iss"
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
           $installer = Get-ChildItem dist -Filter 'Quiral-Platinum-Setup-*.exe' -File | Select-Object -First 1
           if (-not $installer) { throw "Installer not generated" }
@@ -76,7 +76,7 @@ jobs:
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: Quiral-Platinum-Setup-\${{ steps.version.outputs.version }}
+          name: Quiral-Platinum-Setup-${{ steps.version.outputs.version }}
           path: |
             dist/Quiral-Platinum-Setup-*.exe
             dist/Quiral-Platinum-Setup-*.exe.sha256
