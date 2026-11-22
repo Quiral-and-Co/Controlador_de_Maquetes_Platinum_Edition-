@@ -1,3 +1,5 @@
+using System.IO;
+using System.Linq;
 using System.Text.Json;
 
 namespace Platinum.Presentation.Wpf.Catalogue;
@@ -83,8 +85,8 @@ public sealed record CatalogueItem(
                 var innerRadius = Ref is "24771" or "24772" ? 515m : 360m;
                 var outerRadius = Ref is "24771" or "24772" ? 579.3m : 437.5m;
                 return [
-                    new("IN", "INNER", "quadratic", (decimal)(innerRadius * Math.Tan(angle / 2d)), 0m),
-                    new("IN", "OUTER", "quadratic", (decimal)(outerRadius * Math.Tan(angle / 2d)), 0m)
+                    new("IN", "INNER", "quadratic", (decimal)((double)innerRadius * Math.Tan(angle / 2d)), 0m),
+                    new("IN", "OUTER", "quadratic", (decimal)((double)outerRadius * Math.Tan(angle / 2d)), 0m)
                 ];
             }
 
@@ -171,7 +173,7 @@ public sealed record CatalogueItem(
     private static (decimal X, decimal Y) ArcEndpoint(decimal radius, double angle, decimal direction)
     {
         var r = (double)radius;
-        return ((decimal)(r * Math.Sin(angle)), (decimal)(direction * r * (1d - Math.Cos(angle))));
+        return ((decimal)(r * Math.Sin(angle)), (decimal)((double)direction * r * (1d - Math.Cos(angle))));
     }
 
     private IReadOnlyList<CataloguePort> ThreeWayTurnoutPorts()
@@ -201,8 +203,8 @@ public sealed record CatalogueItem(
         var direction = leftHand ? 1d : -1d;
         var half = length / 2m;
         var radians = (double)angle * Math.PI / 180d;
-        var branchX = (decimal)(radius * Math.Sin(radians));
-        var branchY = (decimal)(direction * radius * (1d - Math.Cos(radians)));
+        var branchX = (decimal)((double)radius * Math.Sin(radians));
+        var branchY = (decimal)(direction * (double)radius * (1d - Math.Cos(radians)));
         return [
             new("IN", -half, 0m, "estimated"),
             new("MAIN", half, 0m, "estimated"),
