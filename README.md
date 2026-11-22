@@ -12,6 +12,8 @@ dotnet run --project src/Platinum.Presentation.Wpf/Platinum.Presentation.Wpf.csp
 
 Consulta [la guia de migració WPF](docs/native-wpf-migration.md) per veure què ja s'ha portat i què queda pendent. Les pantalles noves de simulació són locals i no controlen maquinari real.
 
+**Motor de control propi:** s'ha iniciat la substitució de JMRI per serveis C# a `Platinum.Domain`, `Platinum.Application` i `Platinum.Infrastructure`. La interfície WPF ja disposa d'un panell connectat a una central virtual Platinum per provar locomotores, funcions, accessoris i aturada virtual. Els perfils Märklin CS2/CS3, Z21 i ECoS encara no tenen adaptadors físics implementats; no s'envien ordres reals. Vegeu [motor de control propi](docs/own-railway-control-engine.md).
+
 ---
 
 # JMRI TC Gold Custom — 1.4.0
