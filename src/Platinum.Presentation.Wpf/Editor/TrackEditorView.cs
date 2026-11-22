@@ -285,7 +285,7 @@ public sealed class TrackEditorView : UserControl
     private void Surface_MouseMove(object sender, MouseEventArgs e)
     {
         var point = ToModel(e.GetPosition(_surface));
-        if (_draggingSelection && _selectedId.HasValue && _lastPointer.HasValue && e.LeftButton == MouseButtonState.Pressed)
+        if (_draggingSelection && (_selectedPieceId.HasValue || _selectedId.HasValue) && _lastPointer.HasValue && e.LeftButton == MouseButtonState.Pressed)
         {
             var snappedPoint = Snap(point);
             var previousPoint = Snap(_lastPointer.Value);
