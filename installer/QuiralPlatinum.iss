@@ -35,4 +35,4 @@ Name: "{autodesktop}\Quiral Platinum"; Filename: "{app}\{#MyAppExeName}"; Tasks:
 Name: "desktopicon"; Description: "Crear una icona a l'escriptori"; GroupDescription: "Accessos directes:"
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "Iniciar Quiral Platinum"; Flags: postinstall nowait skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "Iniciar Quiral Platinum"; Flags: postinstall nowait runasoriginaluser
