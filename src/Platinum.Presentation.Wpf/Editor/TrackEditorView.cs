@@ -377,6 +377,7 @@ public sealed class TrackEditorView : UserControl
             _levelId);
         _segments.Add(segment);
         _selectedId = segment.Id;
+        ProjectModelChanged?.Invoke();
         Draw();
     }
 
