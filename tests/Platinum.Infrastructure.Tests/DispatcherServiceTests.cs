@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
+using Platinum.Infrastructure.Projects;
 using Platinum.Application.Dispatcher;
 using Platinum.Domain.Layout;
 using Xunit;
@@ -66,6 +69,33 @@ public sealed class DispatcherServiceTests
 
         Assert.True(service.TryReserveRoute(layout, routeA.Id, out _));
         Assert.False(service.TryReserveRoute(layout, routeB.Id, out _));
+    }
+
+    [Fact]
+    public async Task PlatinumPackage_PersistsOccupancyRoutesAndReservations()
+    {
+        var (layout, first, _, _) = CreateLayout();
+        var dispatcher = new DispatcherService();
+        dispatcher.Initialize(layout);
+        dispatcher.SetOccupancy(layout, first, BlockOccupancyState.Free);
+        var route = dispatcher.CreateRoute(layout, "Ruta persistent", new[] { first });
+        Assert.True(dispatcher.TryReserveRoute(layout, route.Id, out _));
+
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".platinum");
+        try
+        {
+            var store = new PlatinumPackageStore();
+            await store.SaveAsync(layout, path);
+            var loaded = await store.LoadAsync(path);
+
+            Assert.Contains(loaded.BlockOccupancies, item => item.BlockId == first && item.State == BlockOccupancyState.Free);
+            Assert.Contains(loaded.Routes, item => item.Id == route.Id);
+            Assert.Contains(loaded.RouteReservations, item => item.RouteId == route.Id);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
     }
 
     [Fact]
