@@ -311,7 +311,9 @@
   }
   $('catalogueSearch').addEventListener('input',renderCatalogue);$('catalogueCategory').addEventListener('change',renderCatalogue);$('suggestGapTracksBtn').addEventListener('click',renderGapSuggestions);renderCatalogue();
   document.querySelectorAll('[data-piece]').forEach(b=>b.onclick=()=>{checkpoint();const p=makePiece(b.dataset.piece);pieces().push(p);state.selectedIds=[p.id];render();log(`${pieceName(p.type)} afegida com a element gràfic provisional.`);});
-  function validateConfig(c){return window.JMRI_TC_LAYOUT_MODEL.validateConfig(c,{worldPorts,syncRelations});}
+  const layoutModelV3=window.JMRI_TC_LAYOUT_MODEL;
+  function validateConfig(c){return layoutModelV3.validateConfig(c,{worldPorts,syncRelations});}
+  window.JMRI_TC_LAYOUT_MODEL=Object.freeze({validateConfig});
   // Auditoria topològica local: no crea ni modifica connexions i no parla amb el maquinari.
   function auditTopology(){
     const errors=[],warnings=[],occupied=new Map(),known=new Map(),allPieces=new Map();
