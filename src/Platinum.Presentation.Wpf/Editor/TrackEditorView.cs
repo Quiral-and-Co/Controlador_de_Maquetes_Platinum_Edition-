@@ -101,7 +101,7 @@ public sealed class TrackEditorView : UserControl
         };
     }
 
-    private Point ToModel(Point viewPoint) => new((viewPoint.X / (BaseScale * _zoomFactor)) - 80, (viewPoint.Y / (BaseScale * _zoomFactor)) - 80);
+    private Point ToModel(Point viewPoint) => new((viewPoint.X / BaseScale) - 80, (viewPoint.Y / BaseScale) - 80);
     private Point ToView(decimal x, decimal y) => new(((double)x + 80) * BaseScale, ((double)y + 80) * BaseScale);
 
     private void Surface_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -111,6 +111,7 @@ public sealed class TrackEditorView : UserControl
         {
             _selectedId = HitTest(point);
             _lastPointer = point;
+            if (_selectedId.HasValue) PushUndo();
             _draggingSelection = _selectedId.HasValue;
             if (_draggingSelection) _surface.CaptureMouse();
             Draw();
