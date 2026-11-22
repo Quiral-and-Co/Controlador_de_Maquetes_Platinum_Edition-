@@ -1,8 +1,6 @@
 name: Platinum WPF Windows release
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       version:
