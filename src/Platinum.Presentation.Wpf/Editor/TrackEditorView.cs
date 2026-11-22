@@ -144,7 +144,7 @@ public sealed class TrackEditorView : UserControl
         _pendingConnectionPortId = null;
         _placementItem = null;
         _hint.Text = _connectMode
-            ? "Connexió lògica: clica dues peces del mateix nivell. No implica connexió física verificada."
+            ? "Connexió per ports: clica els punts verds dels extrems. Els taronges són estimats; cap connexió es marca com a verificada físicament."
             : "Mode de connexió desactivat.";
     }
 
