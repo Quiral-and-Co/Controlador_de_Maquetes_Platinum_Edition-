@@ -17,6 +17,10 @@ public sealed class PlatinumPackageStore : IProjectStore
 
     public async Task SaveAsync(TrackLayout layout, string path, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(layout);
+        if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("Cal indicar el fitxer del projecte.", nameof(path));
+        Validate(layout);
+        cancellationToken.ThrowIfCancellationRequested();
         var fullPath = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         var temporaryPath = fullPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
@@ -56,13 +60,49 @@ public sealed class PlatinumPackageStore : IProjectStore
 
     private static void Validate(TrackLayout layout)
     {
-        if (layout.Id == Guid.Empty || layout.WidthMillimetres <= 0 || layout.HeightMillimetres <= 0 || layout.GridMillimetres <= 0)
-            throw new InvalidDataException("El projecte conté identificadors o dimensions invàlids.");
+        ArgumentNullException.ThrowIfNull(layout);
+        if (layout.Id == Guid.Empty || string.IsNullOrWhiteSpace(layout.Name) ||
+            layout.WidthMillimetres <= 0 || layout.HeightMillimetres <= 0 || layout.GridMillimetres <= 0)
+            throw new InvalidDataException("El projecte conté identificadors, nom o dimensions invàlids.");
+
+        static void EnsureUniqueIds<T>(IEnumerable<T> items, Func<T, Guid> idSelector, string collection)
+        {
+            var ids = items.Select(idSelector).ToArray();
+            if (ids.Any(id => id == Guid.Empty) || ids.Distinct().Count() != ids.Length)
+                throw new InvalidDataException($"La col·lecció {collection} conté identificadors buits o duplicats.");
+        }
+
+        EnsureUniqueIds(layout.Levels, x => x.Id, "nivells");
+        EnsureUniqueIds(layout.Pieces, x => x.Id, "peces");
+        EnsureUniqueIds(layout.Connections, x => x.Id, "connexions");
+        EnsureUniqueIds(layout.Blocks, x => x.Id, "blocs");
+        EnsureUniqueIds(layout.Sensors, x => x.Id, "sensors");
+        EnsureUniqueIds(layout.Routes, x => x.Id, "itineraris");
+
+        var levelIds = layout.Levels.Select(x => x.Id).ToHashSet();
         var pieceIds = layout.Pieces.Select(x => x.Id).ToHashSet();
-        if (pieceIds.Count != layout.Pieces.Count || layout.Pieces.Any(x => x.Id == Guid.Empty || !layout.Levels.Any(l => l.Id == x.LevelId)))
-            throw new InvalidDataException("El projecte conté peces duplicades o nivells inexistents.");
-        if (layout.Connections.Any(x => !pieceIds.Contains(x.FromPieceId) || !pieceIds.Contains(x.ToPieceId)))
-            throw new InvalidDataException("El projecte conté connexions a peces inexistents.");
+        var blockIds = layout.Blocks.Select(x => x.Id).ToHashSet();
+
+        if (layout.Pieces.Any(x => string.IsNullOrWhiteSpace(x.CatalogueCode) ||
+            !levelIds.Contains(x.LevelId)))
+            throw new InvalidDataException("Hi ha peces sense codi de catàleg o assignades a nivells inexistents.");
+
+        if (layout.Connections.Any(x => x.FromPieceId == x.ToPieceId ||
+            !pieceIds.Contains(x.FromPieceId) || !pieceIds.Contains(x.ToPieceId) ||
+            string.IsNullOrWhiteSpace(x.FromPort) || string.IsNullOrWhiteSpace(x.ToPort)))
+            throw new InvalidDataException("El projecte conté connexions invàlides o referències a peces inexistents.");
+
+        if (layout.Blocks.Any(x => string.IsNullOrWhiteSpace(x.Name) ||
+            !levelIds.Contains(x.LevelId) || x.PieceIds.Any(id => !pieceIds.Contains(id)) ||
+            x.PieceIds.Distinct().Count() != x.PieceIds.Count))
+            throw new InvalidDataException("Hi ha blocs amb nivell, peces o noms invàlids.");
+
+        if (layout.Sensors.Any(x => string.IsNullOrWhiteSpace(x.SystemName) || string.IsNullOrWhiteSpace(x.DisplayName)))
+            throw new InvalidDataException("Hi ha sensors sense identificador de sistema o nom visible.");
+
+        if (layout.Routes.Any(x => string.IsNullOrWhiteSpace(x.Name) || x.BlockIds.Any(id => !blockIds.Contains(id)) ||
+            x.BlockIds.Distinct().Count() != x.BlockIds.Count))
+            throw new InvalidDataException("Hi ha itineraris amb blocs inexistents o referències duplicades.");
     }
 
     private static async Task WriteXmlAsync<T>(ZipArchive archive, string name, T value, CancellationToken ct)
@@ -81,11 +121,17 @@ public sealed class PlatinumPackageStore : IProjectStore
         var entry = archive.GetEntry(name) ?? throw new InvalidDataException($"Falta l'entrada {name}.");
         if (entry.Length > MaxEntryBytes) throw new InvalidDataException($"L'entrada {name} supera la mida permesa.");
         await using var input = entry.Open();
-        using var memory = new MemoryStream();
-        await input.CopyToAsync(memory, ct);
-        memory.Position = 0;
+        var settings = new System.Xml.XmlReaderSettings
+        {
+            DtdProcessing = System.Xml.DtdProcessing.Prohibit,
+            XmlResolver = null,
+            MaxCharactersInDocument = MaxEntryBytes,
+            MaxCharactersFromEntities = 0,
+            IgnoreComments = true
+        };
+        using var reader = System.Xml.XmlReader.Create(input, settings);
         var serializer = new XmlSerializer(typeof(T));
-        return (T)(serializer.Deserialize(memory) ?? throw new InvalidDataException($"No s'ha pogut llegir {name}."));
+        return (T)(serializer.Deserialize(reader) ?? throw new InvalidDataException($"No s'ha pogut llegir {name}."));
     }
 
     [XmlRoot("PlatinumManifest")]
