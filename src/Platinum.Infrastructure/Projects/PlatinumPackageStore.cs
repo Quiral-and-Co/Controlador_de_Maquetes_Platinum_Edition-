@@ -59,10 +59,14 @@ public sealed class PlatinumPackageStore : IProjectStore
             throw new InvalidDataException("El paquet conté entrades ZIP duplicades.");
         cancellationToken.ThrowIfCancellationRequested();
         var manifest = await ReadXmlAsync<ProjectManifest>(archive, ManifestEntry, cancellationToken);
-        if (manifest.Format != "Quiral Platinum" || manifest.FormatVersion != TrackLayout.CurrentFormatVersion)
-            throw new InvalidDataException($"Format de projecte no compatible: {manifest.Format} v{manifest.FormatVersion}.");
+        if (manifest.Format != "Quiral Platinum" || manifest.FormatVersion != TrackLayout.CurrentFormatVersion ||
+            !DateTimeOffset.TryParse(manifest.CreatedUtc, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out _))
+            throw new InvalidDataException($"Manifest invàlid o format no compatible: {manifest.Format} v{manifest.FormatVersion}.");
         var document = await ReadXmlAsync<LayoutDocument>(archive, LayoutEntry, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
+        if (document.Levels is null || document.Pieces is null || document.Connections is null ||
+            document.Blocks is null || document.Sensors is null || document.Routes is null)
+            throw new InvalidDataException("El document XML conté col·leccions nul·les.");
         var layout = document.ToDomain();
         Validate(layout);
         return layout;
@@ -106,7 +110,7 @@ public sealed class PlatinumPackageStore : IProjectStore
             string.IsNullOrWhiteSpace(x.FromPort) || string.IsNullOrWhiteSpace(x.ToPort)))
             throw new InvalidDataException("El projecte conté connexions invàlides o referències a peces inexistents.");
 
-        if (layout.Blocks.Any(x => string.IsNullOrWhiteSpace(x.Name) ||
+        if (layout.Blocks.Any(x => string.IsNullOrWhiteSpace(x.Name) || x.PieceIds is null ||
             !levelIds.Contains(x.LevelId) || x.PieceIds.Any(id => !pieceIds.Contains(id)) ||
             x.PieceIds.Distinct().Count() != x.PieceIds.Count))
             throw new InvalidDataException("Hi ha blocs amb nivell, peces o noms invàlids.");
@@ -115,7 +119,7 @@ public sealed class PlatinumPackageStore : IProjectStore
             layout.Sensors.GroupBy(x => x.SystemName, StringComparer.OrdinalIgnoreCase).Any(x => x.Count() > 1))
             throw new InvalidDataException("Hi ha sensors sense identificador de sistema o nom visible.");
 
-        if (layout.Routes.Any(x => string.IsNullOrWhiteSpace(x.Name) || x.BlockIds.Any(id => !blockIds.Contains(id)) ||
+        if (layout.Routes.Any(x => string.IsNullOrWhiteSpace(x.Name) || x.BlockIds is null || x.BlockIds.Any(id => !blockIds.Contains(id)) ||
             x.BlockIds.Distinct().Count() != x.BlockIds.Count))
             throw new InvalidDataException("Hi ha itineraris amb blocs inexistents o referències duplicades.");
     }
