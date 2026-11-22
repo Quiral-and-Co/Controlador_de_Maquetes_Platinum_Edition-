@@ -65,7 +65,7 @@ public sealed class PlatinumPackageStore : IProjectStore
         var document = await ReadXmlAsync<LayoutDocument>(archive, LayoutEntry, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         if (document.Levels is null || document.Pieces is null || document.Connections is null ||
-            document.Blocks is null || document.Sensors is null || document.Routes is null || document.GeometrySegments is null || document.Signals is null || document.Locomotives is null || document.Inspections is null)
+            document.Blocks is null || document.Sensors is null || document.Routes is null || document.GeometrySegments is null || document.Signals is null || document.Locomotives is null || document.ProtocolProfiles is null || document.Inspections is null)
             throw new InvalidDataException("El document XML conté col·leccions nul·les.");
         var layout = document.ToDomain();
         Validate(layout);
@@ -75,7 +75,7 @@ public sealed class PlatinumPackageStore : IProjectStore
     private static void Validate(TrackLayout layout)
     {
         ArgumentNullException.ThrowIfNull(layout);
-        if (layout.Levels is null || layout.Pieces is null || layout.Connections is null || layout.Blocks is null || layout.Sensors is null || layout.Routes is null || layout.GeometrySegments is null || layout.Signals is null || layout.Locomotives is null || layout.Inspections is null)
+        if (layout.Levels is null || layout.Pieces is null || layout.Connections is null || layout.Blocks is null || layout.Sensors is null || layout.Routes is null || layout.GeometrySegments is null || layout.Signals is null || layout.Locomotives is null || layout.ProtocolProfiles is null || layout.Inspections is null)
             throw new InvalidDataException("El projecte conté col·leccions nul·les.");
         if (layout.Id == Guid.Empty || string.IsNullOrWhiteSpace(layout.Name) ||
             layout.WidthMillimetres <= 0 || layout.HeightMillimetres <= 0 || layout.GridMillimetres <= 0)
@@ -99,6 +99,7 @@ public sealed class PlatinumPackageStore : IProjectStore
         EnsureUniqueIds(layout.GeometrySegments, x => x.Id, "geometria de vies");
         EnsureUniqueIds(layout.Signals, x => x.Id, "senyals");
         EnsureUniqueIds(layout.Locomotives, x => x.Id, "locomotores");
+        EnsureUniqueIds(layout.ProtocolProfiles, x => x.Id, "perfils de protocol");
         EnsureUniqueIds(layout.Inspections, x => x.Id, "inspeccions");
 
         var levelIds = layout.Levels.Select(x => x.Id).ToHashSet();
@@ -141,6 +142,9 @@ public sealed class PlatinumPackageStore : IProjectStore
         if (layout.Locomotives.Any(x => string.IsNullOrWhiteSpace(x.Name) || x.Address is < 1 or > 10239 ||
             string.IsNullOrWhiteSpace(x.Protocol) || !x.SimulationOnly))
             throw new InvalidDataException("Els perfils de locomotora han de tenir adreça vàlida i romandre en mode simulació.");
+        if (layout.ProtocolProfiles.Any(x => string.IsNullOrWhiteSpace(x.Name) || string.IsNullOrWhiteSpace(x.Kind) ||
+            string.IsNullOrWhiteSpace(x.Host) || x.Port is < 1 or > 65535 || x.PhysicalCommandsEnabled))
+            throw new InvalidDataException("Els perfils de protocol han de tenir dades vàlides i les ordres físiques desactivades.");
         if (layout.Inspections.Any(x => string.IsNullOrWhiteSpace(x.Item) || x.Notes is null || x.CheckedUtc == default))
             throw new InvalidDataException("Hi ha registres d'inspecció invàlids.");
     }
@@ -206,6 +210,7 @@ public sealed class PlatinumPackageStore : IProjectStore
         [XmlArray] public List<RouteDocument> Routes { get; set; } = [];
         [XmlArray] public List<SignalDocument> Signals { get; set; } = [];
         [XmlArray] public List<LocomotiveDocument> Locomotives { get; set; } = [];
+        [XmlArray] public List<ProtocolProfileDocument> ProtocolProfiles { get; set; } = [];
         [XmlArray] public List<InspectionDocument> Inspections { get; set; } = [];
 
         public static LayoutDocument From(TrackLayout x) => new()
@@ -220,6 +225,7 @@ public sealed class PlatinumPackageStore : IProjectStore
             Routes=x.Routes.Select(v=>new RouteDocument{Id=v.Id,Name=v.Name,BlockIds=v.BlockIds.ToList(),Reserved=v.Reserved}).ToList(),
             Signals=x.Signals.Select(v=>new SignalDocument{Id=v.Id,Name=v.Name,Aspect=v.Aspect,ProtectedBlockId=v.ProtectedBlockId,PhysicallyVerified=v.PhysicallyVerified}).ToList(),
             Locomotives=x.Locomotives.Select(v=>new LocomotiveDocument{Id=v.Id,Name=v.Name,Address=v.Address,Protocol=v.Protocol,SimulationOnly=v.SimulationOnly}).ToList(),
+            ProtocolProfiles=x.ProtocolProfiles.Select(v=>new ProtocolProfileDocument{Id=v.Id,Name=v.Name,Kind=v.Kind,Host=v.Host,Port=v.Port,PhysicalCommandsEnabled=v.PhysicalCommandsEnabled}).ToList(),
             Inspections=x.Inspections.Select(v=>new InspectionDocument{Id=v.Id,Item=v.Item,OperatorDeclaredComplete=v.OperatorDeclaredComplete,Notes=v.Notes,CheckedUtc=v.CheckedUtc.ToString("O")}).ToList()
         };
         public TrackLayout ToDomain() => new()
@@ -234,6 +240,7 @@ public sealed class PlatinumPackageStore : IProjectStore
             Routes=Routes.Select(v=>new RouteDefinition(v.Id,v.Name,v.BlockIds,v.Reserved)).ToList(),
             Signals=Signals.Select(v=>new SignalDefinition(v.Id,v.Name,v.Aspect,v.ProtectedBlockId,v.PhysicallyVerified)).ToList(),
             Locomotives=Locomotives.Select(v=>new LocomotiveProfile(v.Id,v.Name,v.Address,v.Protocol,v.SimulationOnly)).ToList(),
+            ProtocolProfiles=ProtocolProfiles.Select(v=>new RailwayProtocolProfile(v.Id,v.Name,v.Kind,v.Host,v.Port,v.PhysicalCommandsEnabled)).ToList(),
             Inspections=Inspections.Select(v=>new PhysicalInspectionRecord(v.Id,v.Item,v.OperatorDeclaredComplete,v.Notes,DateTimeOffset.Parse(v.CheckedUtc,System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind))).ToList()
         };
     }
@@ -246,5 +253,6 @@ public sealed class PlatinumPackageStore : IProjectStore
     public sealed class RouteDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public bool Reserved {get;set;} [XmlArrayItem("BlockId")] public List<Guid> BlockIds {get;set;}=[]; }
     public sealed class SignalDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public string Aspect {get;set;}="unknown"; public Guid? ProtectedBlockId {get;set;} public bool PhysicallyVerified {get;set;} }
     public sealed class LocomotiveDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public int Address {get;set;} public string Protocol {get;set;}="simulation"; public bool SimulationOnly {get;set;}=true; }
+    public sealed class ProtocolProfileDocument { public Guid Id {get;set;} public string Name {get;set;}=""; public string Kind {get;set;}=""; public string Host {get;set;}=""; public int Port {get;set;} public bool PhysicalCommandsEnabled {get;set;} }
     public sealed class InspectionDocument { public Guid Id {get;set;} public string Item {get;set;}=""; public bool OperatorDeclaredComplete {get;set;} public string Notes {get;set;}=""; public string CheckedUtc {get;set;}=""; }
 }
