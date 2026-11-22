@@ -302,12 +302,12 @@ public sealed class TrackEditorView : UserControl
                     var branch = new PathFigure { StartPoint = new Point(start.X + dx * 0.48, start.Y + dy * 0.48), IsClosed = false };
                     branch.Segments.Add(new LineSegment(branchEnd, true));
                     var group = new GeometryGroup();
-                    group.Children.Add(new PathGeometry([figure]));
-                    group.Children.Add(new PathGeometry([branch]));
+                    group.Children.Add(new PathGeometry { Figures = new PathFigureCollection { figure } });
+                    group.Children.Add(new PathGeometry { Figures = new PathFigureCollection { branch } });
                     return group;
                 }
             }
         }
-        return new PathGeometry([figure]);
+        return new PathGeometry { Figures = new PathFigureCollection { figure } };
     }
 }
