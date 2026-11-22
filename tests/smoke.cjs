@@ -24,7 +24,7 @@ const palette=['straight','curve','turnout','block'].map(type=>{const e=new El()
 const shell=new El('shell');
 const docHandlers={};
 const document={addEventListener:(name,fn)=>{docHandlers[name]=fn;},getElementById:id=>els[id]||(els[id]=new El(id)),createElement:tag=>new El(tag),createElementNS:()=>new El('svg'),querySelectorAll:q=>q==='[data-piece]'?palette:[],querySelector:q=>shell};
-const window={MARKLIN_C_CATALOGUE:JSON.parse(fs.readFileSync(__dirname+'/../catalogue-marklin-c.json','utf8')),JMRI_TC_VIEWPORT:viewport,JMRI_TC_SELECTION_MOVE:selectionMove,JMRI_TC_TRACK_JUNCTION:trackJunction,addEventListener:()=>{}};
+const window={JMRI_TC_LAYOUT_MODEL:require('../layout-model-v3.js'),MARKLIN_C_CATALOGUE:JSON.parse(fs.readFileSync(__dirname+'/../catalogue-marklin-c.json','utf8')),JMRI_TC_VIEWPORT:viewport,JMRI_TC_SELECTION_MOVE:selectionMove,JMRI_TC_TRACK_JUNCTION:trackJunction,addEventListener:()=>{}};
 vm.runInNewContext(fs.readFileSync(__dirname+'/../app.js','utf8'),{document,window,console,Date,Math,JSON,Number,String,Array,Set,Map,WebSocket:function(){}});
 if(els.levelCount.textContent!==5)throw Error('Expected five levels');
 // JSON v3: el port D dels desviaments doble-slip forma part del contracte.
