@@ -26,7 +26,8 @@ public sealed class PlatinumPackageStoreTests
                 GeometrySegments = [new TrackGeometrySegment(Guid.NewGuid(), TrackGeometryKind.Curve, 100m, 100m, 400m, 250m, 230m, 20m, levelId)],
                 Blocks = [new LogicalBlock(Guid.NewGuid(), "Bloc A", levelId, [pieceId], true)],
                 Sensors = [new FeedbackSensor(Guid.NewGuid(), "CS2:S88:1", "Sensor 1")],
-                Routes = [new RouteDefinition(Guid.NewGuid(), "Ruta A", [], true)]
+                Routes = [new RouteDefinition(Guid.NewGuid(), "Ruta A", [], true)],
+                ProtocolProfiles = [new RailwayProtocolProfile(Guid.NewGuid(), "CS2 laboratori", "Märklin CS2", "192.168.1.50", 15731, false)]
             };
 
             var store = new PlatinumPackageStore();
@@ -44,6 +45,8 @@ public sealed class PlatinumPackageStoreTests
             Assert.Equal(layout.Sensors[0].SystemName, loaded.Sensors[0].SystemName);
             Assert.True(loaded.Blocks[0].Occupied);
             Assert.True(loaded.Routes[0].Reserved);
+            Assert.Equal("Märklin CS2", loaded.ProtocolProfiles[0].Kind);
+            Assert.False(loaded.ProtocolProfiles[0].PhysicalCommandsEnabled);
 
             using var archive = ZipFile.OpenRead(path);
             Assert.NotNull(archive.GetEntry("manifest.xml"));
