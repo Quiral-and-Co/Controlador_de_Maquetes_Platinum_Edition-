@@ -43,6 +43,22 @@ public partial class MainWindow : Window
         Levels = Enumerable.Range(0, 5).Select(i => new TrackLevel(Guid.NewGuid(), "Nivell " + (i + 1), i * 110m)).ToList()
     };
 
+    private void ValidateTopology_Click(object sender, RoutedEventArgs e)
+    {
+        SyncLayoutFromEditors();
+        var issues = TrackTopologyValidator.Validate(_currentLayout);
+        if (issues.Count == 0)
+        {
+            StatusText.Text = "Topologia lògica correcta. Això no certifica l'encaix físic ni l'estat elèctric.";
+            MessageBox.Show(this, "No s'han trobat errors de topologia lògica.\n\nLa validació no comprova l'encaix físic, la geometria real del catàleg ni les connexions elèctriques.", "Validació de topologia", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        StatusText.Text = $"Topologia: {issues.Count} incidències. Sortides físiques bloquejades.";
+        var details = string.Join(Environment.NewLine, issues.Select(issue => $"[{issue.Code}] {issue.Message}"));
+        MessageBox.Show(this, details, "Incidències de topologia", MessageBoxButton.OK, MessageBoxImage.Warning);
+    }
+
     private void NewProject_Click(object sender, RoutedEventArgs e)
     {
         _currentLayout = CreateNewLayout();
