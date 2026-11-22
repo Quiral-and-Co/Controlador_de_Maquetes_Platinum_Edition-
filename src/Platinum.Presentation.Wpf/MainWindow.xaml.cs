@@ -22,6 +22,7 @@ public partial class MainWindow : Window
         LoadCatalogue();
         OperationsView.SetLayout(_currentLayout);
         ProjectDataView.SetLayout(_currentLayout);
+        ProjectDataView.ProjectDataChanged += (_, _) => { RefreshLevelSelector(); Sync3DEditor(); UpdateProjectStatus(); };
         ProjectDataView.SetLayout(_currentLayout);
         TrackEditor.CataloguePiecePlaced += OnCataloguePiecePlaced;
         TrackEditor.ConnectionCreated += OnConnectionCreated;
