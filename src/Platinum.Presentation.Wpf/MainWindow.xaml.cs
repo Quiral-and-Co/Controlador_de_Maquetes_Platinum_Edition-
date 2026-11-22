@@ -23,7 +23,6 @@ public partial class MainWindow : Window
         OperationsView.SetLayout(_currentLayout);
         ProjectDataView.SetLayout(_currentLayout);
         ProjectDataView.ProjectDataChanged += (_, _) => { RefreshLevelSelector(); Sync3DEditor(); UpdateProjectStatus(); };
-        ProjectDataView.SetLayout(_currentLayout);
         TrackEditor.CataloguePiecePlaced += OnCataloguePiecePlaced;
         TrackEditor.ConnectionCreated += OnConnectionCreated;
         TrackEditor.SetActiveLevel(ActiveLevelId);
@@ -47,6 +46,7 @@ public partial class MainWindow : Window
         _currentLayout = CreateNewLayout();
         _currentPath = null;
         OperationsView.SetLayout(_currentLayout);
+        ProjectDataView.SetLayout(_currentLayout);
         TrackEditor.SetActiveLevel(ActiveLevelId);
         TrackEditor.SetGridSize(_currentLayout.GridMillimetres);
         TrackEditor.LoadSegments(_currentLayout.GeometrySegments);
