@@ -28,7 +28,7 @@ const window={JMRI_TC_LAYOUT_MODEL:require('../layout-model-v3.js'),MARKLIN_C_CA
 vm.runInNewContext(fs.readFileSync(__dirname+'/../app.js','utf8'),{document,window,console,Date,Math,JSON,Number,String,Array,Set,Map,WebSocket:function(){}});
 if(els.levelCount.textContent!==5)throw Error('Expected five levels');
 // JSON v3: el port D dels desviaments doble-slip forma part del contracte.
-const doubleSlipConfig=window.JMRI_TC_PROJECT_FILES.baseConfig();
+const doubleSlipConfig={schemaVersion:3,name:'Double-slip contract',scale:'H0',trackSystem:'Märklin C',room:{widthMm:3000,heightMm:1800},levelSpacingMm:110,levels:Array.from({length:5},(_,i)=>({id:i+1,name:'Nivell '+(i+1),elevationMm:i*110,tracks:[],blocks:[],sensors:[]})),connections:[]};
 doubleSlipConfig.levels[0].tracks.push(
   {id:'DS-1',type:'turnout',name:'Desviament doble',x:100,y:100,rotation:0,levelId:1,blockId:'',sensorName:'',turnoutSystemName:'',catalogueRef:'24624',junctionKind:'double-slip',connectionPoint:'D',geometry:{lengthMm:180,branchOffsetMm:60}},
   {id:'ST-1',type:'straight',name:'Recta',x:280,y:100,rotation:0,levelId:1,blockId:'',sensorName:'',geometry:{lengthMm:180}}
