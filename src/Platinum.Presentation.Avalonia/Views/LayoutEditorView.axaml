@@ -22,7 +22,12 @@
         <Button Content="Zoom −" Command="{Binding ZoomOutCommand}" Margin="0,0,6,6"/>
         <Button Content="Ajustar" Command="{Binding ResetZoomCommand}" Margin="0,0,12,6"/>
         <CheckBox Content="Ajustar a graella (10 mm)" IsChecked="{Binding SnapToGrid}" VerticalAlignment="Center" Margin="0,0,10,6"/>
-        <Button Content="Connexions i ports" Command="{Binding ExplainConnectionsCommand}" Margin="0,0,6,6"/>
+        <ComboBox ItemsSource="{Binding CatalogueItems}" SelectedItem="{Binding SelectedCatalogueItem}" Width="260" Margin="0,0,6,6">
+          <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding DisplayName}"/></DataTemplate></ComboBox.ItemTemplate>
+        </ComboBox>
+        <Button Content="Col·locar peça" Command="{Binding PlaceCataloguePieceCommand}" Margin="0,0,6,6"/>
+        <Button Content="Connectar ports" Command="{Binding ToggleConnectModeCommand}" Margin="0,0,6,6"/>
+        <Button Content="Ajuda connexions" Command="{Binding ExplainConnectionsCommand}" Margin="0,0,6,6"/>
       </WrapPanel>
     </Border>
     <TabControl Grid.Row="2">
