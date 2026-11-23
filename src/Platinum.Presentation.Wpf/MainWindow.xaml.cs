@@ -7,7 +7,8 @@ using Platinum.Domain.Layout;
 using Platinum.Infrastructure.Projects;
 using Platinum.Presentation.Wpf.Updates;
 using Platinum.Presentation.Wpf.Editor;
-using Platinum.Presentation.Wpf.Catalogue;
+using Platinum.Domain.Catalogue;
+using Platinum.Infrastructure.Catalogue;
 
 namespace Platinum.Presentation.Wpf;
 
