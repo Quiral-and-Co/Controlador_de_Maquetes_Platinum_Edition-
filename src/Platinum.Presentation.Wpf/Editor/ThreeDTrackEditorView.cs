@@ -146,13 +146,10 @@ public sealed class ThreeDTrackEditorView : UserControl
             return;
         }
         var ports = item.Ports.ToDictionary(x => x.Id, StringComparer.OrdinalIgnoreCase);
-        var rotation = (double)piece.RotationDegrees * Math.PI / 180d;
         Point3D Transform(decimal x, decimal y)
         {
-            var lx = (double)x; var ly = (double)y;
-            var wx = (double)piece.X + lx * Math.Cos(rotation) - ly * Math.Sin(rotation);
-            var wy = (double)piece.Y + lx * Math.Sin(rotation) + ly * Math.Cos(rotation);
-            return new Point3D(wx, -wy, elevation);
+            var world = TrackEditorEngine.TransformPort(piece, x, y);
+            return new Point3D((double)world.X, -(double)world.Y, elevation);
         }
         foreach (var route in item.TrackPaths)
         {
