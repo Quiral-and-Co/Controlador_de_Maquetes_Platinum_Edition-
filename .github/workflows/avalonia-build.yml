@@ -9,13 +9,21 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
-      - name: Restore
+      - name: Restore Avalonia
         run: dotnet restore src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj
-      - name: Build
+      - name: Build Avalonia
         run: dotnet build src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj -c Release --no-restore
+      - name: Restore .NET tests
+        run: dotnet restore tests/Platinum.Infrastructure.Tests/Platinum.Infrastructure.Tests.csproj
+      - name: Run domain, infrastructure and topology tests
+        run: dotnet test tests/Platinum.Infrastructure.Tests/Platinum.Infrastructure.Tests.csproj -c Release --no-restore
