@@ -87,7 +87,7 @@ public sealed class Track3DCanvas : Control
     private void DrawCataloguePiece(DrawingContext context, TrackPiece piece, double elevation, Point center, Color levelColor)
     {
         var item = CatalogueItems.FirstOrDefault(x => x.Ref.Equals(piece.CatalogueCode, StringComparison.OrdinalIgnoreCase));
-        if (item is null || item.TrackPaths.Count == 0)
+        if (item is null)
         {
             var anchor = Project((double)piece.X, -(double)piece.Y, elevation + 8, center);
             context.DrawEllipse(new SolidColorBrush(Color.Parse("#E59A45")), null, anchor, 5, 5);
@@ -102,6 +102,11 @@ public sealed class Track3DCanvas : Control
             for (var i = 1; i < points.Count; i++)
                 context.DrawLine(pen, Project((double)points[i - 1].X, -(double)points[i - 1].Y, elevation + 8, center),
                     Project((double)points[i].X, -(double)points[i].Y, elevation + 8, center));
+        }
+        if (item.TrackPaths.Count == 0)
+        {
+            var anchor = Project((double)piece.X, -(double)piece.Y, elevation + 8, center);
+            context.DrawEllipse(new SolidColorBrush(Color.Parse("#E59A45")), null, anchor, 5, 5);
         }
         foreach (var port in item.Ports)
         {
