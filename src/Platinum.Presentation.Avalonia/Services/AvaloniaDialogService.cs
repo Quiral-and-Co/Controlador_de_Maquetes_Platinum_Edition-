@@ -2,13 +2,14 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 
 namespace Platinum.Presentation.Avalonia.Services;
 
 public sealed class AvaloniaDialogService : IDialogService
 {
-    private Window? Owner => Avalonia.Application.Current?.ApplicationLifetime is
+    private Window? Owner => global::Avalonia.Application.Current?.ApplicationLifetime is
         IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null;
 
     public async Task ShowMessageAsync(string title, string message)
