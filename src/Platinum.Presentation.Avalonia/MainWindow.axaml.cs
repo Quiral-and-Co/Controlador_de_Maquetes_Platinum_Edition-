@@ -17,6 +17,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Closed += async (_,_) => await OperationsPanel.DisposeAsync();
         LevelSelector.ItemsSource=_layout.Levels;
         LevelSelector.SelectedIndex=0;
         TrackPlan.SetLayout(_layout,ActiveLevelId);
