@@ -179,7 +179,6 @@ public sealed record CatalogueItem(
         // and the asymmetric exit positions are not published in the catalogue.
         var halfLength = (LengthMm ?? 188.3m) / 2m;
         var angle = (double)(AngleDeg ?? 24.3m) * Math.PI / 180d;
-        var radius = (double)(RadiusMm ?? 437.5m);
         var branchX = halfLength;
         var branchY = (decimal)((double)halfLength * Math.Tan(angle));
         return [
