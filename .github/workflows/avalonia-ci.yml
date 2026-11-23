@@ -52,7 +52,7 @@ jobs:
         run: Compress-Archive -Path artifacts/Platinum-${{ matrix.rid }}/* -DestinationPath artifacts/Platinum-${{ matrix.rid }}.zip
       - name: Archive Unix
         if: runner.os != 'Windows'
-        run: tar -czf artifacts/Platinum-${{ matrix.rid }}.tar.gz -C artifacts/Platinum-${{ matrix.rid }} .
+        run: cd artifacts/Platinum-${{ matrix.rid }} && zip -qr ../Platinum-${{ matrix.rid }}.zip .
       - name: SHA256 manifest
         shell: bash
         run: |
