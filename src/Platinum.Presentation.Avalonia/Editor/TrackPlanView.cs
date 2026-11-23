@@ -24,7 +24,7 @@ public sealed class TrackPlanView : Control
     public void BeginCataloguePlacement(CatalogueItem item) { _placement=item; _tool="Col·locar peça"; _start=null; Focus(); }
     public void SetCatalogue(IEnumerable<CatalogueItem> items) { _catalogue.Clear(); foreach(var item in items) _catalogue[item.Ref]=item; InvalidateVisual(); }
 
-    protected override void OnRender(DrawingContext ctx)
+    public override void Render(DrawingContext ctx)
     {
         base.OnRender(ctx);
         ctx.DrawRectangle(new SolidColorBrush(Color.Parse("#121B24")),null,Bounds);
