@@ -19,14 +19,9 @@ public sealed partial class App : Application
         {
             _services = new ServiceCollection().AddPresentation().BuildServiceProvider();
             desktop.MainWindow = new MainWindow(_services.GetRequiredService<MainWindowViewModel>());
+            desktop.Exit += (_, _) => _services.Dispose();
         }
 
         base.OnFrameworkInitializationCompleted();
-    }
-
-    public override void OnExit()
-    {
-        _services?.Dispose();
-        base.OnExit();
     }
 }
