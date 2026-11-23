@@ -16,8 +16,7 @@ public sealed class MarklinCs2ConnectionTests
     {
         using var station=new UdpClient(new IPEndPoint(IPAddress.Loopback,0));
         var commandPort=((IPEndPoint)station.Client.LocalEndPoint!).Port;
-        using var feedback=new UdpClient(new IPEndPoint(IPAddress.Loopback,0));
-        var feedbackPort=((IPEndPoint)feedback.Client.LocalEndPoint!).Port;
+        int feedbackPort;\n        using(var feedback=new UdpClient(new IPEndPoint(IPAddress.Loopback,0))) feedbackPort=((IPEndPoint)feedback.Client.LocalEndPoint!).Port;
         var server=Task.Run(async ()=>{
             for(var i=0;i<2;i++){
                 var request=await station.ReceiveAsync();
