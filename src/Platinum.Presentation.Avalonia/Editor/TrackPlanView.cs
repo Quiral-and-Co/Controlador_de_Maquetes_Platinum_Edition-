@@ -67,7 +67,7 @@ public sealed class TrackPlanView : Control
         return hit;
     }
     private Guid? HitPiece(Point p){if(_layout is null)return null;foreach(var piece in _layout.Pieces.Where(x=>x.LevelId==_levelId).Reverse())if(Math.Sqrt(Math.Pow(p.X-(double)piece.X,2)+Math.Pow(p.Y-(double)piece.Y,2))<120)return piece.Id;return null;}
-    private static double Distance(Point p,Point a,Point b){var v=b-a;var d=v.X*v.X+v.Y*v.Y;if(d<1e-8)returnMath.Sqrt(Math.Pow(p.X-a.X,2)+Math.Pow(p.Y-a.Y,2));var t=Math.Clamp(((p.X-a.X)*v.X+(p.Y-a.Y)*v.Y)/d,0,1);returnMath.Sqrt(Math.Pow(p.X-(a+v*t).X,2)+Math.Pow(p.Y-(a+v*t).Y,2));}
+    private static double Distance(Point p,Point a,Point b){var v=b-a;var d=v.X*v.X+v.Y*v.Y;if(d<1e-8)return Math.Sqrt(Math.Pow(p.X-a.X,2)+Math.Pow(p.Y-a.Y,2));var t=Math.Clamp(((p.X-a.X)*v.X+(p.Y-a.Y)*v.Y)/d,0,1);return Math.Sqrt(Math.Pow(p.X-(a+v*t).X,2)+Math.Pow(p.Y-(a+v*t).Y,2));}
     private Guid? HitSegment(Point p)
     {
         if(_layout is null)return null;foreach(var s in _layout.GeometrySegments.Where(x=>x.LevelId==_levelId).Reverse())
