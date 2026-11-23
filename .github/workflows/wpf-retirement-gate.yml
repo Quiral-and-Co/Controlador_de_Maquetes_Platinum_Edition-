@@ -1,0 +1,16 @@
+name: WPF retirement parity gate
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify all functional parity gates
+        run: bash eng/verify-avalonia-parity.sh
+      - name: Require explicit human retirement approval
+        run: |
+          echo "Parity gate passed. This workflow does not delete WPF."
+          echo "A maintainer must review the full matrix and approve a separate removal PR."
