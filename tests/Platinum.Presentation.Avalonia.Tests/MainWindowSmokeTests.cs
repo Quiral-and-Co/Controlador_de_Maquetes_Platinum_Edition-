@@ -36,7 +36,7 @@ public sealed class MainWindowSmokeTests
         }
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void New_Project_Action_Resets_Project_Status()
     {
         var window = new MainWindow();
