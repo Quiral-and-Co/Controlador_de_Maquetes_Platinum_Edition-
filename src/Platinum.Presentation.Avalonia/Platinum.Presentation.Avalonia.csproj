@@ -17,8 +17,4 @@
     <ProjectReference Include="../Platinum.Application/Platinum.Application.csproj" />
     <ProjectReference Include="../Platinum.Infrastructure/Platinum.Infrastructure.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Content Include="Assets/catalogue-marklin-c.json"
-             CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
 </Project>
