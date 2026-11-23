@@ -8,7 +8,7 @@ namespace Platinum.Presentation.Avalonia.Services;
 
 public sealed class AvaloniaDialogService : IDialogService
 {
-    private Window? Owner => Application.Current?.ApplicationLifetime is
+    private Window? Owner => Avalonia.Application.Current?.ApplicationLifetime is
         IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null;
 
     public async Task ShowMessageAsync(string title, string message)
