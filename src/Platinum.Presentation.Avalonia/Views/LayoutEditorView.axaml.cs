@@ -48,6 +48,7 @@ public sealed partial class LayoutEditorView : UserControl
         if (_canvas is not null)
         {
             _canvas.Engine = _viewModel.Engine;
+            _canvas.CatalogueItems = _viewModel.CatalogueItems;
             _canvas.ActiveLevelId = _viewModel.ActiveLevelId;
             _canvas.ZoomFactor = _viewModel.ZoomFactor;
             _canvas.GridMillimetres = _viewModel.GridMillimetres;
@@ -59,6 +60,7 @@ public sealed partial class LayoutEditorView : UserControl
         if (_canvas3D is not null)
         {
             _canvas3D.Engine = _viewModel.Engine;
+            _canvas3D.CatalogueItems = _viewModel.CatalogueItems;
             _canvas3D.Levels = _viewModel.Levels;
             _canvas3D.ActiveLevelId = _viewModel.ActiveLevelId;
             _canvas3D.InvalidateVisual();
@@ -70,6 +72,20 @@ public sealed partial class LayoutEditorView : UserControl
         if (_viewModel is null || _canvas is null || !e.GetCurrentPoint(_canvas).Properties.IsLeftButtonPressed) return;
         var model = _canvas.ToModel(e.GetPosition(_canvas));
         var snapped = _viewModel.Snap(model.X, model.Y);
+        if (_viewModel.PlacementItem is not null)
+        {
+            _viewModel.PlaceCataloguePieceAt(snapped.X, snapped.Y);
+            _canvas.InvalidateVisual();
+            e.Handled = true;
+            return;
+        }
+        if (_viewModel.ConnectMode)
+        {
+            _viewModel.ConnectPortAt(snapped.X, snapped.Y);
+            _canvas.InvalidateVisual();
+            e.Handled = true;
+            return;
+        }
         if (_viewModel.Tool == TrackEditorTool.Select)
         {
             _viewModel.SelectAt(snapped.X, snapped.Y);
