@@ -84,23 +84,23 @@ public partial class MainWindow : Window
     private void LoadCatalogue()
     {
         try{var path=Path.Combine(AppContext.BaseDirectory,"Assets","catalogue-marklin-c.json");var doc=MarklinCCatalogue.Load(path);
-            _catalogueItems=doc.Items;CatalogueList.ItemsSource=_catalogueItems;TrackPlan.SetCatalogue(_catalogueItems);TrackPlan3D.SetCatalogue(_catalogueItems);
+            _catalogueItems=doc.Items;CatalogueList.ItemsSource=_catalogueItems.Select(x=>x.DisplayName).ToList();TrackPlan.SetCatalogue(_catalogueItems);TrackPlan3D.SetCatalogue(_catalogueItems);
             CatalogueCount.Text=_catalogueItems.Count+" referències · "+doc.Brand+" "+doc.System+" · "+doc.Scale;}
         catch(Exception ex){CatalogueCount.Text="No s'ha pogut carregar el catàleg.";CatalogueDetails.Text=ex.Message;}
     }
     private void CatalogueSearch_TextChanged(object? s,TextChangedEventArgs e)
     {
         if(CatalogueList is null)return;var q=CatalogueSearch.Text?.Trim()??"";
-        CatalogueList.ItemsSource=string.IsNullOrWhiteSpace(q)?_catalogueItems:_catalogueItems.Where(x=>x.Ref.Contains(q,StringComparison.OrdinalIgnoreCase)||x.Name.Contains(q,StringComparison.OrdinalIgnoreCase)||x.Category.Contains(q,StringComparison.OrdinalIgnoreCase)).ToList();
+        CatalogueList.ItemsSource=(string.IsNullOrWhiteSpace(q)?_catalogueItems:_catalogueItems.Where(x=>x.Ref.Contains(q,StringComparison.OrdinalIgnoreCase)||x.Name.Contains(q,StringComparison.OrdinalIgnoreCase)||x.Category.Contains(q,StringComparison.OrdinalIgnoreCase))).Select(x=>x.DisplayName).ToList();
     }
     private void CatalogueList_SelectionChanged(object? s,SelectionChangedEventArgs e)
     {
-        if(CatalogueList.SelectedItem is not CatalogueItem item){PlaceCatalogueButton.IsEnabled=false;return;}
+        if(CatalogueList.SelectedItem is not string selected){PlaceCatalogueButton.IsEnabled=false;return;}\n        var item=_catalogueItems.FirstOrDefault(x=>x.DisplayName==selected);if(item is null){PlaceCatalogueButton.IsEnabled=false;return;}
         PlaceCatalogueButton.IsEnabled=true;CatalogueDetails.Text=item.DisplayName+"\nCategoria: "+item.Category+"\nTipus: "+item.Type+"\nGeometria: "+item.GeometrySummary+"\nEstat: "+item.GeometryStatus+"\n"+item.Notes;
     }
     private void PlaceCatalogueButton_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if(CatalogueList.SelectedItem is not CatalogueItem item)return;
+        if(CatalogueList.SelectedItem is not string selected)return;\n        var item=_catalogueItems.FirstOrDefault(x=>x.DisplayName==selected);if(item is null)return;
         if(item.GeometryStatus.Equals("unverified",StringComparison.OrdinalIgnoreCase))StatusText.Text="Avís: geometria no verificada; marcador esquemàtic. ";
         TrackPlan.BeginCataloguePlacement(item);StatusText.Text+="Fes clic al plànol per col·locar "+item.Ref+".";
     }
