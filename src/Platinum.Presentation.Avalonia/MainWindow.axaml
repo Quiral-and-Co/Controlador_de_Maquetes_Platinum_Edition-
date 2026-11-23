@@ -27,7 +27,7 @@
           <TabItem Header="Editor 2D"><DockPanel><WrapPanel DockPanel.Dock="Top"><Button Content="Seleccionar" Click="SelectTool_Click"/><Button Content="Via recta" Click="StraightTool_Click"/><Button Content="Corba" Click="CurveTool_Click"/><Button Content="Desviament" Click="TurnoutTool_Click"/><Separator/><Button Content="Desfer" Click="Undo_Click"/><Button Content="Refer" Click="Redo_Click"/><Button Content="Eliminar" Click="Delete_Click"/><Button Content="−15°" Click="RotateMinus_Click"/><Button Content="+15°" Click="RotatePlus_Click"/><Button Content="90°" Click="Rotate90_Click"/><Button Content="Connectar ports" Click="ConnectPorts_Click"/><Button Content="Zoom +" Click="ZoomIn_Click"/><Button Content="Zoom −" Click="ZoomOut_Click"/><Button Content="Ajustar" Click="FitView_Click"/></WrapPanel><editor:TrackPlanView x:Name="TrackPlan"/></DockPanel></TabItem>
           <TabItem Header="Editor 3D"><DockPanel><WrapPanel DockPanel.Dock="Top"><Button Content="Superior" Click="ThreeDTop_Click"/><Button Content="Isomètrica" Click="ThreeDIso_Click"/><Button Content="Lateral" Click="ThreeDSide_Click"/><Button Content="Zoom +" Click="ThreeDZoomIn_Click"/><Button Content="Zoom −" Click="ThreeDZoomOut_Click"/></WrapPanel><editor:ThreeDTrackView x:Name="TrackPlan3D"/></DockPanel></TabItem>
           <TabItem Header="Dispatcher"><dispatcher:DispatcherView x:Name="DispatcherPanel"/></TabItem>
-          <TabItem Header="Operacions"><operations:OperationsView/></TabItem>
+          <TabItem Header="Operacions"><operations:OperationsView x:Name="OperationsPanel"/></TabItem>
         </TabControl>
       </Grid>
       <Border Grid.Column="2" Background="#1A222C" Padding="12"><StackPanel Spacing="8">
