@@ -13,7 +13,9 @@ Branca: feature/avalonia-migration
 - Reutilització del model TrackLayout, ProjectService i PlatinumPackageStore.
 - Obrir i desar paquets .platinum mitjançant StorageProvider d'Avalonia.
 - Catàleg Märklin C carregat des de l'asset existent.
-- Editor 2D inicial: graella, nivells, geometria recta/corba/desviament i col·locació de peces.
+- Editor 2D: graella, geometria recta/corba/desviament, col·locació de peces, selecció i moviment, gir, eliminació, zoom, pan, connexió per ports i historial desfer/refer.
+- Ports i traçats Märklin C portats al model Avalonia, amb etiquetes d'exactitud estimada/derivada.
+- Vista 3D axonomètrica: geometria de catàleg, connexions, nivells, càmera orbitable i zoom.
 - Dispatcher local: blocs, ocupacions, itineraris, reserves i alliberament amb el servei d'aplicació existent.
 - Vista axonomètrica inicial del model compartit amb rotació i zoom.
 - Panells locals de simulació per automatització, senyalització, perfils de centrals, DMI, protecció, tren-terra, Món de Jocs i validació.
