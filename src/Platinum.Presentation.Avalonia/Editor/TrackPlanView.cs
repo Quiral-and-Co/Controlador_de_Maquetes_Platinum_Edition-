@@ -107,8 +107,8 @@ public sealed class TrackPlanView : Control
                 else
                 {
                     var sourceWorld=WorldPort(sourcePiece,sourcePort);var targetWorld=WorldPort(hit.Value.Piece,hit.Value.Port);
-                    var result=_topology.Connect(_layout,from,fromPort,(decimal)sourceWorld.X,(decimal)sourceWorld.Y,hit.Value.Piece.Id,hit.Value.Port.Id,(decimal)targetWorld.X,(decimal)targetWorld.Y);
-                    if(result.Success)PushUndo();
+                    PushUndo();
+                    _topology.Connect(_layout,from,fromPort,(decimal)sourceWorld.X,(decimal)sourceWorld.Y,hit.Value.Piece.Id,hit.Value.Port.Id,(decimal)targetWorld.X,(decimal)targetWorld.Y);
                     _pendingPiece=null;_pendingPort=null;
                 }
             }
