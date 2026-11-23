@@ -20,6 +20,8 @@ public partial class MainWindow : Window
         LevelSelector.ItemsSource=_layout.Levels;
         LevelSelector.SelectedIndex=0;
         TrackPlan.SetLayout(_layout,ActiveLevelId);
+        TrackPlan3D.SetLayout(_layout,ActiveLevelId);
+        DispatcherPanel.SetLayout(_layout);
         LoadCatalogue();
         ProjectStatus.Text="PROJECTE NO DESAT";
     }
@@ -29,14 +31,16 @@ public partial class MainWindow : Window
     private void NewProject_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)
     {
         _layout=CreateNewLayout();_currentPath=null;LevelSelector.ItemsSource=_layout.Levels;LevelSelector.SelectedIndex=0;
-        TrackPlan.SetLayout(_layout,ActiveLevelId);ProjectStatus.Text="PROJECTE NO DESAT";StatusText.Text="Projecte nou creat.";
+        TrackPlan.SetLayout(_layout,ActiveLevelId);TrackPlan3D.SetLayout(_layout,ActiveLevelId);DispatcherPanel.SetLayout(_layout);
+        ProjectStatus.Text="PROJECTE NO DESAT";StatusText.Text="Projecte nou creat.";
     }
     private async void OpenProject_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)
     {
         var files=await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions{Title="Obrir projecte Platinum",AllowMultiple=false,FileTypeFilter=[new FilePickerFileType("Projecte Quiral Platinum"){Patterns=["*.platinum"]}]});
         var path=files.FirstOrDefault()?.Path.LocalPath;if(string.IsNullOrWhiteSpace(path))return;
         try{_layout=await _projects.LoadAsync(path);if(_layout.Levels.Count==0)_layout.Levels.Add(new TrackLevel(Guid.NewGuid(),"Nivell principal",0m));
-            _currentPath=path;LevelSelector.ItemsSource=_layout.Levels;LevelSelector.SelectedIndex=0;TrackPlan.SetLayout(_layout,ActiveLevelId);
+            _currentPath=path;LevelSelector.ItemsSource=_layout.Levels;LevelSelector.SelectedIndex=0;
+            TrackPlan.SetLayout(_layout,ActiveLevelId);TrackPlan3D.SetLayout(_layout,ActiveLevelId);DispatcherPanel.SetLayout(_layout);
             ProjectStatus.Text=Path.GetFileName(path);StatusText.Text="Projecte carregat i validat.";}
         catch(Exception ex){StatusText.Text="Error en obrir el projecte: "+ex.Message;}
     }
@@ -49,14 +53,21 @@ public partial class MainWindow : Window
             path=file?.Path.LocalPath;
         }
         if(string.IsNullOrWhiteSpace(path))return;
-        try{await _projects.SaveAsync(_layout,path);_currentPath=path;ProjectStatus.Text=Path.GetFileName(path);StatusText.Text="Projecte desat correctament.";}
+        try{DispatcherPanel.SyncToLayout();await _projects.SaveAsync(_layout,path);_currentPath=path;ProjectStatus.Text=Path.GetFileName(path);StatusText.Text="Projecte desat correctament.";}
         catch(Exception ex){StatusText.Text="Error en desar el projecte: "+ex.Message;}
     }
-    private void LevelSelector_SelectionChanged(object? s,SelectionChangedEventArgs e){if(TrackPlan is not null&&_layout.Levels.Count>0)TrackPlan.SetActiveLevel(ActiveLevelId);}
+    private void LevelSelector_SelectionChanged(object? s,SelectionChangedEventArgs e)
+    {
+        if(TrackPlan is null||_layout.Levels.Count==0)return;
+        TrackPlan.SetActiveLevel(ActiveLevelId);TrackPlan3D.SetActiveLevel(ActiveLevelId);
+    }
     private void SelectTool_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.SetTool("Seleccionar");
     private void StraightTool_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.SetTool("Via recta");
     private void CurveTool_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.SetTool("Corba");
     private void TurnoutTool_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.SetTool("Desviament");
+    private void ThreeDTop_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan3D.TopView();
+    private void ThreeDIso_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan3D.IsometricView();
+    private void ThreeDSide_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan3D.SideView();
 
     private void LoadCatalogue()
     {
