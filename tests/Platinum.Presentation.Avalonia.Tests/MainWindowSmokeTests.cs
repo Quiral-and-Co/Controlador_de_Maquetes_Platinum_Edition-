@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Headless.XUnit;
 using Platinum.Presentation.Avalonia;
 using Xunit;
 
@@ -7,7 +8,7 @@ namespace Platinum.Presentation.Avalonia.Tests;
 
 public sealed class MainWindowSmokeTests
 {
-    [Fact]
+    [AvaloniaFact]
     public void MainWindow_Loads_Core_Editor_And_Catalogue()
     {
         var window = new MainWindow();
