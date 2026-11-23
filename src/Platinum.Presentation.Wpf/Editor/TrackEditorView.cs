@@ -17,18 +17,16 @@ public sealed class TrackEditorView : UserControl
     private readonly Canvas _surface = new() { Width = 1900, Height = 1150, Background = new SolidColorBrush(Color.FromRgb(18, 27, 36)), ClipToBounds = true };
     private readonly ScaleTransform _zoom = new(1, 1);
     private readonly TextBlock _hint = new() { Foreground = Brushes.LightGray, Margin = new Thickness(10, 4, 0, 4) };
-    private readonly List<TrackGeometrySegment> _segments = [];
-    private readonly List<TrackPiece> _pieces = [];
-    private readonly List<TrackConnection> _connections = [];
+    private readonly TrackEditorEngine _engine = new();
+    private IReadOnlyList<TrackGeometrySegment> _segments => _engine.Segments;
+    private IReadOnlyList<TrackPiece> _pieces => _engine.Pieces;
+    private IReadOnlyList<TrackConnection> _connections => _engine.Connections;
     private readonly Dictionary<string, CatalogueItem> _catalogueByCode = new(StringComparer.OrdinalIgnoreCase);
     private CatalogueItem? _placementItem;
     private Guid? _selectedPieceId;
     private Guid? _pendingConnectionPieceId;
     private string? _pendingConnectionPortId;
     private bool _connectMode;
-    private sealed record EditorSnapshot(List<TrackGeometrySegment> Segments, List<TrackPiece> Pieces, List<TrackConnection> Connections);
-    private readonly Stack<EditorSnapshot> _undo = new();
-    private readonly Stack<EditorSnapshot> _redo = new();
     private Guid _levelId;
     private Tool _tool = Tool.Select;
     private Point? _anchor;
@@ -108,21 +106,20 @@ public sealed class TrackEditorView : UserControl
     {
         _catalogueByCode.Clear();
         foreach (var item in items) _catalogueByCode[item.Ref] = item;
+        _engine.SetCataloguePorts(items.SelectMany(item => item.Ports.Select(port => new TrackEditorPort(item.Ref, port.Id, port.X, port.Y, port.Accuracy))));
         Draw();
     }
 
     public void LoadPieces(IEnumerable<TrackPiece>? pieces)
     {
-        _pieces.Clear();
-        if (pieces is not null) _pieces.AddRange(pieces);
+        _engine.LoadPieces(pieces);
         _selectedPieceId = null;
         Draw();
     }
 
     public void LoadConnections(IEnumerable<TrackConnection>? connections)
     {
-        _connections.Clear();
-        if (connections is not null) _connections.AddRange(connections);
+        _engine.LoadConnections(connections);
         _pendingConnectionPieceId = null;
         _pendingConnectionPortId = null;
         Draw();
@@ -131,12 +128,10 @@ public sealed class TrackEditorView : UserControl
     private void RotateSelected(decimal degrees)
     {
         if (!_selectedPieceId.HasValue) { _hint.Text = "Selecciona una peça del catàleg abans de girar-la."; return; }
-        var index = _pieces.FindIndex(piece => piece.Id == _selectedPieceId.Value);
-        if (index < 0) return;
-        var piece = _pieces[index];
-        PushUndo();
-        _pieces[index] = piece with { RotationDegrees = ((piece.RotationDegrees + degrees) % 360m + 360m) % 360m };
-        _hint.Text = $"Peça {piece.CatalogueCode}: girada a {_pieces[index].RotationDegrees:0.#}°.";
+        var piece = _pieces.FirstOrDefault(candidate => candidate.Id == _selectedPieceId.Value);
+        if (piece is null || !_engine.RotatePiece(piece.Id, degrees)) return;
+        var rotated = _pieces.First(candidate => candidate.Id == piece.Id);
+        _hint.Text = $"Peça {piece.CatalogueCode}: girada a {rotated.RotationDegrees:0.#}°.";
         Draw();
         EditorDataChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -171,10 +166,7 @@ public sealed class TrackEditorView : UserControl
 
     public void LoadSegments(IEnumerable<TrackGeometrySegment>? segments)
     {
-        _segments.Clear();
-        if (segments is not null) _segments.AddRange(segments);
-        _undo.Clear();
-        _redo.Clear();
+        _engine.LoadSegments(segments);
         _selectedId = null;
         Draw();
     }
@@ -206,9 +198,8 @@ public sealed class TrackEditorView : UserControl
 
     private Point Snap(Point point)
     {
-        if (!_snapToGrid) return point;
-        return new Point(Math.Round(point.X / (double)_gridMillimetres) * (double)_gridMillimetres,
-            Math.Round(point.Y / (double)_gridMillimetres) * (double)_gridMillimetres);
+        var snapped = TrackEditorEngine.Snap((decimal)point.X, (decimal)point.Y, _gridMillimetres, _snapToGrid);
+        return new Point((double)snapped.X, (double)snapped.Y);
     }
     private Point ToView(decimal x, decimal y) => new(((double)x + 80) * BaseScale, ((double)y + 80) * BaseScale);
 
@@ -218,9 +209,7 @@ public sealed class TrackEditorView : UserControl
         if (_placementItem is not null)
         {
             var item = _placementItem;
-            PushUndo();
-            var placed = new TrackPiece(Guid.NewGuid(), item.Ref, (decimal)point.X, (decimal)point.Y, 0m, _levelId, item.GeometryStatus);
-            _pieces.Add(placed);
+            var placed = _engine.AddPiece(item.Ref, (decimal)point.X, (decimal)point.Y, 0m, _levelId, item.GeometryStatus);
             _placementItem = null;
             CataloguePiecePlaced?.Invoke(placed);
             EditorDataChanged?.Invoke(this, EventArgs.Empty);
@@ -255,10 +244,7 @@ public sealed class TrackEditorView : UserControl
             {
                 var fromPiece = _pendingConnectionPieceId.Value;
                 var fromPort = _pendingConnectionPortId ?? "logical";
-                var exists = _connections.Any(connection =>
-                    (connection.FromPieceId == fromPiece && connection.FromPort == fromPort && connection.ToPieceId == pieceId && connection.ToPort == portId) ||
-                    (connection.FromPieceId == pieceId && connection.FromPort == portId && connection.ToPieceId == fromPiece && connection.ToPort == fromPort));
-                if (!exists)
+                if (_engine.TryConnect(fromPiece, fromPort, pieceId, portId, out var connection))
                 {
                     var accuracy = hit.Value.Port.Accuracy;
                     var sourcePort = FindPort(fromPiece, fromPort);
@@ -266,13 +252,10 @@ public sealed class TrackEditorView : UserControl
                         _hint.Text = "Connexió entre ports creada; un dels extrems és estimat i cal verificar-lo amb plànol Märklin.";
                     else
                         _hint.Text = "Connexió entre extrems creada a partir de dimensions de catàleg; no certifica l'encaix físic.";
-                    PushUndo();
-                    var connection = new TrackConnection(Guid.NewGuid(), fromPiece, fromPort, pieceId, portId, false);
-                    _connections.Add(connection);
-                    ConnectionCreated?.Invoke(connection);
+                    ConnectionCreated?.Invoke(connection!);
                     EditorDataChanged?.Invoke(this, EventArgs.Empty);
                 }
-                else _hint.Text = "Aquests dos ports ja estan connectats.";
+                else _hint.Text = "Aquests ports ja estan connectats o la connexió no és vàlida.";
                 _pendingConnectionPieceId = null;
                 _pendingConnectionPortId = null;
             }
@@ -320,22 +303,10 @@ public sealed class TrackEditorView : UserControl
             var previousPoint = Snap(_lastPointer.Value);
             var dx = (decimal)(snappedPoint.X - previousPoint.X);
             var dy = (decimal)(snappedPoint.Y - previousPoint.Y);
-            var pieceIndex = _selectedPieceId.HasValue ? _pieces.FindIndex(piece => piece.Id == _selectedPieceId.Value) : -1;
-            if (pieceIndex >= 0)
-            {
-                var piece = _pieces[pieceIndex];
-                _pieces[pieceIndex] = piece with { X = piece.X + dx, Y = piece.Y + dy };
-                _lastPointer = point;
-                Draw();
-            }
-            var index = _selectedId.HasValue ? _segments.FindIndex(s => s.Id == _selectedId.Value) : -1;
-            if (index >= 0)
-            {
-                var s = _segments[index];
-                _segments[index] = s with { StartX = s.StartX + dx, StartY = s.StartY + dy, EndX = s.EndX + dx, EndY = s.EndY + dy, ControlX = s.ControlX + dx, ControlY = s.ControlY + dy };
-                _lastPointer = point;
-                Draw();
-            }
+            if (_selectedPieceId.HasValue) _engine.MovePiece(_selectedPieceId.Value, dx, dy, false);
+            if (_selectedId.HasValue) _engine.MoveSegment(_selectedId.Value, dx, dy, false);
+            _lastPointer = point;
+            Draw();
         }
         else if (_anchor.HasValue && e.LeftButton == MouseButtonState.Pressed)
         {
@@ -361,16 +332,9 @@ public sealed class TrackEditorView : UserControl
         _surface.ReleaseMouseCapture();
         if ((point - start).Length < 8) { Draw(); return; }
 
-        PushUndo();
-        var dx = point.X - start.X;
-        var dy = point.Y - start.Y;
-        var segment = new TrackGeometrySegment(
-            Guid.NewGuid(),
+        var segment = _engine.AddSegment(
             _tool switch { Tool.Curve => TrackGeometryKind.Curve, Tool.Turnout => TrackGeometryKind.Turnout, _ => TrackGeometryKind.Straight },
-            (decimal)start.X, (decimal)start.Y, (decimal)point.X, (decimal)point.Y,
-            (decimal)(start.X + dx / 2 - dy * 0.22), (decimal)(start.Y + dy / 2 + dx * 0.22),
-            _levelId);
-        _segments.Add(segment);
+            (decimal)start.X, (decimal)start.Y, (decimal)point.X, (decimal)point.Y, _levelId);
         _selectedId = segment.Id;
         Draw();
         EditorDataChanged?.Invoke(this, EventArgs.Empty);
@@ -390,37 +354,24 @@ public sealed class TrackEditorView : UserControl
         Draw();
     }
 
-    private EditorSnapshot CaptureSnapshot() => new(_segments.ToList(), _pieces.ToList(), _connections.ToList());
+    private void PushUndo() => _engine.BeginEdit();
 
-    private void RestoreSnapshot(EditorSnapshot snapshot)
+    private void Undo()
     {
-        _segments.Clear(); _segments.AddRange(snapshot.Segments);
-        _pieces.Clear(); _pieces.AddRange(snapshot.Pieces);
-        _connections.Clear(); _connections.AddRange(snapshot.Connections);
+        if (!_engine.Undo()) return;
         _selectedId = null; _selectedPieceId = null;
         _pendingConnectionPieceId = null; _pendingConnectionPortId = null;
         Draw();
         EditorDataChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private void PushUndo()
-    {
-        _undo.Push(CaptureSnapshot());
-        _redo.Clear();
-    }
-
-    private void Undo()
-    {
-        if (_undo.Count == 0) return;
-        _redo.Push(CaptureSnapshot());
-        RestoreSnapshot(_undo.Pop());
-    }
-
     private void Redo()
     {
-        if (_redo.Count == 0) return;
-        _undo.Push(CaptureSnapshot());
-        RestoreSnapshot(_redo.Pop());
+        if (!_engine.Redo()) return;
+        _selectedId = null; _selectedPieceId = null;
+        _pendingConnectionPieceId = null; _pendingConnectionPortId = null;
+        Draw();
+        EditorDataChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private CataloguePort? FindPort(Guid pieceId, string portId)
@@ -437,34 +388,17 @@ public sealed class TrackEditorView : UserControl
         var port = item.Ports.FirstOrDefault(candidate => string.Equals(candidate.Id, portId, StringComparison.OrdinalIgnoreCase));
         if (port is null) return new Point((double)piece.X, (double)piece.Y);
 
-        var radians = (double)piece.RotationDegrees * Math.PI / 180d;
-        var x = (double)port.X;
-        var y = (double)port.Y;
-        return new Point(
-            (double)piece.X + x * Math.Cos(radians) - y * Math.Sin(radians),
-            (double)piece.Y + x * Math.Sin(radians) + y * Math.Cos(radians));
+        var world = _engine.GetWorldPort(piece.Id, portId);
+        return world.HasValue ? new Point((double)world.Value.X, (double)world.Value.Y) : new Point((double)piece.X, (double)piece.Y);
     }
 
     private (TrackPiece Piece, CataloguePort Port)? HitTestPort(Point point)
     {
-        const double toleranceMm = 22d;
-        (TrackPiece Piece, CataloguePort Port)? nearest = null;
-        var nearestDistance = toleranceMm;
-        foreach (var piece in _pieces.Where(candidate => candidate.LevelId == _levelId).Reverse())
-        {
-            if (!_catalogueByCode.TryGetValue(piece.CatalogueCode, out var item)) continue;
-            foreach (var port in item.Ports)
-            {
-                var world = GetWorldPort(piece, port.Id);
-                var distance = (point - world).Length;
-                if (distance <= nearestDistance)
-                {
-                    nearestDistance = distance;
-                    nearest = (piece, port);
-                }
-            }
-        }
-        return nearest;
+        var hit = _engine.HitTestPort((decimal)point.X, (decimal)point.Y, _levelId);
+        if (!hit.HasValue) return null;
+        var piece = _pieces.FirstOrDefault(candidate => candidate.Id == hit.Value.PieceId);
+        var port = piece is null ? null : FindPort(piece.Id, hit.Value.PortId);
+        return piece is null || port is null ? null : (piece, port);
     }
 
     private void DrawPiecePorts(TrackPiece piece)
@@ -493,30 +427,12 @@ public sealed class TrackEditorView : UserControl
 
     private Guid? HitTestPiece(Point point)
     {
-        const double tolerance = 115;
-        foreach (var piece in _pieces.Where(piece => piece.LevelId == _levelId).Reverse())
-        {
-            var center = new Point((double)piece.X, (double)piece.Y);
-            if ((point - center).Length <= tolerance) return piece.Id;
-        }
-        return null;
+        return _engine.HitTestPiece((decimal)point.X, (decimal)point.Y, _levelId);
     }
 
     private Guid? HitTest(Point point)
     {
-        const double tolerance = 55;
-        foreach (var segment in _segments.Where(s => s.LevelId == _levelId).Reverse())
-        {
-            var a = new Point((double)segment.StartX, (double)segment.StartY);
-            var b = new Point((double)segment.EndX, (double)segment.EndY);
-            if (DistanceToSegment(point, a, b) <= tolerance) return segment.Id;
-            if (segment.Kind == TrackGeometryKind.Curve)
-            {
-                var c = new Point((double)segment.ControlX, (double)segment.ControlY);
-                if (DistanceToSegment(point, a, c) <= tolerance || DistanceToSegment(point, c, b) <= tolerance) return segment.Id;
-            }
-        }
-        return null;
+        return _engine.HitTestSegment((decimal)point.X, (decimal)point.Y, _levelId);
     }
 
     private static double DistanceToSegment(Point p, Point a, Point b)
