@@ -1,0 +1,14 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Platinum.Presentation.Avalonia.Views.LayoutEditorView">
+  <StackPanel Spacing="18">
+    <TextBlock Text="{Binding Title}" FontSize="30" FontWeight="Bold"/>
+    <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Opacity="0.75"/>
+    <Border Padding="24" BorderThickness="1" BorderBrush="#D4DCE5" CornerRadius="10">
+      <StackPanel Spacing="12">
+        <TextBlock Text="Àrea de treball 2D" FontSize="20" FontWeight="SemiBold"/>
+        <TextBlock Text="La vista de dibuix s'afegirà mantenint coordenades, escales, orientacions, connexions i operacions d'edició del model existent." TextWrapping="Wrap"/>
+        <Button Content="Detalls de la migració" HorizontalAlignment="Left" Command="{Binding ExplainMigrationCommand}"/>
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>
