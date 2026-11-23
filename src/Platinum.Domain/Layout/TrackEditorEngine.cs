@@ -60,12 +60,14 @@ public sealed class TrackEditorEngine
         return segment;
     }
 
-    public bool MoveSegment(Guid segmentId, decimal deltaX, decimal deltaY)
+    public void BeginEdit() => PushUndo();
+
+    public bool MoveSegment(Guid segmentId, decimal deltaX, decimal deltaY, bool recordUndo = true)
     {
         var index = _segments.FindIndex(x => x.Id == segmentId);
         if (index < 0) return false;
         if (deltaX == 0m && deltaY == 0m) return false;
-        PushUndo();
+        if (recordUndo) PushUndo();
         var s = _segments[index];
         _segments[index] = s with
         {
@@ -76,12 +78,12 @@ public sealed class TrackEditorEngine
         return true;
     }
 
-    public bool MovePiece(Guid pieceId, decimal deltaX, decimal deltaY)
+    public bool MovePiece(Guid pieceId, decimal deltaX, decimal deltaY, bool recordUndo = true)
     {
         var index = _pieces.FindIndex(x => x.Id == pieceId);
         if (index < 0) return false;
         if (deltaX == 0m && deltaY == 0m) return false;
-        PushUndo();
+        if (recordUndo) PushUndo();
         var piece = _pieces[index];
         _pieces[index] = piece with { X = piece.X + deltaX, Y = piece.Y + deltaY };
         return true;
