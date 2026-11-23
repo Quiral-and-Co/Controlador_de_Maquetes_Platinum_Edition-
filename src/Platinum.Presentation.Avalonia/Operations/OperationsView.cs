@@ -13,7 +13,6 @@ public sealed class OperationsView : UserControl, IAsyncDisposable
     private readonly RailwayAutomationEngine _automation=new();
     private MarklinCs2Adapter? _cs2Adapter;
     public async ValueTask DisposeAsync(){if(_cs2Adapter is not null){await _cs2Adapter.DisposeAsync();_cs2Adapter=null;}await _controlService.DisconnectAsync();}
-    private readonly TextBlock _status=new(){TextWrapping=TextWrapping.Wrap,Foreground=Brushes.Goldenrod};
     private readonly List<string> _blocks=[],_routes=[],_events=[];
     private readonly ListBox _blockList=new(){MinHeight=90},_routeList=new(){MinHeight=90},_eventList=new(){MinHeight=100};
     public OperationsView()
@@ -99,67 +98,73 @@ public sealed class OperationsView : UserControl, IAsyncDisposable
     }
 
     private Control BuildAutomation()
+        var status=Label("Dispatcher preparat.");
     {
         var p=Panel("Dispatcher auxiliar i automatització local");var name=new TextBox{PlaceholderText="Nom del bloc"};var routeName=new TextBox{PlaceholderText="Nom de l'itinerari"};var routeBlocks=new TextBox{PlaceholderText="Blocs separats per comes"};
         p.Children.Add(Label("Blocs lògics de simulació"));p.Children.Add(name);
-        p.Children.Add(Btn("Afegir bloc",(_,_)=>{var n=name.Text?.Trim();if(string.IsNullOrWhiteSpace(n)||_blocks.Contains(n))return;_blocks.Add(n+" · LLIURE");RefreshLists();_status.Text="Bloc local creat: "+n;}));
+        p.Children.Add(Btn("Afegir bloc",(_,_)=>{var n=name.Text?.Trim();if(string.IsNullOrWhiteSpace(n)||_blocks.Contains(n))return;_blocks.Add(n+" · LLIURE");RefreshLists();status.Text="Bloc local creat: "+n;}));
         p.Children.Add(_blockList);
-        p.Children.Add(Btn("Canviar lliure / ocupat",(_,_)=>{if(_blockList.SelectedItem is not string selected)return;var i=_blocks.IndexOf(selected);_blocks[i]=selected.EndsWith("OCUPAT")?selected.Replace("OCUPAT","LLIURE"):selected.Replace("LLIURE","OCUPAT");RefreshLists();_status.Text="Estat simulat canviat; no és una lectura de sensor.";}));
+        p.Children.Add(Btn("Canviar lliure / ocupat",(_,_)=>{if(_blockList.SelectedItem is not string selected)return;var i=_blocks.IndexOf(selected);_blocks[i]=selected.EndsWith("OCUPAT")?selected.Replace("OCUPAT","LLIURE"):selected.Replace("LLIURE","OCUPAT");RefreshLists();status.Text="Estat simulat canviat; no és una lectura de sensor.";}));
         p.Children.Add(new Separator());p.Children.Add(routeName);p.Children.Add(routeBlocks);
-        p.Children.Add(Btn("Crear itinerari local",(_,_)=>{var values=(routeBlocks.Text??"").Split(',',StringSplitOptions.TrimEntries|StringSplitOptions.RemoveEmptyEntries);if(values.Length==0||values.Any(v=>!_blocks.Any(b=>b.StartsWith(v+" · ",StringComparison.OrdinalIgnoreCase)))){_status.Text="Indica blocs existents.";return;}_routes.Add((routeName.Text??"Itinerari").Trim()+" · "+string.Join(" → ",values)+" · NO RESERVAT");RefreshLists();}));
+        p.Children.Add(Btn("Crear itinerari local",(_,_)=>{var values=(routeBlocks.Text??"").Split(',',StringSplitOptions.TrimEntries|StringSplitOptions.RemoveEmptyEntries);if(values.Length==0||values.Any(v=>!_blocks.Any(b=>b.StartsWith(v+" · ",StringComparison.OrdinalIgnoreCase)))){status.Text="Indica blocs existents.";return;}_routes.Add((routeName.Text??"Itinerari").Trim()+" · "+string.Join(" → ",values)+" · NO RESERVAT");RefreshLists();}));
         p.Children.Add(_routeList);
-        p.Children.Add(Btn("Reservar itinerari (simulació)",(_,_)=>{if(_routeList.SelectedItem is not string route)return;var parts=route.Split(" · ");var names=parts.Length>1?parts[1].Split(" → ",StringSplitOptions.TrimEntries):Array.Empty<string>();if(names.Any(n=>_blocks.Any(b=>b.StartsWith(n+" · OCUPAT",StringComparison.OrdinalIgnoreCase)))){_status.Text="Reserva rebutjada: hi ha blocs ocupats.";return;}var i=_routes.IndexOf(route);_routes[i]=route.Replace("NO RESERVAT","RESERVAT");RefreshLists();_status.Text="Reserva lògica local creada; cap sortida física activada.";}));
+        p.Children.Add(Btn("Reservar itinerari (simulació)",(_,_)=>{if(_routeList.SelectedItem is not string route)return;var parts=route.Split(" · ");var names=parts.Length>1?parts[1].Split(" → ",StringSplitOptions.TrimEntries):Array.Empty<string>();if(names.Any(n=>_blocks.Any(b=>b.StartsWith(n+" · OCUPAT",StringComparison.OrdinalIgnoreCase)))){status.Text="Reserva rebutjada: hi ha blocs ocupats.";return;}var i=_routes.IndexOf(route);_routes[i]=route.Replace("NO RESERVAT","RESERVAT");RefreshLists();status.Text="Reserva lògica local creada; cap sortida física activada.";}));
         p.Children.Add(Btn("Alliberar reserva",(_,_)=>{if(_routeList.SelectedItem is not string route)return;var i=_routes.IndexOf(route);_routes[i]=route.Replace("RESERVAT","NO RESERVAT");RefreshLists();}));
-        p.Children.Add(Btn("ATURADA D'EMERGÈNCIA LÒGICA",(_,_)=>{_status.Text="Aturada lògica enclavada en aquest simulador. No actua sobre maquinari.";_routes.Clear();RefreshLists();}));
-        p.Children.Add(_status);p.Children.Add(Label("Aquest simulador no és un enclavament ferroviari certificat. La parada física independent continua sent obligatòria."));return Scroll(p);
+        p.Children.Add(Btn("ATURADA D'EMERGÈNCIA LÒGICA",(_,_)=>{status.Text="Aturada lògica enclavada en aquest simulador. No actua sobre maquinari.";_routes.Clear();RefreshLists();}));
+        p.Children.Add(status);p.Children.Add(Label("Aquest simulador no és un enclavament ferroviari certificat. La parada física independent continua sent obligatòria."));return Scroll(p);
     }
     private void RefreshLists(){_blockList.ItemsSource=null;_blockList.ItemsSource=_blocks.ToList();_routeList.ItemsSource=null;_routeList.ItemsSource=_routes.ToList();}
     private Control BuildSignalling()
+        var status=Label("Senyalització preparada.");
     {
         var p=Panel("Senyalització ferroviària · simulador local");var signal=new ComboBox{ItemsSource=new[]{"S1 · Entrada","S2 · Sortida","S3 · Bloqueig","S4 · Maniobres"},SelectedIndex=0};var aspect=new ComboBox{ItemsSource=new[]{"Desconegut","Via lliure (simulat)","Precaució (simulat)","Parada (simulat)","Maniobres (simulat)"},SelectedIndex=0};
-        p.Children.Add(Label("Senyal"));p.Children.Add(signal);p.Children.Add(Label("Aspecte"));p.Children.Add(aspect);p.Children.Add(Btn("Aplicar aspecte al simulador",(_,_)=>_status.Text=signal.SelectedItem+": "+aspect.SelectedItem+". No s'ha enviat a cap senyal real."));p.Children.Add(_status);p.Children.Add(Label("La integració ADIF/JMRI i l'enclavament real necessiten dades de camp, protocols i validació independent."));return Scroll(p);
+        p.Children.Add(Label("Senyal"));p.Children.Add(signal);p.Children.Add(Label("Aspecte"));p.Children.Add(aspect);p.Children.Add(Btn("Aplicar aspecte al simulador",(_,_)=>status.Text=signal.SelectedItem+": "+aspect.SelectedItem+". No s'ha enviat a cap senyal real."));p.Children.Add(status);p.Children.Add(Label("La integració ADIF/JMRI i l'enclavament real necessiten dades de camp, protocols i validació independent."));return Scroll(p);
     }
     private Control BuildStations()
+        var status=Label("Central no connectada.");
     {
         var p=Panel("Perfils de centrals digitals");var maker=new ComboBox{ItemsSource=new[]{"Märklin","Roco","ESU","Uhlenbrock","Z21","DCC genèric"},SelectedIndex=0};var model=new TextBox{PlaceholderText="Model de central"};var host=new TextBox{PlaceholderText="Adreça IP"};var port=new TextBox{Text="15731"};var profiles=new ListBox{MinHeight=90};var values=new List<string>();
         p.Children.Add(Label("Fabricant"));p.Children.Add(maker);p.Children.Add(model);p.Children.Add(host);p.Children.Add(port);
-        p.Children.Add(Btn("Desar perfil local",(_,_)=>{if(!int.TryParse(port.Text,out var n)||n<1||n>65535){_status.Text="Port invàlid.";return;}values.Add(maker.SelectedItem+" · "+model.Text+" · "+host.Text+":"+n+" · NO CONNECTAT");profiles.ItemsSource=values.ToList();_status.Text="Perfil desat localment. No s'ha obert cap connexió.";}));
+        p.Children.Add(Btn("Desar perfil local",(_,_)=>{if(!int.TryParse(port.Text,out var n)||n<1||n>65535){status.Text="Port invàlid.";return;}values.Add(maker.SelectedItem+" · "+model.Text+" · "+host.Text+":"+n+" · NO CONNECTAT");profiles.ItemsSource=values.ToList();status.Text="Perfil desat localment. No s'ha obert cap connexió.";}));
         p.Children.Add(profiles);
         p.Children.Add(Btn("Provar presència Märklin CS2 (ping)",async (_,_)=>{
-            if(!int.TryParse(port.Text,out var n)||n<1||n>65535){_status.Text="Port CS2 invàlid; el valor habitual és 15731.";return;}
+            if(!int.TryParse(port.Text,out var n)||n<1||n>65535){status.Text="Port CS2 invàlid; el valor habitual és 15731.";return;}
             MarklinCs2Adapter? candidate=null;
             try{
                 if(_cs2Adapter is not null){await _cs2Adapter.DisposeAsync();_cs2Adapter=null;}
                 var profile=new ControlStationProfile("Märklin CS2",ControlStationKind.MarklinCs2,host.Text?.Trim()??"",n);
                 candidate=(MarklinCs2Adapter)ControlStationAdapterFactory.Create(profile);
-                _status.Text="Consultant presència CS2 per UDP...";
+                status.Text="Consultant presència CS2 per UDP...";
                 await candidate.ConnectAsync();_cs2Adapter=candidate;candidate=null;
-                _status.Text="CS2 DETECTADA · ping CAN natiu confirmat. Tracció i accessoris continuen bloquejats.";
-            }catch(Exception ex){if(candidate is not null)await candidate.DisposeAsync();_status.Text="No s'ha pogut confirmar la CS2: "+ex.Message;}
+                status.Text="CS2 DETECTADA · ping CAN natiu confirmat. Tracció i accessoris continuen bloquejats.";
+            }catch(Exception ex){if(candidate is not null)await candidate.DisposeAsync();status.Text="No s'ha pogut confirmar la CS2: "+ex.Message;}
         }));
-        p.Children.Add(Btn("Desconnectar CS2",async (_,_)=>{if(_cs2Adapter is not null){await _cs2Adapter.DisposeAsync();_cs2Adapter=null;}_status.Text="Adaptador CS2 desconnectat.";}));
-        p.Children.Add(_status);
+        p.Children.Add(Btn("Desconnectar CS2",async (_,_)=>{if(_cs2Adapter is not null){await _cs2Adapter.DisposeAsync();_cs2Adapter=null;}status.Text="Adaptador CS2 desconnectat.";}));
+        p.Children.Add(status);
         p.Children.Add(Label("La prova utilitza UDP 15731 (comandes) i 15730 (respostes). Només envia ping; no activa la via ni mou locomotores o desviaments."));
         return Scroll(p);
     }
     private Control BuildDmi()
+        var status=Label("Cabina virtual preparada.");
     {
         var p=Panel("DMI · cabina virtual de locomotora");var speed=new Slider{Minimum=0,Maximum=200,Value=0};var readout=Label("Velocitat simulada: 0 km/h");
         speed.PropertyChanged+=(s,e)=>{if(e.Property==RangeBase.ValueProperty)readout.Text="Velocitat simulada: "+speed.Value.ToString("0")+" km/h";};
-        p.Children.Add(readout);p.Children.Add(speed);p.Children.Add(Btn("Parada virtual",(_,_)=>{speed.Value=0;_status.Text="Parada virtual aplicada. No és una parada física.";}));p.Children.Add(_status);return Scroll(p);
+        p.Children.Add(readout);p.Children.Add(speed);p.Children.Add(Btn("Parada virtual",(_,_)=>{speed.Value=0;status.Text="Parada virtual aplicada. No és una parada física.";}));p.Children.Add(status);return Scroll(p);
     }
     private Control BuildProtection()
+        var status=Label("Protecció virtual preparada.");
     {
         var p=Panel("Protecció ferroviària · simulador educatiu");var limit=new Slider{Minimum=0,Maximum=160,Value=80};var actual=new Slider{Minimum=0,Maximum=200,Value=0};var readout=Label("Velocitat 0 · límit 80 km/h");
-        void Update(){readout.Text="Velocitat "+actual.Value.ToString("0")+" · límit "+limit.Value.ToString("0")+" km/h";_status.Text=actual.Value>limit.Value?"FRENADA VIRTUAL: límit superat.":"Supervisió virtual dins del límit.";}
+        void Update(){readout.Text="Velocitat "+actual.Value.ToString("0")+" · límit "+limit.Value.ToString("0")+" km/h";status.Text=actual.Value>limit.Value?"FRENADA VIRTUAL: límit superat.":"Supervisió virtual dins del límit.";}
         limit.PropertyChanged+=(s,e)=>{if(e.Property==RangeBase.ValueProperty)Update();};actual.PropertyChanged+=(s,e)=>{if(e.Property==RangeBase.ValueProperty)Update();};
-        p.Children.Add(Label("Velocitat permesa"));p.Children.Add(limit);p.Children.Add(Label("Velocitat simulada"));p.Children.Add(actual);p.Children.Add(readout);p.Children.Add(Btn("Reconèixer avís",(_,_)=>_status.Text="Avís reconegut en el simulador."));p.Children.Add(Btn("Emergència virtual",(_,_)=>{actual.Value=0;_status.Text="Emergència virtual: velocitat simulada a zero.";}));p.Children.Add(_status);p.Children.Add(Label("No és ETCS/ASFA/LZB/PZB certificat ni controla frens reals."));return Scroll(p);
+        p.Children.Add(Label("Velocitat permesa"));p.Children.Add(limit);p.Children.Add(Label("Velocitat simulada"));p.Children.Add(actual);p.Children.Add(readout);p.Children.Add(Btn("Reconèixer avís",(_,_)=>status.Text="Avís reconegut en el simulador."));p.Children.Add(Btn("Emergència virtual",(_,_)=>{actual.Value=0;status.Text="Emergència virtual: velocitat simulada a zero.";}));p.Children.Add(status);p.Children.Add(Label("No és ETCS/ASFA/LZB/PZB certificat ni controla frens reals."));return Scroll(p);
     }
     private Control BuildGround()
+        var status=Label("Terminal local preparada.");
     {
         var p=Panel("Terminal tren-terra · missatgeria local");var destination=new TextBox{Text="Tren 001"};var message=new TextBox{Text="Missatge de prova",AcceptsReturn=true,MinHeight=70};
         p.Children.Add(Label("Destinatari"));p.Children.Add(destination);p.Children.Add(Label("Missatge"));p.Children.Add(message);
-        p.Children.Add(Btn("Registrar missatge local",(_,_)=>{if(string.IsNullOrWhiteSpace(message.Text))return;_events.Add(DateTime.Now.ToString("HH:mm:ss")+" · "+destination.Text+": "+message.Text);_eventList.ItemsSource=_events.ToList();_status.Text="Missatge registrat localment; no s'ha transmès per ràdio.";}));p.Children.Add(_eventList);p.Children.Add(_status);return Scroll(p);
+        p.Children.Add(Btn("Registrar missatge local",(_,_)=>{if(string.IsNullOrWhiteSpace(message.Text))return;_events.Add(DateTime.Now.ToString("HH:mm:ss")+" · "+destination.Text+": "+message.Text);_eventList.ItemsSource=_events.ToList();status.Text="Missatge registrat localment; no s'ha transmès per ràdio.";}));p.Children.Add(_eventList);p.Children.Add(status);return Scroll(p);
     }
     private Control BuildGame()
     {
