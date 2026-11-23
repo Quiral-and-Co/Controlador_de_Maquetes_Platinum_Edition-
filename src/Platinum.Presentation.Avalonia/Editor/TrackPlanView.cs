@@ -74,6 +74,14 @@ public sealed class TrackPlanView : Control
         {var a=new Point((double)s.StartX,(double)s.StartY);var b=new Point((double)s.EndX,(double)s.EndY);if(s.Kind!=TrackGeometryKind.Curve){if(Distance(p,a,b)<60)return s.Id;}else{var prev=a;for(var i=1;i<=32;i++){var t=i/32d;var u=1-t;var q=new Point(u*u*a.X+2*u*t*(double)s.ControlX+t*t*b.X,u*u*a.Y+2*u*t*(double)s.ControlY+t*t*b.Y);if(Distance(p,prev,q)<60)return s.Id;prev=q;}}}
         return null;
     }
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if(e.KeyModifiers.HasFlag(KeyModifiers.Control)&&e.Key==Key.Z){Undo();e.Handled=true;return;}
+        if(e.KeyModifiers.HasFlag(KeyModifiers.Control)&&e.Key==Key.Y){Redo();e.Handled=true;return;}
+        if(e.Key==Key.Delete||e.Key==Key.Back){DeleteSelected();e.Handled=true;return;}
+        if(e.Key==Key.R){RotateSelected(15m);e.Handled=true;}
+    }
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);if(_layout is null)return;var props=e.GetCurrentPoint(this).Properties;var screen=e.GetPosition(this);
