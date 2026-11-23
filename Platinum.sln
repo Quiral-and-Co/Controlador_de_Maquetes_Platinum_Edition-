@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Platinum.Infrastructure.Tes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Platinum.Presentation.Avalonia", "src\Platinum.Presentation.Avalonia\Platinum.Presentation.Avalonia.csproj", "{A2D8A5E4-8C5E-4C9D-9A2C-000000000006}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Platinum.LayoutEditor.Tests", "tests\Platinum.LayoutEditor.Tests\Platinum.LayoutEditor.Tests.csproj", "{A2D8A5E4-8C5E-4C9D-9A2C-000000000007}"
+EndProject
 Global
  GlobalSection(SolutionConfigurationPlatforms) = preSolution
   Debug|Any CPU = Debug|Any CPU
@@ -44,5 +46,9 @@ Global
   {A2D8A5E4-8C5E-4C9D-9A2C-000000000006}.Debug|Any CPU.Build.0 = Debug|Any CPU
   {A2D8A5E4-8C5E-4C9D-9A2C-000000000006}.Release|Any CPU.ActiveCfg = Release|Any CPU
   {A2D8A5E4-8C5E-4C9D-9A2C-000000000006}.Release|Any CPU.Build.0 = Release|Any CPU
+  {A2D8A5E4-8C5E-4C9D-9A2C-000000000007}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+  {A2D8A5E4-8C5E-4C9D-9A2C-000000000007}.Debug|Any CPU.Build.0 = Debug|Any CPU
+  {A2D8A5E4-8C5E-4C9D-9A2C-000000000007}.Release|Any CPU.ActiveCfg = Release|Any CPU
+  {A2D8A5E4-8C5E-4C9D-9A2C-000000000007}.Release|Any CPU.Build.0 = Release|Any CPU
  EndGlobalSection
 EndGlobal
