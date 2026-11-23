@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Platinum.Domain.Layout;
+using Platinum.Domain.Catalogue;
 
 namespace Platinum.Presentation.Avalonia.Views;
 
@@ -10,6 +11,7 @@ public sealed class TrackCanvas : Control
 {
     private const double BaseScale = 0.22;
     public TrackEditorEngine? Engine { get; set; }
+    public IReadOnlyList<CatalogueItem> CatalogueItems { get; set; } = [];
     public Guid ActiveLevelId { get; set; }
     public double ZoomFactor { get; set; } = 1d;
     public decimal GridMillimetres { get; set; } = 10m;
@@ -59,10 +61,22 @@ public sealed class TrackCanvas : Control
         }
 
         if (Engine is null) return;
+        foreach (var connection in Engine.Connections)
+        {
+            var fromPiece = Engine.Pieces.FirstOrDefault(p => p.Id == connection.FromPieceId && p.LevelId == ActiveLevelId);
+            var toPiece = Engine.Pieces.FirstOrDefault(p => p.Id == connection.ToPieceId && p.LevelId == ActiveLevelId);
+            var a = Engine.GetWorldPort(connection.FromPieceId, connection.FromPort);
+            var b = Engine.GetWorldPort(connection.ToPieceId, connection.ToPort);
+            if (fromPiece is null || toPiece is null || !a.HasValue || !b.HasValue) continue;
+            var pen = new Pen(new SolidColorBrush(connection.PhysicallyVerified ? Color.Parse("#72D69A") : Color.Parse("#F4A261")),
+                2.2, connection.PhysicallyVerified ? DashStyle.Solid : DashStyle.Dash);
+            context.DrawLine(pen, ToView(a.Value.X, a.Value.Y), ToView(b.Value.X, b.Value.Y));
+        }
+
         foreach (var segment in Engine.Segments.Where(x => x.LevelId == ActiveLevelId))
         {
             var selected = segment.Id == SelectedSegmentId;
-            var pen = new Pen(new SolidColorBrush(selected ? Color.Parse("#FFD166") : Color.Parse("#72C7E8")), selected ? 5 : 3);
+            var pen = new Pen(new SolidColorBrush(selected ? Color.Parse("#FFD166") : Color.Parse("#DDE6EC")), selected ? 7 : 5);
             var points = SegmentPoints(segment);
             for (var i = 1; i < points.Count; i++)
                 context.DrawLine(pen, ToView((decimal)points[i - 1].X, (decimal)points[i - 1].Y),
@@ -78,17 +92,7 @@ public sealed class TrackCanvas : Control
         }
 
         foreach (var piece in Engine.Pieces.Where(x => x.LevelId == ActiveLevelId))
-        {
-            var center = ToView(piece.X, piece.Y);
-            var selected = piece.Id == SelectedPieceId;
-            var fill = new SolidColorBrush(selected ? Color.Parse("#FFD166") : Color.Parse("#E59A45"));
-            context.DrawEllipse(fill, new Pen(new SolidColorBrush(Color.Parse("#17212B")), 2), center,
-                selected ? 13 : 10, selected ? 13 : 10);
-            var angle = (double)piece.RotationDegrees * Math.PI / 180d;
-            var end = new Point(center.X + Math.Cos(angle) * 24 * ZoomFactor,
-                center.Y + Math.Sin(angle) * 24 * ZoomFactor);
-            context.DrawLine(new Pen(fill, 3), center, end);
-        }
+            DrawCataloguePiece(context, piece);
 
         if (PreviewStart.HasValue && PreviewEnd.HasValue)
         {
@@ -96,6 +100,67 @@ public sealed class TrackCanvas : Control
             var b = new Point((PreviewEnd.Value.X + 80) * scale, (PreviewEnd.Value.Y + 80) * scale);
             context.DrawLine(new Pen(new SolidColorBrush(Color.Parse("#B5E48C")), 2, DashStyle.Dash), a, b);
         }
+    }
+
+    private void DrawCataloguePiece(DrawingContext context, TrackPiece piece)
+    {
+        var item = CatalogueItems.FirstOrDefault(x => x.Ref.Equals(piece.CatalogueCode, StringComparison.OrdinalIgnoreCase));
+        var selected = piece.Id == SelectedPieceId;
+        var color = item?.GeometryStatus switch
+        {
+            "confirmed" => Color.Parse("#53BED2"),
+            "partial" => Color.Parse("#F0AE52"),
+            _ => Color.Parse("#A5AEB8")
+        };
+        var pen = new Pen(new SolidColorBrush(selected ? Color.Parse("#FFD166") : color), selected ? 7 : 5);
+        if (item is not null && item.TrackPaths.Count > 0)
+        {
+            var ports = item.Ports.ToDictionary(p => p.Id, StringComparer.OrdinalIgnoreCase);
+            foreach (var route in item.TrackPaths)
+            {
+                if (!ports.TryGetValue(route.FromPort, out var from) || !ports.TryGetValue(route.ToPort, out var to)) continue;
+                var points = RoutePoints(piece, route, from, to);
+                for (var i = 1; i < points.Count; i++)
+                    context.DrawLine(pen, ToView(points[i - 1].X, points[i - 1].Y), ToView(points[i].X, points[i].Y));
+            }
+        }
+        else
+        {
+            var center = ToView(piece.X, piece.Y);
+            context.DrawEllipse(new SolidColorBrush(color), pen, center, 5 * ZoomFactor, 5 * ZoomFactor);
+        }
+
+        if (item is null) return;
+        foreach (var port in item.Ports)
+        {
+            var world = TrackEditorEngine.TransformPort(piece, port.X, port.Y);
+            var point = ToView(world.X, world.Y);
+            var marker = port.Accuracy == "estimated" ? Color.Parse("#F4A261") : Color.Parse("#7AE582");
+            context.DrawEllipse(new SolidColorBrush(marker), new Pen(new SolidColorBrush(Color.Parse("#17212B")), 1),
+                point, 4.5 * ZoomFactor, 4.5 * ZoomFactor);
+        }
+    }
+
+    private static IReadOnlyList<(decimal X, decimal Y)> RoutePoints(TrackPiece piece,
+        CatalogueTrackPath route, CataloguePort from, CataloguePort to)
+    {
+        var points = new List<(decimal X, decimal Y)>();
+        var rotation = (double)piece.RotationDegrees * Math.PI / 180d;
+        var start = TrackEditorEngine.TransformPort(piece, from.X, from.Y);
+        var end = TrackEditorEngine.TransformPort(piece, to.X, to.Y);
+        if (route.Kind.Equals("quadratic", StringComparison.OrdinalIgnoreCase))
+        {
+            var control = TrackEditorEngine.TransformPort(piece, route.ControlX, route.ControlY);
+            for (var i = 0; i <= 24; i++)
+            {
+                var t = i / 24m;
+                var u = 1m - t;
+                points.Add((u * u * start.X + 2m * u * t * control.X + t * t * end.X,
+                    u * u * start.Y + 2m * u * t * control.Y + t * t * end.Y));
+            }
+        }
+        else points.AddRange([start, end]);
+        return points;
     }
 
     private static IReadOnlyList<(double X, double Y)> SegmentPoints(TrackGeometrySegment s)
