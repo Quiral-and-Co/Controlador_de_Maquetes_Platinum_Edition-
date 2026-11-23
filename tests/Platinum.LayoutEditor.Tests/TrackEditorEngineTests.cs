@@ -1,5 +1,6 @@
 using Xunit;
 using Platinum.Domain.Layout;
+using Platinum.Domain.Catalogue;
 
 namespace Platinum.LayoutEditor.Tests;
 
@@ -93,6 +94,33 @@ public sealed class TrackEditorEngineTests
         Assert.Equal(100m, world.X);
         Assert.Equal(210m, world.Y);
         var hit = engine.HitTestPort(100m, 210m, Level);
-        Assert.Equal((piece.Id, "A"), hit);
+        Assert.Equal((piece.Id, "A"), hit!.Value);
+    }
+    [Fact]
+    public void DragTransaction_CreatesSingleUndoCheckpoint()
+    {
+        var engine = new TrackEditorEngine();
+        var segment = new TrackGeometrySegment(Guid.NewGuid(), TrackGeometryKind.Straight, 0m, 0m, 100m, 0m, 50m, 0m, Level);
+        engine.Load([segment], null, null);
+        engine.BeginEdit();
+        engine.MoveSegment(segment.Id, 10m, 20m, false);
+        engine.MoveSegment(segment.Id, 5m, 0m, false);
+        Assert.Equal(15m, Assert.Single(engine.Segments).StartX);
+        Assert.True(engine.Undo());
+        Assert.Equal(0m, Assert.Single(engine.Segments).StartX);
+    }
+
+    [Fact]
+    public void CatalogueGeometry_IsSharedAndProvidesMatchingPortsAndRoutes()
+    {
+        var straight = new CatalogueItem("24188", "Straight", "Track", "straight",
+            188.3m, null, null, "confirmed", null);
+        var ports = straight.Ports;
+        var route = Assert.Single(straight.TrackPaths);
+        Assert.Equal(2, ports.Count);
+        Assert.Equal(ports[0].Id, route.FromPort);
+        Assert.Equal(ports[1].Id, route.ToPort);
+        Assert.Equal(-94.15m, ports[0].X);
+        Assert.Equal(94.15m, ports[1].X);
     }
 }
