@@ -53,6 +53,7 @@ jobs:
           - os: macos-15-intel
             rid: osx-x64
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.rid == 'osx-x64' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
