@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using Platinum.Application.Layout;
 using Platinum.Domain.Layout;
 using Platinum.Presentation.Avalonia.Catalogue;
 
@@ -16,6 +17,7 @@ public sealed class TrackPlanView : Control
     private string _tool="Seleccionar";
     private CatalogueItem? _placement;
     private readonly Dictionary<string,CatalogueItem> _catalogue=new(StringComparer.OrdinalIgnoreCase);
+    private readonly TrackTopologyService _topology=new();
     private Guid? _selectedPiece,_selectedSegment,_pendingPiece;
     private string? _pendingPort;
     private Point? _anchor,_lastModel,_lastScreen;
@@ -95,9 +97,20 @@ public sealed class TrackPlanView : Control
             else if(_pendingPiece==hit.Value.Piece.Id&&_pendingPort==hit.Value.Port.Id){}
             else
             {
-                var from=_pendingPiece.Value;var fromPort=_pendingPort??"";var exists=_layout.Connections.Any(x=>(x.FromPieceId==from&&x.FromPort==fromPort&&x.ToPieceId==hit.Value.Piece.Id&&x.ToPort==hit.Value.Port.Id)||(x.ToPieceId==from&&x.ToPort==fromPort&&x.FromPieceId==hit.Value.Piece.Id&&x.FromPort==hit.Value.Port.Id));
-                if(!exists){PushUndo();_layout.Connections.Add(new TrackConnection(Guid.NewGuid(),from,fromPort,hit.Value.Piece.Id,hit.Value.Port.Id,false));}
-                _pendingPiece=null;_pendingPort=null;
+                var from=_pendingPiece.Value;var fromPort=_pendingPort??"";
+                var sourcePiece=_layout.Pieces.FirstOrDefault(x=>x.Id==from);
+                var sourcePort=sourcePiece is not null&&_catalogue.TryGetValue(sourcePiece.CatalogueCode,out var sourceItem)?sourceItem.Ports.FirstOrDefault(x=>x.Id.Equals(fromPort,StringComparison.OrdinalIgnoreCase)):null;
+                if(sourcePiece is null||sourcePort is null)
+                {
+                    _pendingPiece=null;_pendingPort=null;
+                }
+                else
+                {
+                    var sourceWorld=WorldPort(sourcePiece,sourcePort);var targetWorld=WorldPort(hit.Value.Piece,hit.Value.Port);
+                    var result=_topology.Connect(_layout,from,fromPort,(decimal)sourceWorld.X,(decimal)sourceWorld.Y,hit.Value.Piece.Id,hit.Value.Port.Id,(decimal)targetWorld.X,(decimal)targetWorld.Y);
+                    if(result.Success)PushUndo();
+                    _pendingPiece=null;_pendingPort=null;
+                }
             }
             InvalidateVisual();e.Handled=true;return;
         }
