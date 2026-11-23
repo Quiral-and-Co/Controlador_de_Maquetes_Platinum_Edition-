@@ -1,5 +1,4 @@
 using Avalonia;
-using Avalonia.Fonts.Inter;
 
 namespace Platinum.Presentation.Avalonia;
 
