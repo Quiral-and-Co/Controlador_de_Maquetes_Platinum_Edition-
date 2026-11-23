@@ -7,9 +7,11 @@ using Platinum.Infrastructure.Control;
 
 namespace Platinum.Presentation.Avalonia.Operations;
 
-public sealed class OperationsView : UserControl
+public sealed class OperationsView : UserControl, IAsyncDisposable
 {
     private readonly RailwayControlService _controlService=new(new LocalSimulationAdapter());
+    private MarklinCs2Adapter? _cs2Adapter;
+    public async ValueTask DisposeAsync(){if(_cs2Adapter is not null){await _cs2Adapter.DisposeAsync();_cs2Adapter=null;}await _controlService.DisconnectAsync();}
     private readonly TextBlock _status=new(){TextWrapping=TextWrapping.Wrap,Foreground=Brushes.Goldenrod};
     private readonly List<string> _blocks=[],_routes=[],_events=[];
     private readonly ListBox _blockList=new(){MinHeight=90},_routeList=new(){MinHeight=90},_eventList=new(){MinHeight=100};
@@ -83,7 +85,23 @@ public sealed class OperationsView : UserControl
         var p=Panel("Perfils de centrals digitals");var maker=new ComboBox{ItemsSource=new[]{"Märklin","Roco","ESU","Uhlenbrock","Z21","DCC genèric"},SelectedIndex=0};var model=new TextBox{PlaceholderText="Model de central"};var host=new TextBox{PlaceholderText="Adreça IP"};var port=new TextBox{Text="15731"};var profiles=new ListBox{MinHeight=90};var values=new List<string>();
         p.Children.Add(Label("Fabricant"));p.Children.Add(maker);p.Children.Add(model);p.Children.Add(host);p.Children.Add(port);
         p.Children.Add(Btn("Desar perfil local",(_,_)=>{if(!int.TryParse(port.Text,out var n)||n<1||n>65535){_status.Text="Port invàlid.";return;}values.Add(maker.SelectedItem+" · "+model.Text+" · "+host.Text+":"+n+" · NO CONNECTAT");profiles.ItemsSource=values.ToList();_status.Text="Perfil desat localment. No s'ha obert cap connexió.";}));
-        p.Children.Add(profiles);p.Children.Add(Label("Les proves de central continuen desactivades fins a portar i validar els adaptadors de protocol."));return Scroll(p);
+        p.Children.Add(profiles);
+        p.Children.Add(Btn("Provar presència Märklin CS2 (ping)",async (_,_)=>{
+            if(!int.TryParse(port.Text,out var n)||n<1||n>65535){_status.Text="Port CS2 invàlid; el valor habitual és 15731.";return;}
+            MarklinCs2Adapter? candidate=null;
+            try{
+                if(_cs2Adapter is not null){await _cs2Adapter.DisposeAsync();_cs2Adapter=null;}
+                var profile=new ControlStationProfile("Märklin CS2",ControlStationKind.MarklinCs2,host.Text?.Trim()??"",n);
+                candidate=(MarklinCs2Adapter)ControlStationAdapterFactory.Create(profile);
+                _status.Text="Consultant presència CS2 per UDP...";
+                await candidate.ConnectAsync();_cs2Adapter=candidate;candidate=null;
+                _status.Text="CS2 DETECTADA · ping CAN natiu confirmat. Tracció i accessoris continuen bloquejats.";
+            }catch(Exception ex){if(candidate is not null)await candidate.DisposeAsync();_status.Text="No s'ha pogut confirmar la CS2: "+ex.Message;}
+        }));
+        p.Children.Add(Btn("Desconnectar CS2",async (_,_)=>{if(_cs2Adapter is not null){await _cs2Adapter.DisposeAsync();_cs2Adapter=null;}_status.Text="Adaptador CS2 desconnectat.";}));
+        p.Children.Add(_status);
+        p.Children.Add(Label("La prova utilitza UDP 15731 (comandes) i 15730 (respostes). Només envia ping; no activa la via ni mou locomotores o desviaments."));
+        return Scroll(p);
     }
     private Control BuildDmi()
     {
