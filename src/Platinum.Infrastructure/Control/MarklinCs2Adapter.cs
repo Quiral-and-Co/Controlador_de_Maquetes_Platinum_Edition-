@@ -10,7 +10,7 @@ namespace Platinum.Infrastructure.Control;
 
 /// <summary>
 /// Transport natiu Märklin CS2 CAN-over-Ethernet (datagrames de 13 bytes).
-/// No utilitza JMRI, Java, WebSocket ni servidor intermediari.
+/// Implementació directa amb UDP i codificació CAN pròpia de Platinum.
 /// Les ordres de tracció/accessoris continuen bloquejades fins a integrar
 /// l'estat de seguretat runtime i validar la instal·lació física.
 /// </summary>
