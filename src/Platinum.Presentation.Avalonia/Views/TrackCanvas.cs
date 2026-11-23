@@ -145,7 +145,6 @@ public sealed class TrackCanvas : Control
         CatalogueTrackPath route, CataloguePort from, CataloguePort to)
     {
         var points = new List<(decimal X, decimal Y)>();
-        var rotation = (double)piece.RotationDegrees * Math.PI / 180d;
         var start = TrackEditorEngine.TransformPort(piece, from.X, from.Y);
         var end = TrackEditorEngine.TransformPort(piece, to.X, to.Y);
         if (route.Kind.Equals("quadratic", StringComparison.OrdinalIgnoreCase))
