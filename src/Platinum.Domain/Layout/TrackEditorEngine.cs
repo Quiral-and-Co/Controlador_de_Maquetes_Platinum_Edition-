@@ -64,6 +64,31 @@ public sealed class TrackEditorEngine
         _redo.Clear();
     }
 
+
+    public void LoadSegments(IEnumerable<TrackGeometrySegment>? segments)
+    {
+        _segments.Clear();
+        if (segments is not null) _segments.AddRange(segments);
+        _undo.Clear();
+        _redo.Clear();
+    }
+
+    public void LoadPieces(IEnumerable<TrackPiece>? pieces)
+    {
+        _pieces.Clear();
+        if (pieces is not null) _pieces.AddRange(pieces);
+        _undo.Clear();
+        _redo.Clear();
+    }
+
+    public void LoadConnections(IEnumerable<TrackConnection>? connections)
+    {
+        _connections.Clear();
+        if (connections is not null) _connections.AddRange(connections);
+        _undo.Clear();
+        _redo.Clear();
+    }
+
     public static decimal Snap(decimal value, decimal gridMillimetres, bool enabled = true)
     {
         if (gridMillimetres <= 0m || gridMillimetres > 1000m)
