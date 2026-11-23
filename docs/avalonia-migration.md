@@ -45,3 +45,29 @@ dotnet run --project src/Platinum.Presentation.Avalonia/Platinum.Presentation.Av
 
 ## Seguretat
 Tots els panells afegits en aquesta fase són locals o de simulació. No s'han habilitat ordres a locomotores, desviaments, senyals, frens ni altres sortides físiques. La parada d'emergència física independent i les proteccions elèctriques continuen sent obligatòries. Cap estat de simulació o casella de validació constitueix certificació ferroviària.
+
+
+## Implementació de protocols, distribució i proves (fase actual)
+
+- JMRI: adaptador propi HTTP/JSON amb timeout, validació de la resposta, desconnexió i reconnexió. En aquesta fase només verifica disponibilitat i estructura JSON; no envia ordres físiques.
+- WiThrottle: adaptador TCP natiu amb handshake de versió, timeout, gestió de resposta invàlida i reconnexió. Les ordres de tracció continuen bloquejades.
+- Märklin CS2: adaptador UDP CAN existent amb port de feedback configurable per proves; proves de ping, timeout, reconnexió i trames invàlides.
+- Actualitzador: selecciona assets de GitHub Releases per RID, descarrega ZIP i manifest SHA-256, verifica el hash, extreu en staging, promou el directori i conserva/restaura backup davant una interrupció. La verificació SHA-256 comprova integritat respecte al manifest publicat, però no substitueix signatura criptogràfica del publicador.
+- Windows: instal·lador Inno Setup x64.
+- Linux: paquet DEB amd64.
+- macOS: DMG per arm64 i x64.
+- Els tres sistemes també publiquen ZIP self-contained amb manifest SHA-256, utilitzat per l'actualitzador.
+- Proves: nou projecte Avalonia.Headless.XUnit per controls Avalonia i proves d'integració de protocols i actualitzador.
+- CI: matriu Windows/Linux/macOS per compilar i executar proves; matriu de publicació per Windows x64, Linux x64 i macOS arm64/x64.
+
+## Gate de retirada de WPF
+
+La matriu `docs/avalonia-parity-status.json` continua inicialitzada amb tots els criteris a `false`. El workflow manual `.github/workflows/wpf-retirement-gate.yml` i el script `eng/verify-avalonia-parity.sh` bloquegen la retirada mentre no hi hagi paritat completa i absència de dependències WPF. El workflow no elimina el projecte: exigeix revisió humana i una PR separada.
+
+## Pendents de seguretat i publicació
+
+- Integrar JMRI/WiThrottle/CS2 amb el gate de seguretat físic abans d'habilitar cap ordre real.
+- Signar executables i instal·ladors Windows, notaritzar el DMG de macOS i publicar manifests signats.
+- Ampliar les proves headless a fluxos complets de l'editor, operacions i diagnòstic.
+- Executar i revisar els workflows de tots els sistemes operatius; la creació dels workflows no equival a una validació completada.
+- No retirar WPF fins que la matriu funcional sigui completada i revisada.
