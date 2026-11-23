@@ -1,35 +1,23 @@
-# Aplicació d'escriptori nativa · .NET 10 WPF
+# Quiral Platinum — aplicació d'escriptori Avalonia · .NET 10
 
-> **Branca de migració nativa:** l'aplicació d'escriptori en desenvolupament és C# + WPF + XAML. No carrega HTML, CSS, JavaScript, WebView ni necessita iniciar cap servidor o navegador per executar el projecte WPF. Els fitxers web descrits més avall es mantenen com a implementació de referència mentre es completa la paritat funcional; no són dependències del projecte WPF.
+> **Interfície principal:** C# + Avalonia UI + XAML. El projecte Avalonia és el punt d'entrada de l'aplicació d'escriptori i forma part de la solució principal. El projecte WPF es conserva al repositori com a referència de migració, però està exclòs de `Platinum.sln`.
 
-Per compilar i executar la versió nativa a Windows:
+Per compilar, provar i executar l'aplicació principal:
 
 ```powershell
 dotnet restore Platinum.sln
 dotnet build Platinum.sln -c Release
-dotnet run --project src/Platinum.Presentation.Wpf/Platinum.Presentation.Wpf.csproj
+dotnet test Platinum.sln -c Release
+dotnet run --project src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj
 ```
 
-Consulta [la guia de migració WPF](docs/native-wpf-migration.md) per veure què ja s'ha portat i què queda pendent.
+Consulta [la guia de migració .NET/Avalonia](README-DOTNET.md) per a l'arquitectura i les instruccions completes.
 
-### Dispatcher natiu WPF (.NET 10)
+### Interfície Avalonia
 
-La branca `main` incorpora el panell Dispatcher WPF connectat al `TrackLayout` actiu: alta i baixa de blocs per nivell, consulta d'ocupació lògica Desconegut/Lliure/Ocupat, creació d'itineraris amb blocs seleccionats, reserva atòmica sense conflictes i alliberament de reserves quan un bloc deixa d'estar lliure. Les ocupacions i reserves es desen al paquet `.platinum`. Aquesta interfície és de simulació local: no envia ordres a locomotores, desviaments, senyals, JMRI ni centrals digitals. Proves de domini: `dotnet test Platinum.sln -c Release` (inclou `DispatcherServiceTests`). Les pantalles noves de simulació són locals i no controlen maquinari real.
+La finestra principal inclou editor 2D i 3D, catàleg Märklin C, dispatcher, operacions i gestió de projectes. La compilació i les proves automatitzades s'han de validar abans de publicar cada versió.
 
-## Instal·lació i actualitzacions (WPF)
-
-El setup Inno Setup conserva un `AppId` estable. Quan detecta una instal·lació anterior de Quiral Platinum, executa el desinstal·lador antic en mode silenciós abans de copiar els fitxers nous. Aquesta operació es fa després que l'usuari confirmi la instal·lació; si la desinstal·lació falla, el setup s'atura i no deixa una instal·lació parcial. Es conserva la carpeta d'instal·lació anterior i es tornen a crear les dreceres.
-
-La barra superior de Platinum inclou **Actualitzar des de GitHub**. L'aplicació consulta l'última GitHub Release, compara la versió de l'assembly, descarrega l'instal·lador oficial .exe, verifica el manifest SHA-256 i només després de la confirmació de l'usuari inicia l'instal·lador elevat de Windows. L'aplicació es tanca perquè Inno Setup pugui substituir la versió instal·lada.
-
-- [Platinum WPF setup build](.github/workflows/wpf-setup-build.yml) compila WPF self-contained per a Windows x64 i publica un artefacte descarregable a GitHub Actions.
-- [Platinum WPF Windows release](.github/workflows/wpf-release.yml) genera el mateix instal·lador i el publica com a GitHub Release amb el seu manifest SHA-256.
-- Per publicar una release estable, executa el workflow de release indicant una versió semàntica (per exemple `0.2.0`) o crea un tag `vMAJOR.MINOR.PATCH`.
-- Fins que no hi hagi una GitHub Release amb l'EXE i el fitxer `.sha256`, el botó d'actualització només pot informar de l'estat; no hi ha cap actualització instal·lable.
-
-La verificació SHA-256 detecta fitxers alterats o corruptes, però no substitueix la signatura Authenticode del fabricant. Abans de distribuir públicament, és recomanable signar l'instal·lador amb un certificat de codi.
-
-**Motor de control propi:** Platinum ja disposa de serveis C# i d'un adaptador de xarxa natiu per a Märklin CS2: CAN-over-Ethernet UDP, ports 15731/15730 i consulta de presència, sense JMRI/Java/WebSocket. Les ordres físiques continuen bloquejades fins a completar el mapa d'identificadors, la supervisió de seguretat i les proves amb maquinari. CS3, Z21 i ECoS continuen pendents. Vegeu [motor de control propi](docs/own-railway-control-engine.md) i [protocol natiu CS2](docs/native-marklin-cs2-protocol.md).
+**Seguretat:** les sortides físiques romanen bloquejades per defecte. Les funcions de simulació o diagnòstic no equivalen a una validació física ni a un enclavament ferroviari certificat. No connectis maquinari real fins que s'hagin completat les proves de seguretat i integració.
 
 ---
 
