@@ -10,7 +10,7 @@ on:
       - 'Platinum.sln'
       - '.github/workflows/avalonia.yml'
   pull_request:
-    branches: [main]
+    branches: [main, migration/dotnet10-wpf-native]
     paths:
       - 'src/**'
       - 'Directory.Build.props'
