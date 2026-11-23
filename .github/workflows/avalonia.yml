@@ -1,0 +1,40 @@
+name: Avalonia cross-platform build
+
+on:
+  push:
+    branches: [migration/avalonia-native]
+    paths:
+      - 'src/**'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'Platinum.sln'
+      - '.github/workflows/avalonia.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'Platinum.sln'
+      - '.github/workflows/avalonia.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-avalonia:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore Avalonia application
+        run: dotnet restore src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj
+      - name: Build Avalonia application
+        run: dotnet build src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj --configuration Release --no-restore
