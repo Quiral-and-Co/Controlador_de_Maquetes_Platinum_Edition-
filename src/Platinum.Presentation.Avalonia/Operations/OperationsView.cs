@@ -174,9 +174,9 @@ public sealed class OperationsView : UserControl, IAsyncDisposable
     }
     private Control BuildValidation()
     {
-        var p=Panel("Matriu de verificació · registres d'operador");p.Children.Add(Label("Aquest registre no certifica el circuit ni desbloqueja sortides."));
+        var p=Panel("Matriu de verificació · registres d'operador");var status=Label("Matriu pendent de revisió.");p.Children.Add(Label("Aquest registre no certifica el circuit ni desbloqueja sortides."));
         var checks=new[]{"Traçat mecànic inspeccionat","Connexions elèctriques inspeccionades","Sensors identificats i provats","Desviaments verificats físicament","Parada d'emergència física provada","Alimentació i proteccions inspeccionades"}.Select(x=>new CheckBox{Content=x,Margin=new global::Avalonia.Thickness(4,6)}).ToList();
         foreach(var c in checks)p.Children.Add(c);
-        p.Children.Add(Btn("Calcular estat de revisió",(_,_)=>_status.Text="Revisió declarada: "+checks.Count(x=>x.IsChecked==true)+"/"+checks.Count+". SORTIDES FÍSIQUES: BLOQUEJADES."));p.Children.Add(_status);return Scroll(p);
+        p.Children.Add(Btn("Calcular estat de revisió",(_,_)=>status.Text="Revisió declarada: "+checks.Count(x=>x.IsChecked==true)+"/"+checks.Count+". SORTIDES FÍSIQUES: BLOQUEJADES."));p.Children.Add(status);return Scroll(p);
     }
 }
