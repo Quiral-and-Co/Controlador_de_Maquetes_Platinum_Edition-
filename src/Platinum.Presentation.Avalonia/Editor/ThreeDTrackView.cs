@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Platinum.Domain.Layout;
+using Platinum.Presentation.Avalonia.Catalogue;
 
 namespace Platinum.Presentation.Avalonia.Editor;
 
