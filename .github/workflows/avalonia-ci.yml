@@ -38,6 +38,9 @@ jobs:
           - os: macos-latest
             rid: osx-arm64
             ext: zip
+          - os: macos-15-intel
+            rid: osx-x64
+            ext: zip
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -53,11 +56,24 @@ jobs:
       - name: Archive Unix
         if: runner.os != 'Windows'
         run: cd artifacts/Platinum-${{ matrix.rid }} && zip -qr ../Platinum-${{ matrix.rid }}.zip .
-      - name: SHA256 manifest
+      - name: Build Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install innosetup --yes --no-progress
+          & "${env:ProgramFiles(x86)}\\Inno Setup 6\\ISCC.exe" /DAppDir="$PWD\\artifacts\\Platinum-${{ matrix.rid }}" /DOutputDir="$PWD\\artifacts" packaging\\windows\\Platinum.iss
+      - name: Build Linux package
+        if: runner.os == 'Linux'
+        run: bash packaging/linux/build-deb.sh ${{ matrix.rid }} artifacts/Platinum-${{ matrix.rid }}
+      - name: Build macOS disk image
+        if: runner.os == 'macOS'
+        run: bash packaging/macos/build-dmg.sh ${{ matrix.rid }} artifacts/Platinum-${{ matrix.rid }}
+      - name: SHA256 manifests
         shell: bash
         run: |
           cd artifacts
           sha256sum Platinum-${{ matrix.rid }}.zip > Platinum-${{ matrix.rid }}.zip.sha256
+          for package in Platinum-Setup-*; do [ -f "$package" ] && sha256sum "$package" > "$package.sha256" || true; done
       - uses: actions/upload-artifact@v4
         with:
           name: Platinum-${{ matrix.rid }}
