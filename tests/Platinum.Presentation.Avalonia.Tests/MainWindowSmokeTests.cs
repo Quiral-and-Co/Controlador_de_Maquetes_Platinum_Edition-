@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Platinum.Presentation.Avalonia;
 using Xunit;
 
@@ -43,7 +44,9 @@ public sealed class MainWindowSmokeTests
             var status = window.FindControl<TextBlock>("StatusText");
             Assert.NotNull(status);
 
-            window.NewProjectForTest();
+            var newProject = window.FindControl<Button>("NewProjectButton");
+            Assert.NotNull(newProject);
+            newProject!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
             Assert.Equal("Projecte nou creat.", status!.Text);
         }
