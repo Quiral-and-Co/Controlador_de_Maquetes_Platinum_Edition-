@@ -2,7 +2,7 @@
 #ifndef MyAppVersion
   #define MyAppVersion "0.2.0"
 #endif
-#define MyAppExeName "Platinum.Presentation.Wpf.exe"
+#define MyAppExeName "Platinum.Presentation.Avalonia.exe"
 
 [Setup]
 AppId={{B7E4A1C9-42A6-4E10-9D3A-7F1B4C8E6A20}
