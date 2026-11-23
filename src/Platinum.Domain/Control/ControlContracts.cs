@@ -12,7 +12,6 @@ public enum ControlStationKind
     Z21,
     EsuEcos,
     GenericDcc
-
 }
 
 public enum AccessoryState
@@ -44,7 +43,7 @@ public sealed record RailwayCommandResult(bool Accepted, string Message)
 }
 
 /// <summary>
-/// Contracte propi de Platinum. Cap dependència de JMRI ni d'un servidor extern.
+/// Contracte de transport propi de Platinum, sense cap pont d'integració extern.
 /// Els adaptadors físics s'han d'implementar i validar per a cada central.
 /// </summary>
 public interface IControlStationAdapter : IAsyncDisposable
