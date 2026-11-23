@@ -1,5 +1,7 @@
-#define AppName "Platinum"
-#define AppVersion "0.1.0"
+#define AppName "Quiral Platinum"
+#ifndef AppVersion
+  #define AppVersion "0.2.0"
+#endif
 #ifndef AppDir
   #define AppDir "artifacts/Platinum-win-x64"
 #endif
@@ -7,13 +9,13 @@
   #define OutputDir "artifacts"
 #endif
 [Setup]
-AppId={{8D56B5A7-85AF-4E4B-9B5A-8D56B5A785AF}
+AppId={{B7E4A1C9-42A6-4E10-9D3A-7F1B4C8E6A20}
 AppName={#AppName}
 AppVersion={#AppVersion}
 DefaultDirName={autopf}\Platinum
-DefaultGroupName=Platinum
+DefaultGroupName=Quiral Platinum
 OutputDir={#OutputDir}
-OutputBaseFilename=Platinum-Setup-win-x64
+OutputBaseFilename=Quiral-Platinum-Setup-win-x64-{#AppVersion}
 Compression=lzma2
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64
