@@ -20,7 +20,7 @@ public partial class MainWindow : Window
         LevelSelector.ItemsSource=_layout.Levels;
         LevelSelector.SelectedIndex=0;
         TrackPlan.SetLayout(_layout,ActiveLevelId);
-        TrackPlan3D.SetLayout(_layout,ActiveLevelId);
+        TrackPlan3D.SetLayout(_layout,ActiveLevelId);TrackPlan3D.SetCatalogue(_catalogueItems);
         DispatcherPanel.SetLayout(_layout);
         LoadCatalogue();
         ProjectStatus.Text="PROJECTE NO DESAT";
@@ -31,7 +31,7 @@ public partial class MainWindow : Window
     private void NewProject_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         _layout=CreateNewLayout();_currentPath=null;LevelSelector.ItemsSource=_layout.Levels;LevelSelector.SelectedIndex=0;
-        TrackPlan.SetLayout(_layout,ActiveLevelId);TrackPlan3D.SetLayout(_layout,ActiveLevelId);DispatcherPanel.SetLayout(_layout);
+        TrackPlan.SetLayout(_layout,ActiveLevelId);TrackPlan3D.SetLayout(_layout,ActiveLevelId);TrackPlan3D.SetCatalogue(_catalogueItems);DispatcherPanel.SetLayout(_layout);
         ProjectStatus.Text="PROJECTE NO DESAT";StatusText.Text="Projecte nou creat.";
     }
     private async void OpenProject_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)
@@ -68,11 +68,23 @@ public partial class MainWindow : Window
     private void ThreeDTop_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan3D.TopView();
     private void ThreeDIso_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan3D.IsometricView();
     private void ThreeDSide_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan3D.SideView();
+    private void Undo_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.Undo();
+    private void Redo_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.Redo();
+    private void Delete_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.DeleteSelected();
+    private void RotateMinus_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.RotateSelected(-15m);
+    private void RotatePlus_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.RotateSelected(15m);
+    private void Rotate90_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.RotateSelected(90m);
+    private void ConnectPorts_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.ToggleConnectMode();
+    private void ZoomIn_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.ZoomIn();
+    private void ZoomOut_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.ZoomOut();
+    private void FitView_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.FitView();
+    private void ThreeDZoomIn_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan3D.ZoomIn();
+    private void ThreeDZoomOut_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan3D.ZoomOut();
 
     private void LoadCatalogue()
     {
         try{var path=Path.Combine(AppContext.BaseDirectory,"Assets","catalogue-marklin-c.json");var doc=MarklinCCatalogue.Load(path);
-            _catalogueItems=doc.Items;CatalogueList.ItemsSource=_catalogueItems;TrackPlan.SetCatalogue(_catalogueItems);
+            _catalogueItems=doc.Items;CatalogueList.ItemsSource=_catalogueItems;TrackPlan.SetCatalogue(_catalogueItems);TrackPlan3D.SetCatalogue(_catalogueItems);
             CatalogueCount.Text=_catalogueItems.Count+" referències · "+doc.Brand+" "+doc.System+" · "+doc.Scale;}
         catch(Exception ex){CatalogueCount.Text="No s'ha pogut carregar el catàleg.";CatalogueDetails.Text=ex.Message;}
     }
