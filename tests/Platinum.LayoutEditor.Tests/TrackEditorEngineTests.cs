@@ -91,7 +91,7 @@ public sealed class TrackEditorEngineTests
         var world = TrackEditorEngine.TransformPort(piece, 10m, 0m);
         Assert.Equal(100m, world.X);
         Assert.Equal(210m, world.Y);
-        var hit = engine.HitTestPort(100m, 210m, Level, [new TrackEditorPort("X", "A", 10m, 0m)]);
+        var hit = engine.HitTestPort(100m, 210m, Level);
         Assert.Equal((piece.Id, "A"), hit);
     }
 }
