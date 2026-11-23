@@ -12,6 +12,11 @@ public sealed class ThreeDTrackView : Control
     private Guid _levelId;
     private double _yaw=-42, _pitch=38, _zoom=1;
     private Point? _dragStart;
+    private readonly Dictionary<string,CatalogueItem> _catalogue=new(StringComparer.OrdinalIgnoreCase);
+    public void SetCatalogue(IEnumerable<CatalogueItem> items){_catalogue.Clear();foreach(var item in items)_catalogue[item.Ref]=item;InvalidateVisual();}
+    public void ZoomIn()=>Zoom(0.82);
+    public void ZoomOut()=>Zoom(1.22);
+    private void Zoom(double factor){_zoom=Math.Clamp(_zoom*factor,0.2,5);InvalidateVisual();}
     public ThreeDTrackView(){ClipToBounds=true;Focusable=true;}
     public void SetLayout(TrackLayout layout,Guid levelId){_layout=layout;_levelId=levelId;InvalidateVisual();}
     public void SetActiveLevel(Guid levelId){_levelId=levelId;InvalidateVisual();}
@@ -37,7 +42,44 @@ public sealed class ThreeDTrackView : Control
             if(s.Kind==TrackGeometryKind.Straight)ctx.DrawLine(pen,Map((double)s.StartX,(double)s.StartY,z),Map((double)s.EndX,(double)s.EndY,z));
             else{var prev=Map((double)s.StartX,(double)s.StartY,z);for(var i=1;i<=24;i++){var t=i/24d;var u=1-t;var x=u*u*(double)s.StartX+2*u*t*(double)s.ControlX+t*t*(double)s.EndX;var y=u*u*(double)s.StartY+2*u*t*(double)s.ControlY+t*t*(double)s.EndY;var next=Map(x,y,z);ctx.DrawLine(pen,prev,next);prev=next;}}
         }
-        foreach(var p in _layout.Pieces){var z=(double)elevations.GetValueOrDefault(p.LevelId,0m);var point=Map((double)p.X,(double)p.Y,z);ctx.DrawEllipse(new SolidColorBrush(Color.Parse(p.LevelId==_levelId?"#8CC7E8":"#536C7D")),null,point,4,4);}
+        foreach(var p in _layout.Pieces)
+        {
+            var z=(double)elevations.GetValueOrDefault(p.LevelId,0m);
+            if(_catalogue.TryGetValue(p.CatalogueCode,out var item)&&item.TrackPaths.Count>0)
+            {
+                var ports=item.Ports.ToDictionary(x=>x.Id,StringComparer.OrdinalIgnoreCase);
+                var angle=(double)p.RotationDegrees*Math.PI/180;
+                Point Transform(decimal x,decimal y){var xx=(double)x;var yy=(double)y;return Map((double)p.X+xx*Math.Cos(angle)-yy*Math.Sin(angle),(double)p.Y+xx*Math.Sin(angle)+yy*Math.Cos(angle),z);}
+                var pen=new Pen(new SolidColorBrush(Color.Parse(p.LevelId==_levelId?"#8CC7E8":"#536C7D")),2.6);
+                foreach(var route in item.TrackPaths)
+                {
+                    if(!ports.TryGetValue(route.FromPort,out var from)||!ports.TryGetValue(route.ToPort,out var to))continue;
+                    var a=Transform(from.X,from.Y);var b=Transform(to.X,to.Y);
+                    if(route.Kind=="quadratic"&&ports.ContainsKey(route.ToPort))
+                    {
+                        var control=Transform(route.ControlX,route.ControlY);var prev=a;
+                        for(var i=1;i<=24;i++){var t=i/24d;var u=1-t;var next=new Point(u*u*a.X+2*u*t*control.X+t*t*b.X,u*u*a.Y+2*u*t*control.Y+t*t*b.Y);ctx.DrawLine(pen,prev,next);prev=next;}
+                    }
+                    else ctx.DrawLine(pen,a,b);
+                }
+            }
+            else {var point=Map((double)p.X,(double)p.Y,z);ctx.DrawEllipse(new SolidColorBrush(Color.Parse(p.LevelId==_levelId?"#8CC7E8":"#536C7D")),null,point,4,4);}
+        }
+        foreach(var connection in _layout.Connections)
+        {
+            var from=_layout.Pieces.FirstOrDefault(x=>x.Id==connection.FromPieceId);
+            var to=_layout.Pieces.FirstOrDefault(x=>x.Id==connection.ToPieceId);
+            if(from is null||to is null||from.LevelId!=to.LevelId)continue;
+            Point Port(TrackPiece piece,string id)
+            {
+                var z=(double)elevations.GetValueOrDefault(piece.LevelId,0m);
+                if(!_catalogue.TryGetValue(piece.CatalogueCode,out var item))return Map((double)piece.X,(double)piece.Y,z);
+                var port=item.Ports.FirstOrDefault(x=>x.Id==id);if(port is null)return Map((double)piece.X,(double)piece.Y,z);
+                var a=(double)piece.RotationDegrees*Math.PI/180;return Map((double)piece.X+(double)port.X*Math.Cos(a)-(double)port.Y*Math.Sin(a),(double)piece.Y+(double)port.X*Math.Sin(a)+(double)port.Y*Math.Cos(a),z);
+            }
+            var a=Port(from,connection.FromPort);var b=Port(to,connection.ToPort);
+            ctx.DrawLine(new Pen(new SolidColorBrush(Color.Parse(connection.PhysicallyVerified?"#62D58A":"#E89B42")),1.5),a,b);
+        }
         var text="Vista axonomètrica · "+_layout.Levels.Count+" nivells · "+_layout.Pieces.Count+" peces";
         ctx.DrawText(new FormattedText(text,System.Globalization.CultureInfo.CurrentCulture,FlowDirection.LeftToRight,Typeface.Default,12,Brushes.Gainsboro),new Point(16,Bounds.Height-24));
     }
