@@ -1,0 +1,21 @@
+name: Platinum Avalonia build
+
+on:
+  push:
+    branches: [ "feature/avalonia-migration" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj
+      - name: Build
+        run: dotnet build src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj -c Release --no-restore
