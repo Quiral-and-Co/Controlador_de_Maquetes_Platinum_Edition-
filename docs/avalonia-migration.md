@@ -22,6 +22,7 @@ Branca: feature/avalonia-migration
 - Port del panell de control propi de Platinum amb RailwayControlService i LocalSimulationAdapter: velocitat virtual, funcions, accessoris i aturada d'emergència virtual; no hi ha sortides físiques.
 - Prova de presència de Märklin CS2 portada a Avalonia: consulta CAN/UDP de ping, amb timeout i desconnexió explícita. No habilita ordres de tracció ni accessoris.
 - Panell d'enclavaments lògics basat en RailwayAutomationEngine: blocs, reserves atòmiques, avaluació conservadora de senyals, aturada enclavada, reconeixement i auditoria.
+- Consulta de versions de GitHub portable: comprova la Release més recent i obre la pàgina oficial; la instal·lació automàtica encara no s'ha portat perquè el paquet WPF actual és específic de Windows.
 
 ## Compilació
 dotnet restore Platinum.sln
