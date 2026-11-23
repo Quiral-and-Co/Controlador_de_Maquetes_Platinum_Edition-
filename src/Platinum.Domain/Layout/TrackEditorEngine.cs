@@ -14,12 +14,42 @@ public sealed class TrackEditorEngine
     private readonly List<TrackGeometrySegment> _segments = [];
     private readonly List<TrackPiece> _pieces = [];
     private readonly List<TrackConnection> _connections = [];
+    private readonly List<TrackEditorPort> _cataloguePorts = [];
     private readonly Stack<Snapshot> _undo = new();
     private readonly Stack<Snapshot> _redo = new();
 
     public IReadOnlyList<TrackGeometrySegment> Segments => _segments;
     public IReadOnlyList<TrackPiece> Pieces => _pieces;
     public IReadOnlyList<TrackConnection> Connections => _connections;
+
+    public IReadOnlyList<TrackEditorPort> CataloguePorts => _cataloguePorts;
+
+    public void SetCataloguePorts(IEnumerable<TrackEditorPort>? ports)
+    {
+        _cataloguePorts.Clear();
+        if (ports is not null) _cataloguePorts.AddRange(ports);
+    }
+
+    public TrackPiece AddPiece(string catalogueCode, decimal x, decimal y, decimal rotationDegrees,
+        Guid levelId, string geometryStatus = "unverified")
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(catalogueCode);
+        PushUndo();
+        var piece = new TrackPiece(Guid.NewGuid(), catalogueCode, x, y,
+            ((rotationDegrees % 360m) + 360m) % 360m, levelId, geometryStatus);
+        _pieces.Add(piece);
+        return piece;
+    }
+
+    public (decimal X, decimal Y)? GetWorldPort(Guid pieceId, string portId)
+    {
+        var piece = _pieces.FirstOrDefault(x => x.Id == pieceId);
+        var port = piece is null ? null : _cataloguePorts.FirstOrDefault(p =>
+            string.Equals(p.CatalogueCode, piece.CatalogueCode, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(p.Id, portId, StringComparison.OrdinalIgnoreCase));
+        return piece is null || port is null ? null : TransformPort(piece, port.X, port.Y);
+    }
+
 
     public void Load(IEnumerable<TrackGeometrySegment>? segments,
         IEnumerable<TrackPiece>? pieces, IEnumerable<TrackConnection>? connections)
@@ -149,17 +179,14 @@ public sealed class TrackEditorEngine
         return null;
     }
 
-    public (Guid PieceId, string PortId)? HitTestPort(decimal x, decimal y, Guid levelId,
-        IEnumerable<TrackEditorPort> ports, decimal toleranceMm = 22m)
+    public (Guid PieceId, string PortId)? HitTestPort(decimal x, decimal y, Guid levelId, decimal toleranceMm = 22m)
     {
-        var byCode = ports.GroupBy(p => p.CatalogueCode, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.ToArray(), StringComparer.OrdinalIgnoreCase);
         (Guid PieceId, string PortId)? nearest = null;
         var nearestDistance = toleranceMm;
         foreach (var piece in _pieces.Where(p => p.LevelId == levelId).Reverse())
         {
-            if (!byCode.TryGetValue(piece.CatalogueCode, out var piecePorts)) continue;
-            foreach (var port in piecePorts)
+            foreach (var port in _cataloguePorts.Where(p =>
+                string.Equals(p.CatalogueCode, piece.CatalogueCode, StringComparison.OrdinalIgnoreCase)))
             {
                 var world = TransformPort(piece, port.X, port.Y);
                 var distance = Distance(x, y, world.X, world.Y);
