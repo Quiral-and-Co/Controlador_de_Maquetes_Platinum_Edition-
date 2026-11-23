@@ -10,16 +10,16 @@ public sealed class DispatcherView : UserControl
 {
     private readonly DispatcherService _service=new();
     private TrackLayout? _layout;
-    private readonly TextBox _blockName=new(){Watermark="Nom del bloc"};
+    private readonly TextBox _blockName=new(){PlaceholderText="Nom del bloc"};
     private readonly ListBox _blocks=new(){MinHeight=170};
-    private readonly TextBox _routeName=new(){Watermark="Nom de l'itinerari"};
-    private readonly TextBox _routeBlocks=new(){Watermark="Blocs separats per comes"};
+    private readonly TextBox _routeName=new(){PlaceholderText="Nom de l'itinerari"};
+    private readonly TextBox _routeBlocks=new(){PlaceholderText="Blocs separats per comes"};
     private readonly ListBox _routes=new(){MinHeight=130};
     private readonly TextBlock _status=new(){TextWrapping=TextWrapping.Wrap,Foreground=Brushes.Goldenrod};
 
     public DispatcherView()
     {
-        var root=new StackPanel{Margin=new Avalonia.Thickness(16),Spacing=8};
+        var root=new StackPanel{Margin=new global::Avalonia.Thickness(16),Spacing=8};
         root.Children.Add(new TextBlock{Text="DISPATCHER · BLOCS I ITINERARIS",FontSize=19,FontWeight=FontWeight.Bold});
         root.Children.Add(new TextBlock{Text="Gestió local de reserves. No és un enclavament ferroviari i no envia ordres físiques.",TextWrapping=TextWrapping.Wrap});
         root.Children.Add(_blockName); root.Children.Add(MakeButton("Afegir bloc",AddBlock)); root.Children.Add(_blocks);
