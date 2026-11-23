@@ -29,6 +29,7 @@ public sealed class VerifiedUpdatePackageTests
     [Fact]
     public async Task Verified_Package_Is_Installed_Atomically()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var archive=MakeZip("app.txt","new build");
         var hash=Convert.ToHexString(SHA256.HashData(archive)).ToLowerInvariant();
         using var http=new HttpClient(new AssetHandler(archive,hash+"  Platinum.zip"));
@@ -37,9 +38,9 @@ public sealed class VerifiedUpdatePackageTests
         var install=Path.Combine(root,"app");
         try {
             Directory.CreateDirectory(install);
-            await File.WriteAllTextAsync(Path.Combine(install,"old.txt"),"old build");
-            await updater.StageAndInstallAsync(new Uri("https://github.com/org/repo/releases/download/v1/Platinum.zip"),new Uri("https://github.com/org/repo/releases/download/v1/Platinum.zip.sha256"),install);
-            Assert.Equal("new build",await File.ReadAllTextAsync(Path.Combine(install,"app.txt")));
+            await File.WriteAllTextAsync(Path.Combine(install,"old.txt"),"old build",cancellationToken);
+            await updater.StageAndInstallAsync(new Uri("https://github.com/org/repo/releases/download/v1/Platinum.zip"),new Uri("https://github.com/org/repo/releases/download/v1/Platinum.zip.sha256"),install,cancellationToken);
+            Assert.Equal("new build",await File.ReadAllTextAsync(Path.Combine(install,"app.txt"),cancellationToken));
             Assert.False(File.Exists(Path.Combine(install,"old.txt")));
             Assert.False(Directory.Exists(install+".backup"));
         } finally { if(Directory.Exists(root))Directory.Delete(root,true); }
@@ -48,6 +49,7 @@ public sealed class VerifiedUpdatePackageTests
     [Fact]
     public async Task Hash_Mismatch_Leaves_Existing_Install_Untouched()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var archive=MakeZip("app.txt","untrusted");
         using var http=new HttpClient(new AssetHandler(archive,new string('0',64)+"  Platinum.zip"));
         using var updater=new VerifiedUpdatePackageService(http);
@@ -55,9 +57,9 @@ public sealed class VerifiedUpdatePackageTests
         var install=Path.Combine(root,"app");
         try {
             Directory.CreateDirectory(install);
-            await File.WriteAllTextAsync(Path.Combine(install,"stable.txt"),"stable");
-            await Assert.ThrowsAsync<InvalidDataException>(()=>updater.StageAndInstallAsync(new Uri("https://github.com/org/repo/Platinum.zip"),new Uri("https://github.com/org/repo/Platinum.zip.sha256"),install));
-            Assert.Equal("stable",await File.ReadAllTextAsync(Path.Combine(install,"stable.txt")));
+            await File.WriteAllTextAsync(Path.Combine(install,"stable.txt"),"stable",cancellationToken);
+            await Assert.ThrowsAsync<InvalidDataException>(()=>updater.StageAndInstallAsync(new Uri("https://github.com/org/repo/Platinum.zip"),new Uri("https://github.com/org/repo/Platinum.zip.sha256"),install,cancellationToken));
+            Assert.Equal("stable",await File.ReadAllTextAsync(Path.Combine(install,"stable.txt"),cancellationToken));
         } finally { if(Directory.Exists(root))Directory.Delete(root,true); }
     }
 
