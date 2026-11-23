@@ -63,11 +63,11 @@ public sealed class TrackPlanView : Control
     private (TrackPiece Piece,CataloguePort Port)? HitPort(Point p)
     {
         if(_layout is null)return null;(TrackPiece Piece,CataloguePort Port)? hit=null;var best=24d;
-        foreach(var piece in _layout.Pieces.Where(x=>x.LevelId==_levelId).Reverse())if(_catalogue.TryGetValue(piece.CatalogueCode,out var item))foreach(var port in item.Ports){var d=(p-WorldPort(piece,port)).Length;if(d<best){best=d;hit=(piece,port);}}
+        foreach(var piece in _layout.Pieces.Where(x=>x.LevelId==_levelId).Reverse())if(_catalogue.TryGetValue(piece.CatalogueCode,out var item))foreach(var port in item.Ports){var d=Math.Sqrt(Math.Pow(p.X-WorldPort(piece,port).X,2)+Math.Pow(p.Y-WorldPort(piece,port).Y,2));if(d<best){best=d;hit=(piece,port);}}
         return hit;
     }
-    private Guid? HitPiece(Point p){if(_layout is null)return null;foreach(var piece in _layout.Pieces.Where(x=>x.LevelId==_levelId).Reverse())if((p-new Point((double)piece.X,(double)piece.Y)).Length<120)return piece.Id;return null;}
-    private static double Distance(Point p,Point a,Point b){var v=b-a;var d=v.X*v.X+v.Y*v.Y;if(d<1e-8)return(p-a).Length;var t=Math.Clamp(((p.X-a.X)*v.X+(p.Y-a.Y)*v.Y)/d,0,1);return(p-(a+v*t)).Length;}
+    private Guid? HitPiece(Point p){if(_layout is null)return null;foreach(var piece in _layout.Pieces.Where(x=>x.LevelId==_levelId).Reverse())if(Math.Sqrt(Math.Pow(p.X-(double)piece.X,2)+Math.Pow(p.Y-(double)piece.Y,2))<120)return piece.Id;return null;}
+    private static double Distance(Point p,Point a,Point b){var v=b-a;var d=v.X*v.X+v.Y*v.Y;if(d<1e-8)returnMath.Sqrt(Math.Pow(p.X-a.X,2)+Math.Pow(p.Y-a.Y,2));var t=Math.Clamp(((p.X-a.X)*v.X+(p.Y-a.Y)*v.Y)/d,0,1);returnMath.Sqrt(Math.Pow(p.X-(a+v*t).X,2)+Math.Pow(p.Y-(a+v*t).Y,2));}
     private Guid? HitSegment(Point p)
     {
         if(_layout is null)return null;foreach(var s in _layout.GeometrySegments.Where(x=>x.LevelId==_levelId).Reverse())
@@ -119,7 +119,7 @@ public sealed class TrackPlanView : Control
         if(_panning){_panning=false;_lastScreen=null;e.Pointer.Capture(null);return;}
         if(_dragging){_dragging=false;_lastModel=null;e.Pointer.Capture(null);return;}
         if(_anchor is not Point start)return;var end=Snap(ToModel(e.GetPosition(this)));_anchor=null;e.Pointer.Capture(null);
-        if((end-start).Length<8){InvalidateVisual();return;}PushUndo();
+        if(Math.Sqrt(Math.Pow(end.X-start.X,2)+Math.Pow(end.Y-start.Y,2))<8){InvalidateVisual();return;}PushUndo();
         var dx=end.X-start.X;var dy=end.Y-start.Y;var kind=_tool=="Corba"?TrackGeometryKind.Curve:_tool=="Desviament"?TrackGeometryKind.Turnout:TrackGeometryKind.Straight;
         _layout.GeometrySegments.Add(new TrackGeometrySegment(Guid.NewGuid(),kind,(decimal)start.X,(decimal)start.Y,(decimal)end.X,(decimal)end.Y,(decimal)(start.X+dx/2-dy*.22),(decimal)(start.Y+dy/2+dx*.22),_levelId));InvalidateVisual();
     }
