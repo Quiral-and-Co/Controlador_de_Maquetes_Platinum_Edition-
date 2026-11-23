@@ -9,6 +9,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddPresentation(this IServiceCollection services)
     {
         services.AddSingleton<IDialogService, AvaloniaDialogService>();
+        services.AddSingleton<Platinum.Domain.Layout.TrackEditorEngine>();
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<DashboardViewModel>();
         services.AddSingleton<LayoutEditorViewModel>();
