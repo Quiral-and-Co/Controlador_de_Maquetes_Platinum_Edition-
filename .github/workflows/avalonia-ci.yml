@@ -77,7 +77,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Platinum-${{ matrix.rid }}
-          path: |\n            artifacts/Platinum-${{ matrix.rid }}*\n            artifacts/Platinum-Setup-*
+          path: |
+            artifacts/Platinum-${{ matrix.rid }}*
+            artifacts/Platinum-Setup-*
           if-no-files-found: error
   release:
     if: startsWith(github.ref, 'refs/tags/v')
