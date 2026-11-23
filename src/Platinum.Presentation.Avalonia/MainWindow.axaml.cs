@@ -28,13 +28,13 @@ public partial class MainWindow : Window
     private Guid ActiveLevelId=>LevelSelector.SelectedItem is TrackLevel level?level.Id:_layout.Levels[0].Id;
     private static TrackLayout CreateNewLayout()=>new(){Name="Nova maqueta",Levels=Enumerable.Range(0,5).Select(i=>new TrackLevel(Guid.NewGuid(),"Nivell "+(i+1),i*110m)).ToList()};
 
-    private void NewProject_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)
+    private void NewProject_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         _layout=CreateNewLayout();_currentPath=null;LevelSelector.ItemsSource=_layout.Levels;LevelSelector.SelectedIndex=0;
         TrackPlan.SetLayout(_layout,ActiveLevelId);TrackPlan3D.SetLayout(_layout,ActiveLevelId);DispatcherPanel.SetLayout(_layout);
         ProjectStatus.Text="PROJECTE NO DESAT";StatusText.Text="Projecte nou creat.";
     }
-    private async void OpenProject_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)
+    private async void OpenProject_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         var files=await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions{Title="Obrir projecte Platinum",AllowMultiple=false,FileTypeFilter=[new FilePickerFileType("Projecte Quiral Platinum"){Patterns=["*.platinum"]}]});
         var path=files.FirstOrDefault()?.Path.LocalPath;if(string.IsNullOrWhiteSpace(path))return;
@@ -44,7 +44,7 @@ public partial class MainWindow : Window
             ProjectStatus.Text=Path.GetFileName(path);StatusText.Text="Projecte carregat i validat.";}
         catch(Exception ex){StatusText.Text="Error en obrir el projecte: "+ex.Message;}
     }
-    private async void SaveProject_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)
+    private async void SaveProject_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         var path=_currentPath;
         if(string.IsNullOrWhiteSpace(path))
@@ -61,13 +61,13 @@ public partial class MainWindow : Window
         if(TrackPlan is null||_layout.Levels.Count==0)return;
         TrackPlan.SetActiveLevel(ActiveLevelId);TrackPlan3D.SetActiveLevel(ActiveLevelId);
     }
-    private void SelectTool_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.SetTool("Seleccionar");
-    private void StraightTool_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.SetTool("Via recta");
-    private void CurveTool_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.SetTool("Corba");
-    private void TurnoutTool_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.SetTool("Desviament");
-    private void ThreeDTop_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan3D.TopView();
-    private void ThreeDIso_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan3D.IsometricView();
-    private void ThreeDSide_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan3D.SideView();
+    private void SelectTool_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.SetTool("Seleccionar");
+    private void StraightTool_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.SetTool("Via recta");
+    private void CurveTool_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.SetTool("Corba");
+    private void TurnoutTool_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan.SetTool("Desviament");
+    private void ThreeDTop_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan3D.TopView();
+    private void ThreeDIso_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan3D.IsometricView();
+    private void ThreeDSide_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)=>TrackPlan3D.SideView();
 
     private void LoadCatalogue()
     {
@@ -86,7 +86,7 @@ public partial class MainWindow : Window
         if(CatalogueList.SelectedItem is not CatalogueItem item){PlaceCatalogueButton.IsEnabled=false;return;}
         PlaceCatalogueButton.IsEnabled=true;CatalogueDetails.Text=item.DisplayName+"\nCategoria: "+item.Category+"\nTipus: "+item.Type+"\nGeometria: "+item.GeometrySummary+"\nEstat: "+item.GeometryStatus+"\n"+item.Notes;
     }
-    private void PlaceCatalogueButton_Click(object? s,Avalonia.Interactivity.RoutedEventArgs e)
+    private void PlaceCatalogueButton_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         if(CatalogueList.SelectedItem is not CatalogueItem item)return;
         if(item.GeometryStatus.Equals("unverified",StringComparison.OrdinalIgnoreCase))StatusText.Text="Avís: geometria no verificada; marcador esquemàtic. ";
