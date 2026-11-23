@@ -1,4 +1,4 @@
-name: Platinum WPF Windows release
+name: Platinum Avalonia Windows release
 
 on:
   workflow_dispatch:
@@ -43,11 +43,11 @@ jobs:
       - name: Restore and test
         run: |
           dotnet restore Platinum.sln
-          dotnet test tests/Platinum.Infrastructure.Tests/Platinum.Infrastructure.Tests.csproj -c Release
+          dotnet test Platinum.sln -c Release
 
-      - name: Publish self-contained WPF application
+      - name: Publish self-contained Avalonia application
         run: >
-          dotnet publish src/Platinum.Presentation.Wpf/Platinum.Presentation.Wpf.csproj
+          dotnet publish src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj
           -c Release -r win-x64 --self-contained true
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
