@@ -27,7 +27,7 @@ La geometria del catàleg Märklin C s'ha extret de la presentació WPF a `Plati
 - transformació de ports locals al sistema global amb la rotació de la peça;
 - connexions lògiques per ID de port i historial desfer/refer, incloent-hi una única transacció d'historial per arrossegament.
 
-L'editor WPF continua amb el seu codi visual propi en aquesta fase, però ara utilitza els mateixos models de geometria del domini. La següent tasca de paritat serà substituir els seus handlers per crides a `TrackEditorEngine`; no s'ha eliminat ni reescrit la interfície WPF.
+L'editor WPF continua amb el seu codi visual propi, però els handlers d'edició ja deleguen en `TrackEditorEngine` per carregar dades, afegir i moure segments, moure/girar peces, seleccionar, encaixar, connectar ports i desfer/refer. Això fa que WPF i Avalonia comparteixin el mateix motor d'operacions; la representació continua sent específica de cada toolkit.
 
 ## Editor Avalonia
 
@@ -55,7 +55,7 @@ La CI executa aquestes proves a Linux i compila l'aplicació Avalonia a Windows,
 
 ## Criteris pendents abans de declarar paritat
 
-- Adaptar WPF a l'engine compartit i executar els mateixos casos de prova contra ambdues vistes.
+- Executar proves d'acceptació d'interacció en ambdues vistes i comparar la representació/gestos amb el mateix motor.
 - Integrar càrrega/desament de `TrackLayout` a Avalonia sense alterar els esquemes JSON v2/v3 ni els paquets Platinum.
 - Afegir proves d'encaix i connexions sobre els ports reals del catàleg, incloent-hi casos `estimated`.
 - Completar la vista 3D amb la mateixa representació de rails, travesses i detalls de peces que WPF.
@@ -72,7 +72,7 @@ La CI executa aquestes proves a Linux i compila l'aplicació Avalonia a Windows,
 ## Estat
 
 - Shell Avalonia, MVVM, navegació, DI i servei de diàleg implementats.
-- Motor d'edició i geometria de catàleg compartits al domini.
+- Motor d'edició i geometria de catàleg compartits al domini; WPF i Avalonia deleguen en el mateix motor d'operacions.
 - Canvas 2D funcional per a traçats, peces de catàleg, ports, connexions, selecció, moviment, rotació, zoom, graella i desfer/refer.
 - Vista 3D projectada funcional per inspecció, encara no equivalent al render 3D WPF.
 - Càrrega/desament de projectes i nivells de projectes encara pendents a Avalonia.
