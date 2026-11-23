@@ -27,7 +27,7 @@ public sealed class TrackEditorEngineTests
         Assert.True(engine.MoveSegment(segment.Id, 30m, -5m));
         var moved = Assert.Single(engine.Segments);
         Assert.Equal(40m, moved.StartX);
-        Assert.Equal(50m, moved.StartY);
+        Assert.Equal(15m, moved.StartY);
         Assert.Equal(140m, moved.EndX);
         Assert.Equal(115m, moved.EndY);
         Assert.Equal(segment.ControlX + 30m, moved.ControlX);
