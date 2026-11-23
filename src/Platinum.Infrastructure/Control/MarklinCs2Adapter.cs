@@ -28,7 +28,7 @@ public sealed class MarklinCs2Adapter : IControlStationAdapter
     private readonly TimeSpan _timeout;
     private UdpClient? _udp;
 
-    public MarklinCs2Adapter(ControlStationProfile profile, TimeSpan? timeout = null)
+    public MarklinCs2Adapter(ControlStationProfile profile, TimeSpan? timeout = null, int feedbackPort = DefaultFeedbackPort)
     {
         Profile = profile ?? throw new ArgumentNullException(nameof(profile));
         if (profile.Kind != ControlStationKind.MarklinCs2)
@@ -38,7 +38,7 @@ public sealed class MarklinCs2Adapter : IControlStationAdapter
         _address = parsedAddress;
         _commandPort = profile.Port == 0 ? DefaultCommandPort : profile.Port;
         if (_commandPort is < 1 or > 65535) throw new ArgumentOutOfRangeException(nameof(profile), "Port CS2 no vàlid.");
-        _feedbackPort = DefaultFeedbackPort;
+        if (feedbackPort is < 1 or > 65535) throw new ArgumentOutOfRangeException(nameof(feedbackPort));\n        _feedbackPort = feedbackPort;
         _timeout = timeout ?? TimeSpan.FromSeconds(3);
         if (_timeout <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(timeout));
     }
