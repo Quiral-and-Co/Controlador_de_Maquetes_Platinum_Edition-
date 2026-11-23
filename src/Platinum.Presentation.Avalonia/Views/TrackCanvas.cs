@@ -101,7 +101,7 @@ public sealed class TrackCanvas : Control
     private static IReadOnlyList<(double X, double Y)> SegmentPoints(TrackGeometrySegment s)
     {
         if (s.Kind != TrackGeometryKind.Curve)
-            return [(double)s.StartX is var x ? (x, (double)s.StartY) : default, ((double)s.EndX, (double)s.EndY)];
+            return [((double)s.StartX, (double)s.StartY), ((double)s.EndX, (double)s.EndY)];
         var points = new List<(double X, double Y)>();
         for (var i = 0; i <= 32; i++)
         {
