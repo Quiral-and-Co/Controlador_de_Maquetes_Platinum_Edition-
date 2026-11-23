@@ -28,7 +28,7 @@ public sealed class ThreeDTrackView : Control
         var minX=corners.Min(p=>p.X);var maxX=corners.Max(p=>p.X);var minY=corners.Min(p=>p.Y);var maxY=corners.Max(p=>p.Y);
         var scale=Math.Min((Bounds.Width-70)/Math.Max(1,maxX-minX),(Bounds.Height-70)/Math.Max(1,maxY-minY))*_zoom;
         Point Map(double x,double y,double z){var p=Project(x,y,z);return new Point(35+(p.X-minX)*scale,35+(p.Y-minY)*scale);}
-        var board=corners.Select(p=>Map(p.X,p.Y,0)).ToArray();
+        var board=corners.Select(p=>new Point(35+(p.X-minX)*scale,35+(p.Y-minY)*scale)).ToArray();
         for(var i=0;i<4;i++)ctx.DrawLine(new Pen(new SolidColorBrush(Color.Parse("#53616E")),1.2),board[i],board[(i+1)%4]);
         var elevations=_layout.Levels.ToDictionary(x=>x.Id,x=>x.ElevationMillimetres);
         foreach(var s in _layout.GeometrySegments)
