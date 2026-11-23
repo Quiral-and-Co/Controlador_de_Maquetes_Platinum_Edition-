@@ -18,8 +18,7 @@
     <ProjectReference Include="../Platinum.Infrastructure/Platinum.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="../Platinum.Presentation.Wpf/Assets/catalogue-marklin-c.json"
-             Link="Assets/catalogue-marklin-c.json"
+    <Content Include="Assets/catalogue-marklin-c.json"
              CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
