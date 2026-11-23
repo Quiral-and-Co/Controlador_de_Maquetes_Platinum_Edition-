@@ -32,8 +32,8 @@
       </Grid>
       <Border Grid.Column="2" Background="#1A222C" Padding="12"><StackPanel Spacing="8">
         <TextBlock Text="PROPIETATS I CATÀLEG" FontSize="15" FontWeight="Bold"/><TextBlock Text="MÄRKLIN C · H0" FontWeight="Bold" Foreground="#FFC65C"/>
-        <TextBox x:Name="CatalogueSearch" Watermark="Cerca per referència o nom" TextChanged="CatalogueSearch_TextChanged"/>
-        <ListBox x:Name="CatalogueList" Height="280" SelectionChanged="CatalogueList_SelectionChanged"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding DisplayName}"/></DataTemplate></ListBox.ItemTemplate></ListBox>
+        <TextBox x:Name="CatalogueSearch" PlaceholderText="Cerca per referència o nom" TextChanged="CatalogueSearch_TextChanged"/>
+        <ListBox x:Name="CatalogueList" Height="280" SelectionChanged="CatalogueList_SelectionChanged"/>
         <Button x:Name="PlaceCatalogueButton" Content="Col·loca al nivell actiu" IsEnabled="False" Click="PlaceCatalogueButton_Click"/>
         <TextBlock x:Name="CatalogueDetails" Text="Selecciona una peça per consultar-ne les dades." TextWrapping="Wrap" Foreground="#B7C1CC"/>
         <TextBlock x:Name="CatalogueCount" Text="Catàleg no carregat" Foreground="#B7C1CC"/>
