@@ -11,9 +11,8 @@ public enum ControlStationKind
     MarklinCs3,
     Z21,
     EsuEcos,
-    GenericDcc,
-    JmriJson,
-    WiThrottle
+    GenericDcc
+
 }
 
 public enum AccessoryState
