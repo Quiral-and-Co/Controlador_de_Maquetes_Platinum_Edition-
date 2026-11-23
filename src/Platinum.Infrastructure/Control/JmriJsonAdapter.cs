@@ -10,7 +10,6 @@ public sealed class JmriJsonAdapter : IControlStationAdapter
 {
     private readonly HttpClient _http;
     private readonly TimeSpan _timeout;
-    private readonly bool _ownsClient;
     public JmriJsonAdapter(ControlStationProfile profile, TimeSpan? timeout = null, HttpMessageHandler? handler = null)
     {
         Profile = profile ?? throw new ArgumentNullException(nameof(profile));
@@ -20,8 +19,7 @@ public sealed class JmriJsonAdapter : IControlStationAdapter
         BaseUri = uri;
         _timeout = timeout ?? TimeSpan.FromSeconds(3);
         if (_timeout <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(timeout));
-        _ownsClient = handler is not null;
-        _http = new HttpClient(handler ?? new HttpClientHandler(), disposeHandler: _ownsClient) { Timeout = Timeout.InfiniteTimeSpan };
+        _http = new HttpClient(handler ?? new HttpClientHandler(), disposeHandler: true) { Timeout = Timeout.InfiniteTimeSpan };
     }
     public ControlStationProfile Profile { get; }
     public Uri BaseUri { get; }
