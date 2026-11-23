@@ -20,6 +20,7 @@ Branca: feature/avalonia-migration
 - Vista axonomètrica inicial del model compartit amb rotació i zoom.
 - Panells de simulació per automatització, senyalització, perfils de centrals, DMI, protecció, tren-terra, Món de Jocs i validació.
 - Port del panell de control propi de Platinum amb RailwayControlService i LocalSimulationAdapter: velocitat virtual, funcions, accessoris i aturada d'emergència virtual; no hi ha sortides físiques.
+- Prova de presència de Märklin CS2 portada a Avalonia: consulta CAN/UDP de ping, amb timeout i desconnexió explícita. No habilita ordres de tracció ni accessoris.
 
 ## Compilació
 dotnet restore Platinum.sln
