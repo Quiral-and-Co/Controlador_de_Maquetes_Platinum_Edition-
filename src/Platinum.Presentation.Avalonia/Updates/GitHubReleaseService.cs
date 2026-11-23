@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace Platinum.Presentation.Avalonia.Updates;
 
-public sealed record GitHubReleaseInfo(string Tag,string Name,string Notes,Uri Page,IReadOnlyList<string> Assets);
+public sealed record GitHubReleaseAsset(string Name, Uri DownloadUri);\npublic sealed record GitHubReleaseInfo(string Tag,string Name,string Notes,Uri Page,IReadOnlyList<GitHubReleaseAsset> Assets);
 
 public sealed class GitHubReleaseService
 {
@@ -35,7 +35,7 @@ public sealed class GitHubReleaseService
             foreach(var asset in array.EnumerateArray())if(asset.TryGetProperty("name",out var a)&&a.GetString() is string file)assets.Add(file);
         return new GitHubReleaseInfo(tag,name,notes,page,assets);
     }
-    public static Version ParseVersion(string tag)
+    public async Task StageLatestAsync(string runtimeIdentifier, string installDirectory, CancellationToken cancellationToken=default)\n    {\n        var release=await GetLatestAsync(cancellationToken)??throw new InvalidOperationException("No hi ha cap Release publicada.");\n        var package=release.Assets.FirstOrDefault(x=>x.Name.Equals($"Platinum-{runtimeIdentifier}.zip",StringComparison.OrdinalIgnoreCase))??throw new InvalidDataException("No hi ha paquet per a aquesta plataforma.");\n        var checksum=release.Assets.FirstOrDefault(x=>x.Name.Equals(package.Name+".sha256",StringComparison.OrdinalIgnoreCase))??throw new InvalidDataException("Falta el manifest SHA-256 del paquet.");\n        using var updater=new VerifiedUpdatePackageService();\n        await updater.StageAndInstallAsync(package.DownloadUri,checksum.DownloadUri,installDirectory,cancellationToken).ConfigureAwait(false);\n    }\n\n    public static Version ParseVersion(string tag)
     {
         var value=tag.Trim();if(value.StartsWith("v",StringComparison.OrdinalIgnoreCase))value=value[1..];
         var suffix=value.IndexOfAny(['-','+']);if(suffix>=0)value=value[..suffix];
