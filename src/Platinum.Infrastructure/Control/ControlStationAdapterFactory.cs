@@ -20,6 +20,12 @@ public static class ControlStationAdapterFactory
         if (profile.Kind == ControlStationKind.MarklinCs2)
             return new MarklinCs2Adapter(profile);
 
+        if (profile.Kind == ControlStationKind.JmriJson)
+            return new JmriJsonAdapter(profile);
+
+        if (profile.Kind == ControlStationKind.WiThrottle)
+            return new WiThrottleAdapter(profile);
+
         throw new NotSupportedException(
             $"El protocol {profile.Kind} encara no està implementat a Platinum. " +
             "No s'intentarà connectar ni delegar el control a JMRI.");
