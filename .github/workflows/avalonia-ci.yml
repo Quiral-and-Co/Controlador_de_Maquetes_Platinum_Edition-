@@ -2,6 +2,7 @@ name: Platinum Avalonia cross-platform CI
 on:
   push:
     branches: [ feature/avalonia-migration ]
+    tags: [ "v*" ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
