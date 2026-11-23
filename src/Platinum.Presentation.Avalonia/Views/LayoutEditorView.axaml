@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="using:Platinum.Presentation.Avalonia.Views"
+             x:Class="Platinum.Presentation.Avalonia.Views.LayoutEditorView">
+  <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
+    <StackPanel Spacing="4">
+      <TextBlock Text="{Binding Title}" FontSize="28" FontWeight="Bold"/>
+      <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Opacity="0.75"/>
+    </StackPanel>
+    <Border Grid.Row="1" Padding="10" CornerRadius="8" Background="#202D40">
+      <WrapPanel>
+        <Button Content="Seleccionar" Command="{Binding SelectToolCommand}" Margin="0,0,6,6"/>
+        <Button Content="Recta" Command="{Binding StraightToolCommand}" Margin="0,0,6,6"/>
+        <Button Content="Corba" Command="{Binding CurveToolCommand}" Margin="0,0,6,6"/>
+        <Button Content="Desviament" Command="{Binding TurnoutToolCommand}" Margin="0,0,12,6"/>
+        <Button Content="Desfer" Command="{Binding UndoCommand}" Margin="0,0,6,6"/>
+        <Button Content="Refer" Command="{Binding RedoCommand}" Margin="0,0,12,6"/>
+        <Button Content="Girar −15°" Command="{Binding RotateMinusCommand}" Margin="0,0,6,6"/>
+        <Button Content="Girar +15°" Command="{Binding RotatePlusCommand}" Margin="0,0,6,6"/>
+        <Button Content="Girar 90°" Command="{Binding Rotate90Command}" Margin="0,0,12,6"/>
+        <Button Content="Zoom +" Command="{Binding ZoomInCommand}" Margin="0,0,6,6"/>
+        <Button Content="Zoom −" Command="{Binding ZoomOutCommand}" Margin="0,0,6,6"/>
+        <Button Content="Ajustar" Command="{Binding ResetZoomCommand}" Margin="0,0,12,6"/>
+        <CheckBox Content="Ajustar a graella (10 mm)" IsChecked="{Binding SnapToGrid}" VerticalAlignment="Center" Margin="0,0,10,6"/>
+        <ComboBox ItemsSource="{Binding CatalogueItems}" SelectedItem="{Binding SelectedCatalogueItem}" Width="260" Margin="0,0,6,6">
+          <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding DisplayName}"/></DataTemplate></ComboBox.ItemTemplate>
+        </ComboBox>
+        <Button Content="Col·locar peça" Command="{Binding PlaceCataloguePieceCommand}" Margin="0,0,6,6"/>
+        <Button Content="Connectar ports" Command="{Binding ToggleConnectModeCommand}" Margin="0,0,6,6"/>
+        <Button Content="Ajuda connexions" Command="{Binding ExplainConnectionsCommand}" Margin="0,0,6,6"/>
+      </WrapPanel>
+    </Border>
+    <TabControl Grid.Row="2">
+      <TabItem Header="Editor 2D">
+        <Grid RowDefinitions="*,Auto">
+          <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <views:TrackCanvas x:Name="EditorCanvas" />
+          </ScrollViewer>
+          <TextBlock Grid.Row="1" Text="{Binding Status}" Margin="4,8" TextWrapping="Wrap"/>
+        </Grid>
+      </TabItem>
+      <TabItem Header="Vista 3D">
+        <Grid RowDefinitions="*,Auto">
+          <views:Track3DCanvas x:Name="Editor3DCanvas"/>
+          <TextBlock Grid.Row="1" Text="Vista 3D projectada · arrossega per orbitar · roda per apropar/allunyar · alçades segons els nivells del domini." Margin="4,8" TextWrapping="Wrap"/>
+        </Grid>
+      </TabItem>
+    </TabControl>
+  </Grid>
+</UserControl>

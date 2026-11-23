@@ -1,0 +1,45 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Platinum.Presentation.Avalonia.ViewModels"
+        xmlns:views="using:Platinum.Presentation.Avalonia.Views"
+        x:Class="Platinum.Presentation.Avalonia.MainWindow"
+        Title="Quiral Platinum" Width="1440" Height="900"
+        MinWidth="1024" MinHeight="680"
+        WindowStartupLocation="CenterScreen">
+  <Window.DataTemplates>
+    <DataTemplate DataType="vm:DashboardViewModel"><views:DashboardView/></DataTemplate>
+    <DataTemplate DataType="vm:LayoutEditorViewModel"><views:LayoutEditorView/></DataTemplate>
+    <DataTemplate DataType="vm:CatalogueViewModel"><views:CatalogueView/></DataTemplate>
+    <DataTemplate DataType="vm:OperationsViewModel"><views:OperationsView/></DataTemplate>
+  </Window.DataTemplates>
+  <Grid RowDefinitions="Auto,*" ColumnDefinitions="250,*">
+    <Border Grid.Row="0" Grid.ColumnSpan="2" Padding="22,14" Background="#172235">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="3">
+          <TextBlock Text="QUIRAL PLATINUM" FontSize="20" FontWeight="Bold" Foreground="White"/>
+          <TextBlock Text=".NET 10 · Avalonia UI · MVVM" FontSize="12" Foreground="#B9C6D8"/>
+        </StackPanel>
+        <Border Grid.Column="1" Background="#244A3C" CornerRadius="14" Padding="12,6" VerticalAlignment="Center">
+          <TextBlock Text="MODE SEGUR · SENSE SORTIDES FÍSIQUES" Foreground="#B8F2D2" FontSize="11" FontWeight="SemiBold"/>
+        </Border>
+      </Grid>
+    </Border>
+    <Border Grid.Row="1" Grid.Column="0" Background="#202D40" Padding="16">
+      <StackPanel Spacing="8">
+        <TextBlock Text="ESPAI DE TREBALL" Foreground="#9FB0C8" FontSize="11" FontWeight="Bold" Margin="8,8,0,10"/>
+        <Button Content="Inici" Command="{Binding NavigateHomeCommand}" HorizontalContentAlignment="Left"/>
+        <Button Content="Editor de maqueta 2D" Command="{Binding NavigateEditorCommand}" HorizontalContentAlignment="Left"/>
+        <Button Content="Catàleg Märklin" Command="{Binding NavigateCatalogueCommand}" HorizontalContentAlignment="Left"/>
+        <Button Content="Dispatcher · Senyalització · Locomotores" Command="{Binding NavigateOperationsCommand}" HorizontalContentAlignment="Left"/>
+        <Button Content="Protocols i diagnòstic" Command="{Binding NavigateOperationsCommand}" HorizontalContentAlignment="Left"/>
+        <Border Height="1" Background="#40516A" Margin="4,14"/>
+        <TextBlock Text="SECCIÓ ACTUAL" Foreground="#9FB0C8" FontSize="11" FontWeight="Bold"/>
+        <TextBlock Text="{Binding SelectedSection}" Foreground="White" FontSize="14" Margin="8,0"/>
+        <TextBlock Text="La capa visual usa MVVM i serveis injectats; Domain, Application i Infrastructure continuen compartits." Foreground="#D2DCE9" TextWrapping="Wrap" Margin="8,12,8,0" FontSize="12"/>
+      </StackPanel>
+    </Border>
+    <ScrollViewer Grid.Row="1" Grid.Column="1">
+      <ContentControl Content="{Binding CurrentPage}" Margin="32"/>
+    </ScrollViewer>
+  </Grid>
+</Window>

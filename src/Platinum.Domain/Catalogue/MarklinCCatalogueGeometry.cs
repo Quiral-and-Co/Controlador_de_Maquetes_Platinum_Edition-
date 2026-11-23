@@ -1,8 +1,4 @@
-using System.IO;
-using System.Linq;
-using System.Text.Json;
-
-namespace Platinum.Presentation.Wpf.Catalogue;
+namespace Platinum.Domain.Catalogue;
 
 public sealed record CataloguePort(string Id, decimal X, decimal Y, string Accuracy);
 
@@ -183,7 +179,6 @@ public sealed record CatalogueItem(
         // and the asymmetric exit positions are not published in the catalogue.
         var halfLength = (LengthMm ?? 188.3m) / 2m;
         var angle = (double)(AngleDeg ?? 24.3m) * Math.PI / 180d;
-        var radius = (double)(RadiusMm ?? 437.5m);
         var branchX = halfLength;
         var branchY = (decimal)((double)halfLength * Math.Tan(angle));
         return [
@@ -275,15 +270,3 @@ public sealed record CatalogueItem(
 
 public sealed record CatalogueDocument(string CatalogueVersion, string Brand, string System, string Scale, List<CatalogueItem> Items);
 
-public static class MarklinCCatalogue
-{
-    public static CatalogueDocument Load(string path)
-    {
-        using var stream = File.OpenRead(path);
-        var document = JsonSerializer.Deserialize<CatalogueDocument>(stream, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
-        return document ?? throw new InvalidDataException("El catàleg Märklin C és buit o no té un format vàlid.");
-    }
-}

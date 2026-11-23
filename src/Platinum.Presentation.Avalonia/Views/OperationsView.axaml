@@ -1,0 +1,10 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Platinum.Presentation.Avalonia.Views.OperationsView">
+  <StackPanel Spacing="12">
+    <TextBlock Text="{Binding Title}" FontSize="30" FontWeight="Bold"/>
+    <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
+    <Border Padding="18" BorderBrush="#D4DCE5" BorderThickness="1" CornerRadius="10">
+      <TextBlock Text="Mode segur: sense connexions ni ordres a maquetes físiques." TextWrapping="Wrap"/>
+    </Border>
+  </StackPanel>
+</UserControl>
