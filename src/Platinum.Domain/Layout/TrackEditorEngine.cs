@@ -44,10 +44,13 @@ public sealed class TrackEditorEngine
     public (decimal X, decimal Y)? GetWorldPort(Guid pieceId, string portId)
     {
         var piece = _pieces.FirstOrDefault(x => x.Id == pieceId);
-        var port = piece is null ? null : _cataloguePorts.FirstOrDefault(p =>
+        if (piece is null) return null;
+        if (string.Equals(portId, "logical", StringComparison.OrdinalIgnoreCase))
+            return (piece.X, piece.Y);
+        var port = _cataloguePorts.FirstOrDefault(p =>
             string.Equals(p.CatalogueCode, piece.CatalogueCode, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(p.Id, portId, StringComparison.OrdinalIgnoreCase));
-        return piece is null || port is null ? null : TransformPort(piece, port.X, port.Y);
+        return port is null ? (piece.X, piece.Y) : TransformPort(piece, port.X, port.Y);
     }
 
 
