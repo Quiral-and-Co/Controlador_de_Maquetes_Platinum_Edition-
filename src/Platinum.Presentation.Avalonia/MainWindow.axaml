@@ -1,0 +1,9 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Platinum.Presentation.Avalonia.MainWindow" Title="Quiral Platinum" Width="1180" Height="760" MinWidth="900" MinHeight="600">
+<Grid RowDefinitions="Auto,*" ColumnDefinitions="260,*">
+<Border Grid.Row="0" Grid.ColumnSpan="2" Padding="16" Background="#202A36"><TextBlock Text="QUIRAL PLATINUM · ENTORN NATIU" FontSize="18" FontWeight="Bold" Foreground="White"/></Border>
+<Border Grid.Row="1" Grid.Column="0" Padding="16" Background="#F1F3F5"><StackPanel Spacing="12"><TextBlock Text="ESPAIS DE TREBALL" FontWeight="Bold"/><Button Content="Editor de maqueta"/><Button Content="Blocs i sensors"/><Button Content="Itineraris"/><Button Content="Senyalització"/><Button Content="Locomotores"/><Button Content="Simulació"/><Button Content="Diagnòstic"/></StackPanel></Border>
+<Grid Grid.Row="1" Grid.Column="1" Margin="24" RowDefinitions="Auto,Auto,*">
+<TextBlock Text="Platinum Edition" FontSize="28" FontWeight="Bold"/>
+<TextBlock Grid.Row="1" Margin="0,8,0,20" Text="Plataforma independent de disseny, planificació i simulació ferroviària."/>
+<Border Grid.Row="2" BorderBrush="#B8C1CC" BorderThickness="1" CornerRadius="8" Padding="20"><StackPanel Spacing="10"><TextBlock Text="BENVINGUT/DA" FontSize="20" FontWeight="SemiBold"/><TextBlock Text="Base de la interfície multiplataforma. Els mòduls s'incorporaran quan disposin de lògica, persistència i proves pròpies." TextWrapping="Wrap"/><TextBlock Text="Estat: inici de migració · control físic desactivat" FontWeight="SemiBold"/></StackPanel></Border>
+</Grid></Grid></Window>
