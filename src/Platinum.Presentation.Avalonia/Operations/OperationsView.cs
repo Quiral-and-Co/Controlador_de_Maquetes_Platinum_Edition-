@@ -22,7 +22,7 @@ public sealed class OperationsView : UserControl
         tabs.Items.Add(new TabItem{Header="Validació",Content=BuildValidation()});
         Content=tabs;
     }
-    private static Button Btn(string text,EventHandler<Avalonia.Interactivity.RoutedEventArgs> action){var b=new Button{Content=text,HorizontalAlignment=Avalonia.Layout.HorizontalAlignment.Left};b.Click+=action;return b;}
+    private static Button Btn(string text,EventHandler<global::Avalonia.Interactivity.RoutedEventArgs> action){var b=new Button{Content=text,HorizontalAlignment=Avalonia.Layout.HorizontalAlignment.Left};b.Click+=action;return b;}
     private static TextBlock Label(string text)=>new(){Text=text,TextWrapping=TextWrapping.Wrap,Margin=new Avalonia.Thickness(0,5,0,2)};
     private static StackPanel Panel(string title){var p=new StackPanel{Margin=new Avalonia.Thickness(16),Spacing=8};p.Children.Add(new TextBlock{Text=title,FontSize=18,FontWeight=FontWeight.Bold});return p;}
     private static ScrollViewer Scroll(Control c)=>new(){Content=c};
