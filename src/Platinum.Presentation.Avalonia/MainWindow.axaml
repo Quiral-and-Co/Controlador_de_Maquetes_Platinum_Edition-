@@ -21,7 +21,7 @@
         <TextBlock Text="SIMULADORS" Foreground="#FFC65C" FontWeight="SemiBold"/><TextBlock Text="Cabina · Protecció · Tren-terra"/>
       </StackPanel></Border>
       <Grid Grid.Column="1" Margin="10" RowDefinitions="Auto,*">
-        <WrapPanel><Button Content="Nou projecte" Click="NewProject_Click"/><Button Content="Obrir…" Click="OpenProject_Click"/><Button Content="Desar" Click="SaveProject_Click"/>
+        <WrapPanel><Button x:Name="NewProjectButton" Content="Nou projecte" Click="NewProject_Click"/><Button Content="Obrir…" Click="OpenProject_Click"/><Button Content="Desar" Click="SaveProject_Click"/>
           <TextBlock Text="Nivell:" VerticalAlignment="Center" Margin="12,0,4,0"/><ComboBox x:Name="LevelSelector" Width="145" SelectionChanged="LevelSelector_SelectionChanged"/></WrapPanel>
         <TabControl Grid.Row="1" Margin="0,8,0,0">
           <TabItem Header="Editor 2D"><DockPanel><WrapPanel DockPanel.Dock="Top"><Button Content="Seleccionar" Click="SelectTool_Click"/><Button Content="Via recta" Click="StraightTool_Click"/><Button Content="Corba" Click="CurveTool_Click"/><Button Content="Desviament" Click="TurnoutTool_Click"/><Separator/><Button Content="Desfer" Click="Undo_Click"/><Button Content="Refer" Click="Redo_Click"/><Button Content="Eliminar" Click="Delete_Click"/><Button Content="−15°" Click="RotateMinus_Click"/><Button Content="+15°" Click="RotatePlus_Click"/><Button Content="90°" Click="Rotate90_Click"/><Button Content="Connectar ports" Click="ConnectPorts_Click"/><Button Content="Zoom +" Click="ZoomIn_Click"/><Button Content="Zoom −" Click="ZoomOut_Click"/><Button Content="Ajustar" Click="FitView_Click"/></WrapPanel><editor:TrackPlanView x:Name="TrackPlan"/></DockPanel></TabItem>
