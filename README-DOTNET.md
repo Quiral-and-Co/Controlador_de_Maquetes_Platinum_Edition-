@@ -25,6 +25,8 @@ Requereix Windows i .NET 10 SDK:
 ```powershell
 dotnet restore Platinum.sln
 dotnet build Platinum.sln -c Release
+dotnet run --project src/Platinum.Presentation.Avalonia
+# La versió WPF temporal continua disponible a Windows:
 dotnet run --project src/Platinum.Presentation.Wpf
 ```
 
