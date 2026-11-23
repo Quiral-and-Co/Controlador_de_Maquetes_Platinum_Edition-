@@ -88,6 +88,7 @@ public sealed class TrackEditorEngineTests
         var engine = new TrackEditorEngine();
         var piece = new TrackPiece(Guid.NewGuid(), "X", 100m, 200m, 90m, Level);
         engine.Load(null, [piece], null);
+        engine.SetCataloguePorts([new TrackEditorPort("X", "A", 10m, 0m)]);
         var world = TrackEditorEngine.TransformPort(piece, 10m, 0m);
         Assert.Equal(100m, world.X);
         Assert.Equal(210m, world.Y);
