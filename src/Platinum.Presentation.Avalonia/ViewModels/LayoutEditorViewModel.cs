@@ -80,8 +80,7 @@ public sealed class LayoutEditorViewModel : PageViewModel
     public (double X, double Y) Snap(double x, double y)
     {
         var snapped = TrackEditorEngine.Snap((decimal)x, (decimal)y, GridMillimetres, SnapToGrid);
-        var snappedY = TrackEditorEngine.Snap((decimal)y, GridMillimetres, SnapToGrid);
-        return ((double)snapped, (double)snappedY);
+        return ((double)snapped.X, (double)snapped.Y);
     }
 
     public void SelectAt(double x, double y)
