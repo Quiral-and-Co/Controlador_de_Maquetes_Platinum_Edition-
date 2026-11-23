@@ -10,6 +10,7 @@ namespace Platinum.Presentation.Avalonia.Operations;
 public sealed class OperationsView : UserControl, IAsyncDisposable
 {
     private readonly RailwayControlService _controlService=new(new LocalSimulationAdapter());
+    private readonly RailwayAutomationEngine _automation=new();
     private MarklinCs2Adapter? _cs2Adapter;
     public async ValueTask DisposeAsync(){if(_cs2Adapter is not null){await _cs2Adapter.DisposeAsync();_cs2Adapter=null;}await _controlService.DisconnectAsync();}
     private readonly TextBlock _status=new(){TextWrapping=TextWrapping.Wrap,Foreground=Brushes.Goldenrod};
@@ -19,7 +20,8 @@ public sealed class OperationsView : UserControl, IAsyncDisposable
     {
         var tabs=new TabControl();
         tabs.Items.Add(new TabItem{Header="Control propi",Content=BuildNativeControl()});
-        tabs.Items.Add(new TabItem{Header="Automatització",Content=BuildAutomation()});
+        tabs.Items.Add(new TabItem{Header="Enclavaments propis",Content=BuildNativeAutomation()});
+        tabs.Items.Add(new TabItem{Header="Dispatcher",Content=BuildAutomation()});
         tabs.Items.Add(new TabItem{Header="Senyalització",Content=BuildSignalling()});
         tabs.Items.Add(new TabItem{Header="Centrals",Content=BuildStations()});
         tabs.Items.Add(new TabItem{Header="Cabina DMI",Content=BuildDmi()});
@@ -57,6 +59,43 @@ public sealed class OperationsView : UserControl, IAsyncDisposable
         p.Children.Add(Btn("ATURADA D'EMERGÈNCIA VIRTUAL",async (_,_)=>{var r=await _controlService.EmergencyStopAsync();speed.Value=0;status.Text=r.Message;}));
         p.Children.Add(Label("Aquesta vista utilitza RailwayControlService i LocalSimulationAdapter. No s'obre cap port ni s'envien ordres a locomotores, desviaments o senyals reals."));
         return Scroll(p);
+    }
+
+    private Control BuildNativeAutomation()
+    {
+        var p=Panel("Motor d'automatització propi Platinum · només estats lògics");
+        var blockName=new TextBox{PlaceholderText="Nom del bloc"};
+        var blocks=new ListBox{MinHeight=110};
+        var routeName=new TextBox{PlaceholderText="Nom de l'itinerari"};
+        var routeBlocks=new TextBox{PlaceholderText="Blocs separats per comes"};
+        var routes=new ListBox{MinHeight=100};
+        var signalName=new TextBox{PlaceholderText="Identificador del senyal"};
+        var protectedBlock=new TextBox{PlaceholderText="Bloc protegit"};
+        var audit=new ListBox{MinHeight=130};
+        var status=Label("Motor preparat. Cap sortida física.");
+        void Refresh()
+        {
+            blocks.ItemsSource=_automation.Blocks.Select(x=>x.Name+" · "+(x.Occupied?"OCUPAT":"LLIURE")+(x.ReservedBy is null?"":" · RESERVAT "+x.ReservedBy)).ToList();
+            routes.ItemsSource=_automation.Routes.Select(x=>x.Name+" · "+string.Join(" → ",x.Blocks)+" · "+(x.Active?"ACTIU":"INACTIU")).ToList();
+            audit.ItemsSource=_automation.Events.Reverse().Select(x=>x.Timestamp.ToLocalTime().ToString("HH:mm:ss")+" · "+x.Message).ToList();
+        }
+        p.Children.Add(status);
+        p.Children.Add(Label("Blocs lògics"));p.Children.Add(blockName);
+        p.Children.Add(Btn("Crear bloc",(_,_)=>{try{_automation.AddBlock(blockName.Text??"");status.Text="Bloc creat.";Refresh();}catch(Exception ex){status.Text=ex.Message;}}));
+        p.Children.Add(blocks);
+        p.Children.Add(Btn("Alternar ocupació del bloc",(_,_)=>{if(blocks.SelectedItem is not string row)return;var name=row.Split(" · ")[0];try{var current=_automation.Blocks.First(x=>x.Name==name);_automation.SetOccupancy(name,!current.Occupied);status.Text="Estat de "+name+" actualitzat.";Refresh();}catch(Exception ex){status.Text=ex.Message;}}));
+        p.Children.Add(new Separator());
+        p.Children.Add(Label("Reserva atòmica d'itinerari"));p.Children.Add(routeName);p.Children.Add(routeBlocks);
+        p.Children.Add(Btn("Reservar itinerari",(_,_)=>{try{_automation.ReserveRoute(routeName.Text??"", (routeBlocks.Text??"").Split(',',StringSplitOptions.TrimEntries|StringSplitOptions.RemoveEmptyEntries));status.Text="Itinerari reservat lògicament.";Refresh();}catch(Exception ex){status.Text="Reserva rebutjada: "+ex.Message;}}));
+        p.Children.Add(routes);
+        p.Children.Add(Btn("Alliberar itinerari",(_,_)=>{if(routes.SelectedItem is not string row)return;try{_automation.ReleaseRoute(row.Split(" · ")[0]);status.Text="Itinerari alliberat.";Refresh();}catch(Exception ex){status.Text=ex.Message;}}));
+        p.Children.Add(new Separator());
+        p.Children.Add(Label("Avaluació conservadora de senyal"));p.Children.Add(signalName);p.Children.Add(protectedBlock);
+        p.Children.Add(Btn("Calcular aspecte",(_,_)=>{try{status.Text="Senyal "+signalName.Text+": "+_automation.EvaluateSignal(signalName.Text??"",protectedBlock.Text??"");Refresh();}catch(Exception ex){status.Text=ex.Message;}}));
+        p.Children.Add(Btn("ATURADA D'EMERGÈNCIA ENCLAVADA (lògica)",(_,_)=>{_automation.TriggerEmergencyStop("Activada des de Platinum Avalonia");status.Text="Aturada enclavada. No es poden reservar itineraris.";Refresh();}));
+        p.Children.Add(Btn("Reconèixer restabliment lògic",(_,_)=>{try{_automation.AcknowledgeEmergencyReset(true);status.Text="Restabliment lògic reconegut; senyals mantinguts a parada.";Refresh();}catch(Exception ex){status.Text=ex.Message;}}));
+        p.Children.Add(Label("Motor local no certificat. L'enclavament no governa cap sortida física i no substitueix les proteccions independents."));
+        p.Children.Add(Label("Registre d'esdeveniments"));p.Children.Add(audit);Refresh();return Scroll(p);
     }
 
     private Control BuildAutomation()
