@@ -9,11 +9,11 @@ public enum ControlStationKind
     Simulation,
     MarklinCs2,
     MarklinCs3,
-    JmriJson,
-    WiThrottle,
     Z21,
     EsuEcos,
-    GenericDcc
+    GenericDcc,
+    JmriJson,
+    WiThrottle
 }
 
 public enum AccessoryState
