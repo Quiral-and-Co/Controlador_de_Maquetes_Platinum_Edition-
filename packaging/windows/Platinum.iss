@@ -7,7 +7,7 @@
   #define OutputDir "artifacts"
 #endif
 [Setup]
-AppId={{8D56B5A7-85AF-4E4B-9B5A-PLATINUM0001}
+AppId={{8D56B5A7-85AF-4E4B-9B5A-8D56B5A785AF}
 AppName={#AppName}
 AppVersion={#AppVersion}
 DefaultDirName={autopf}\Platinum
