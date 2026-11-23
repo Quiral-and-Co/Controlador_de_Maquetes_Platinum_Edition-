@@ -1,0 +1,13 @@
+{
+  "project_open_save": false,
+  "editor_2d_geometry_topology_undo_redo": false,
+  "editor_3d_real_rendering_camera_selection": false,
+  "catalogue_and_layout_interoperability": false,
+  "sensors_diagnostics_validation": false,
+  "jmri_wi_throttle_marklin_hardware_integration": false,
+  "update_install_recovery": false,
+  "windows_linux_macos_packaging": false,
+  "accessibility_keyboard_and_localization": false,
+  "automated_ui_and_integration_tests": false,
+  "wpf_only_features_accounted_for": false
+}
