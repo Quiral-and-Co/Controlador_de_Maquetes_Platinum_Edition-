@@ -18,7 +18,8 @@ Branca: feature/avalonia-migration
 - Vista 3D axonomètrica: geometria de catàleg, connexions, nivells, càmera orbitable i zoom.
 - Dispatcher local: blocs, ocupacions, itineraris, reserves i alliberament amb el servei d'aplicació existent.
 - Vista axonomètrica inicial del model compartit amb rotació i zoom.
-- Panells locals de simulació per automatització, senyalització, perfils de centrals, DMI, protecció, tren-terra, Món de Jocs i validació.
+- Panells de simulació per automatització, senyalització, perfils de centrals, DMI, protecció, tren-terra, Món de Jocs i validació.
+- Port del panell de control propi de Platinum amb RailwayControlService i LocalSimulationAdapter: velocitat virtual, funcions, accessoris i aturada d'emergència virtual; no hi ha sortides físiques.
 
 ## Compilació
 dotnet restore Platinum.sln
