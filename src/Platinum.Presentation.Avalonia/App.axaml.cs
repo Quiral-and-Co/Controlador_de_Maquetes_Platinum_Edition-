@@ -1,4 +1,5 @@
 using Avalonia;
+using AvaloniaApplication = Avalonia.Application;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,7 +8,7 @@ using Platinum.Presentation.Avalonia.ViewModels;
 
 namespace Platinum.Presentation.Avalonia;
 
-public sealed partial class App : Application
+public sealed partial class App : AvaloniaApplication
 {
     private ServiceProvider? _services;
 
