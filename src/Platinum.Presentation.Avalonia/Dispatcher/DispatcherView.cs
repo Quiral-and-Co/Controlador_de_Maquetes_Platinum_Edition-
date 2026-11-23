@@ -31,22 +31,22 @@ public sealed class DispatcherView : UserControl
     }
     public void SetLayout(TrackLayout layout){_layout=layout;_service.Initialize(layout);Refresh();}
     public void SyncToLayout(){if(_layout is not null)_service.Initialize(_layout);}
-    private static Button MakeButton(string text,EventHandler<Avalonia.Interactivity.RoutedEventArgs> action){var b=new Button{Content=text,HorizontalAlignment=HorizontalAlignment.Left};b.Click+=action;return b;}
-    private void AddBlock(object? s,Avalonia.Interactivity.RoutedEventArgs e)
+    private static Button MakeButton(string text,EventHandler<global::Avalonia.Interactivity.RoutedEventArgs> action){var b=new Button{Content=text,HorizontalAlignment=HorizontalAlignment.Left};b.Click+=action;return b;}
+    private void AddBlock(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         if(_layout is null)return; var name=_blockName.Text?.Trim(); if(string.IsNullOrWhiteSpace(name))return;
         if(_layout.Blocks.Any(x=>x.Name.Equals(name,StringComparison.OrdinalIgnoreCase))){_status.Text="Ja existeix aquest bloc.";return;}
         var level=_layout.Levels.FirstOrDefault(); if(level is null){_status.Text="No hi ha cap nivell.";return;}
         _layout.Blocks.Add(new LogicalBlock(Guid.NewGuid(),name,level.Id,Array.Empty<Guid>()));_service.Initialize(_layout);_status.Text="Bloc creat amb ocupació desconeguda.";Refresh();
     }
-    private void CycleOccupancy(object? s,Avalonia.Interactivity.RoutedEventArgs e)
+    private void CycleOccupancy(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         if(_layout is null||_blocks.SelectedItem is not BlockRow row)return;
         var state=_layout.BlockOccupancies.FirstOrDefault(x=>x.BlockId==row.Id)?.State??BlockOccupancyState.Unknown;
         var next=state switch{BlockOccupancyState.Unknown=>BlockOccupancyState.Free,BlockOccupancyState.Free=>BlockOccupancyState.Occupied,_=>BlockOccupancyState.Unknown};
         _service.SetOccupancy(_layout,row.Id,next);_status.Text="Ocupació lògica actualitzada: "+next+". No és una lectura física.";Refresh();
     }
-    private void CreateRoute(object? s,Avalonia.Interactivity.RoutedEventArgs e)
+    private void CreateRoute(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         if(_layout is null)return;
         try{var names=(_routeBlocks.Text??"").Split(',',StringSplitOptions.TrimEntries|StringSplitOptions.RemoveEmptyEntries);
@@ -54,8 +54,8 @@ public sealed class DispatcherView : UserControl
             var route=_service.CreateRoute(_layout,_routeName.Text??"",ids);_status.Text="Itinerari creat: "+route.Name;Refresh();}
         catch(Exception ex){_status.Text=ex.Message;}
     }
-    private void ReserveRoute(object? s,Avalonia.Interactivity.RoutedEventArgs e){if(_layout is null||_routes.SelectedItem is not RouteRow row)return;_service.TryReserveRoute(_layout,row.Id,out var reason);_status.Text=reason;Refresh();}
-    private void ReleaseRoute(object? s,Avalonia.Interactivity.RoutedEventArgs e){if(_layout is null||_routes.SelectedItem is not RouteRow row)return;_service.ReleaseRoute(_layout,row.Id);_status.Text="Reserva alliberada.";Refresh();}
+    private void ReserveRoute(object? s,global::Avalonia.Interactivity.RoutedEventArgs e){if(_layout is null||_routes.SelectedItem is not RouteRow row)return;_service.TryReserveRoute(_layout,row.Id,out var reason);_status.Text=reason;Refresh();}
+    private void ReleaseRoute(object? s,global::Avalonia.Interactivity.RoutedEventArgs e){if(_layout is null||_routes.SelectedItem is not RouteRow row)return;_service.ReleaseRoute(_layout,row.Id);_status.Text="Reserva alliberada.";Refresh();}
     private void Refresh()
     {
         if(_layout is null)return;var names=_layout.Levels.ToDictionary(x=>x.Id,x=>x.Name);
