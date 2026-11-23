@@ -26,7 +26,7 @@ public sealed class ThreeDTrackView : Control
     public void SideView(){_yaw=-90;_pitch=12;InvalidateVisual();}
     public override void Render(DrawingContext ctx)
     {
-        base.OnRender(ctx);ctx.DrawRectangle(new SolidColorBrush(Color.Parse("#10171F")),null,Bounds);
+        base.Render(ctx);ctx.DrawRectangle(new SolidColorBrush(Color.Parse("#10171F")),null,Bounds);
         if(_layout is null||Bounds.Width<100||Bounds.Height<100)return;
         var yaw=_yaw*Math.PI/180;var pitch=_pitch*Math.PI/180;var cy=Math.Cos(yaw);var sy=Math.Sin(yaw);var cp=Math.Cos(pitch);var sp=Math.Sin(pitch);
         (double X,double Y) Project(double x,double y,double z){var rx=x*cy-y*sy;var ry=x*sy+y*cy;return(rx,ry*cp-z*sp);}
