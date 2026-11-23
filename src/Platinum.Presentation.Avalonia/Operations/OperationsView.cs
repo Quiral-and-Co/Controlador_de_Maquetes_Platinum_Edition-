@@ -22,13 +22,13 @@ public sealed class OperationsView : UserControl
         tabs.Items.Add(new TabItem{Header="Validació",Content=BuildValidation()});
         Content=tabs;
     }
-    private static Button Btn(string text,EventHandler<global::Avalonia.Interactivity.RoutedEventArgs> action){var b=new Button{Content=text,HorizontalAlignment=Avalonia.Layout.HorizontalAlignment.Left};b.Click+=action;return b;}
-    private static TextBlock Label(string text)=>new(){Text=text,TextWrapping=TextWrapping.Wrap,Margin=new Avalonia.Thickness(0,5,0,2)};
-    private static StackPanel Panel(string title){var p=new StackPanel{Margin=new Avalonia.Thickness(16),Spacing=8};p.Children.Add(new TextBlock{Text=title,FontSize=18,FontWeight=FontWeight.Bold});return p;}
+    private static Button Btn(string text,EventHandler<global::Avalonia.Interactivity.RoutedEventArgs> action){var b=new Button{Content=text,HorizontalAlignment=global::Avalonia.Layout.HorizontalAlignment.Left};b.Click+=action;return b;}
+    private static TextBlock Label(string text)=>new(){Text=text,TextWrapping=TextWrapping.Wrap,Margin=new global::Avalonia.Thickness(0,5,0,2)};
+    private static StackPanel Panel(string title){var p=new StackPanel{Margin=new global::Avalonia.Thickness(16),Spacing=8};p.Children.Add(new TextBlock{Text=title,FontSize=18,FontWeight=FontWeight.Bold});return p;}
     private static ScrollViewer Scroll(Control c)=>new(){Content=c};
     private Control BuildAutomation()
     {
-        var p=Panel("Dispatcher auxiliar i automatització local");var name=new TextBox{Watermark="Nom del bloc"};var routeName=new TextBox{Watermark="Nom de l'itinerari"};var routeBlocks=new TextBox{Watermark="Blocs separats per comes"};
+        var p=Panel("Dispatcher auxiliar i automatització local");var name=new TextBox{PlaceholderText="Nom del bloc"};var routeName=new TextBox{PlaceholderText="Nom de l'itinerari"};var routeBlocks=new TextBox{PlaceholderText="Blocs separats per comes"};
         p.Children.Add(Label("Blocs lògics de simulació"));p.Children.Add(name);
         p.Children.Add(Btn("Afegir bloc",(_,_)=>{var n=name.Text?.Trim();if(string.IsNullOrWhiteSpace(n)||_blocks.Contains(n))return;_blocks.Add(n+" · LLIURE");RefreshLists();_status.Text="Bloc local creat: "+n;}));
         p.Children.Add(_blockList);
@@ -49,7 +49,7 @@ public sealed class OperationsView : UserControl
     }
     private Control BuildStations()
     {
-        var p=Panel("Perfils de centrals digitals");var maker=new ComboBox{ItemsSource=new[]{"Märklin","Roco","ESU","Uhlenbrock","Z21","DCC genèric"},SelectedIndex=0};var model=new TextBox{Watermark="Model de central"};var host=new TextBox{Watermark="Adreça IP"};var port=new TextBox{Text="15731"};var profiles=new ListBox{MinHeight=90};var values=new List<string>();
+        var p=Panel("Perfils de centrals digitals");var maker=new ComboBox{ItemsSource=new[]{"Märklin","Roco","ESU","Uhlenbrock","Z21","DCC genèric"},SelectedIndex=0};var model=new TextBox{PlaceholderText="Model de central"};var host=new TextBox{PlaceholderText="Adreça IP"};var port=new TextBox{Text="15731"};var profiles=new ListBox{MinHeight=90};var values=new List<string>();
         p.Children.Add(Label("Fabricant"));p.Children.Add(maker);p.Children.Add(model);p.Children.Add(host);p.Children.Add(port);
         p.Children.Add(Btn("Desar perfil local",(_,_)=>{if(!int.TryParse(port.Text,out var n)||n<1||n>65535){_status.Text="Port invàlid.";return;}values.Add(maker.SelectedItem+" · "+model.Text+" · "+host.Text+":"+n+" · NO CONNECTAT");profiles.ItemsSource=values.ToList();_status.Text="Perfil desat localment. No s'ha obert cap connexió.";}));
         p.Children.Add(profiles);p.Children.Add(Label("Les proves de central continuen desactivades fins a portar i validar els adaptadors de protocol."));return Scroll(p);
@@ -82,7 +82,7 @@ public sealed class OperationsView : UserControl
     private Control BuildValidation()
     {
         var p=Panel("Matriu de verificació · registres d'operador");p.Children.Add(Label("Aquest registre no certifica el circuit ni desbloqueja sortides."));
-        var checks=new[]{"Traçat mecànic inspeccionat","Connexions elèctriques inspeccionades","Sensors identificats i provats","Desviaments verificats físicament","Parada d'emergència física provada","Alimentació i proteccions inspeccionades"}.Select(x=>new CheckBox{Content=x,Margin=new Avalonia.Thickness(4,6)}).ToList();
+        var checks=new[]{"Traçat mecànic inspeccionat","Connexions elèctriques inspeccionades","Sensors identificats i provats","Desviaments verificats físicament","Parada d'emergència física provada","Alimentació i proteccions inspeccionades"}.Select(x=>new CheckBox{Content=x,Margin=new global::Avalonia.Thickness(4,6)}).ToList();
         foreach(var c in checks)p.Children.Add(c);
         p.Children.Add(Btn("Calcular estat de revisió",(_,_)=>_status.Text="Revisió declarada: "+checks.Count(x=>x.IsChecked==true)+"/"+checks.Count+". SORTIDES FÍSIQUES: BLOQUEJADES."));p.Children.Add(_status);return Scroll(p);
     }
