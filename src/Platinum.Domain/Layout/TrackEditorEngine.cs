@@ -80,11 +80,12 @@ public sealed class TrackEditorEngine
     {
         if (startX == endX && startY == endY)
             throw new ArgumentException("El segment ha de tenir longitud positiva.");
-        var dx = endX - startX;
-        var dy = endY - startY;
+        var dx = (double)(endX - startX);
+        var dy = (double)(endY - startY);
+        var controlX = (decimal)((double)startX + dx / 2d - dy * 0.22d);
+        var controlY = (decimal)((double)startY + dy / 2d + dx * 0.22d);
         var segment = new TrackGeometrySegment(Guid.NewGuid(), kind, startX, startY, endX, endY,
-            startX + dx / 2m - dy * 0.22m,
-            startY + dy / 2m + dx * 0.22m, levelId);
+            controlX, controlY, levelId);
         PushUndo();
         _segments.Add(segment);
         return segment;
