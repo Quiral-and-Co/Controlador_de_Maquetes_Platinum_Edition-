@@ -25,9 +25,9 @@ public sealed class HeadlessInteractionTests
     {
         var toggle=new ToggleButton { Content="Grid snap", IsChecked=true };
         var window=new Window { Width=640, Height=480, Content=toggle };
-        Assert.True(toggle.IsChecked);
+        Assert.Equal(true,toggle.IsChecked);
         toggle.IsChecked=false;
-        Assert.False(toggle.IsChecked);
+        Assert.Equal(false,toggle.IsChecked);
         window.Close();
     }
 }
