@@ -4,7 +4,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using Platinum.Domain.Layout;
-using Platinum.Presentation.Wpf.Catalogue;
+using Platinum.Domain.Catalogue;
 
 namespace Platinum.Presentation.Wpf.Editor;
 
