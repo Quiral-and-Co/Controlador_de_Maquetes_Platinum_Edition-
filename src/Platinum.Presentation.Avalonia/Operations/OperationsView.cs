@@ -1,17 +1,22 @@
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Media;
+using Platinum.Application.Control;
+using Platinum.Domain.Control;
+using Platinum.Infrastructure.Control;
 
 namespace Platinum.Presentation.Avalonia.Operations;
 
 public sealed class OperationsView : UserControl
 {
+    private readonly RailwayControlService _controlService=new(new LocalSimulationAdapter());
     private readonly TextBlock _status=new(){TextWrapping=TextWrapping.Wrap,Foreground=Brushes.Goldenrod};
     private readonly List<string> _blocks=[],_routes=[],_events=[];
     private readonly ListBox _blockList=new(){MinHeight=90},_routeList=new(){MinHeight=90},_eventList=new(){MinHeight=100};
     public OperationsView()
     {
         var tabs=new TabControl();
+        tabs.Items.Add(new TabItem{Header="Control propi",Content=BuildNativeControl()});
         tabs.Items.Add(new TabItem{Header="Automatització",Content=BuildAutomation()});
         tabs.Items.Add(new TabItem{Header="Senyalització",Content=BuildSignalling()});
         tabs.Items.Add(new TabItem{Header="Centrals",Content=BuildStations()});
@@ -26,6 +31,32 @@ public sealed class OperationsView : UserControl
     private static TextBlock Label(string text)=>new(){Text=text,TextWrapping=TextWrapping.Wrap,Margin=new global::Avalonia.Thickness(0,5,0,2)};
     private static StackPanel Panel(string title){var p=new StackPanel{Margin=new global::Avalonia.Thickness(16),Spacing=8};p.Children.Add(new TextBlock{Text=title,FontSize=18,FontWeight=FontWeight.Bold});return p;}
     private static ScrollViewer Scroll(Control c)=>new(){Content=c};
+    private Control BuildNativeControl()
+    {
+        var p=Panel("Motor de control propi · central virtual Platinum");
+        var status=Label("Central virtual desconnectada. No hi ha connexió física.");
+        var address=new TextBox{Text="3",Width=150};
+        var speed=new Slider{Minimum=0,Maximum=1000,Value=0};
+        var reverse=new CheckBox{Content="Marxa enrere"};
+        var function=new ComboBox{ItemsSource=Enumerable.Range(0,69).Select(x=>"F"+x).ToList(),SelectedIndex=0,Width=150};
+        var functionOn=new CheckBox{Content="Activar funció"};
+        var accessoryAddress=new TextBox{Text="1",Width=150};
+        var accessoryState=new ComboBox{ItemsSource=Enum.GetValues<AccessoryState>(),SelectedIndex=0,Width=180};
+        p.Children.Add(status);
+        p.Children.Add(Btn("Connectar central virtual",async (_,_)=>{try{await _controlService.ConnectAsync();status.Text="CONNECTAT · "+_controlService.Profile.Name+" · només simulació local.";}catch(Exception ex){status.Text="Error: "+ex.Message;}}));
+        p.Children.Add(Btn("Desconnectar",async (_,_)=>{await _controlService.DisconnectAsync();status.Text="Central virtual desconnectada.";}));
+        p.Children.Add(Label("Adreça de locomotora (1–10239)"));p.Children.Add(address);
+        p.Children.Add(Label("Velocitat virtual (0–1000)"));p.Children.Add(speed);p.Children.Add(reverse);
+        p.Children.Add(Btn("Aplicar velocitat a la simulació",async (_,_)=>{if(!int.TryParse(address.Text,out var a)){status.Text="Adreça de locomotora no vàlida.";return;}var r=await _controlService.SetLocomotiveSpeedAsync(a,(int)speed.Value,reverse.IsChecked==true);status.Text=r.Message;}));
+        p.Children.Add(Label("Funció de locomotora"));p.Children.Add(function);p.Children.Add(functionOn);
+        p.Children.Add(Btn("Aplicar funció a la simulació",async (_,_)=>{if(!int.TryParse(address.Text,out var a)){status.Text="Adreça no vàlida.";return;}var r=await _controlService.SetFunctionAsync(a,function.SelectedIndex,functionOn.IsChecked==true);status.Text=r.Message;}));
+        p.Children.Add(Label("Adreça d'accessori / desviament"));p.Children.Add(accessoryAddress);p.Children.Add(accessoryState);
+        p.Children.Add(Btn("Aplicar accessori a la simulació",async (_,_)=>{if(!int.TryParse(accessoryAddress.Text,out var a)||accessoryState.SelectedItem is not AccessoryState state){status.Text="Adreça o estat d'accessori no vàlid.";return;}var r=await _controlService.SetAccessoryAsync(a,state);status.Text=r.Message;}));
+        p.Children.Add(Btn("ATURADA D'EMERGÈNCIA VIRTUAL",async (_,_)=>{var r=await _controlService.EmergencyStopAsync();speed.Value=0;status.Text=r.Message;}));
+        p.Children.Add(Label("Aquesta vista utilitza RailwayControlService i LocalSimulationAdapter. No s'obre cap port ni s'envien ordres a locomotores, desviaments o senyals reals."));
+        return Scroll(p);
+    }
+
     private Control BuildAutomation()
     {
         var p=Panel("Dispatcher auxiliar i automatització local");var name=new TextBox{PlaceholderText="Nom del bloc"};var routeName=new TextBox{PlaceholderText="Nom de l'itinerari"};var routeBlocks=new TextBox{PlaceholderText="Blocs separats per comes"};
