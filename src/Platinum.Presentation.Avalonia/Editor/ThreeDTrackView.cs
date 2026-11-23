@@ -18,7 +18,7 @@ public sealed class ThreeDTrackView : Control
     public void TopView(){_yaw=0;_pitch=82;InvalidateVisual();}
     public void IsometricView(){_yaw=-42;_pitch=38;InvalidateVisual();}
     public void SideView(){_yaw=-90;_pitch=12;InvalidateVisual();}
-    protected override void OnRender(DrawingContext ctx)
+    public override void Render(DrawingContext ctx)
     {
         base.OnRender(ctx);ctx.DrawRectangle(new SolidColorBrush(Color.Parse("#10171F")),null,Bounds);
         if(_layout is null||Bounds.Width<100||Bounds.Height<100)return;
