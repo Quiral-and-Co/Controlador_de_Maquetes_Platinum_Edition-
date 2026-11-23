@@ -1,5 +1,7 @@
 using System.Windows.Input;
 using Platinum.Domain.Layout;
+using Platinum.Domain.Catalogue;
+using Platinum.Infrastructure.Catalogue;
 using Platinum.Presentation.Avalonia.Services;
 
 namespace Platinum.Presentation.Avalonia.ViewModels;
@@ -18,6 +20,11 @@ public sealed class LayoutEditorViewModel : PageViewModel
     private bool _snapToGrid = true;
     private double _zoomFactor = 1d;
     private string _status = "Editor 2D preparat · coordenades en mm · mode segur";
+    private CatalogueItem[] _catalogueItems = [];
+    private CatalogueItem? _selectedCatalogueItem;
+    private CatalogueItem? _placementItem;
+    private bool _connectMode;
+    private (Guid PieceId, string PortId)? _pendingConnection;
 
     public LayoutEditorViewModel(IDialogService dialogs, TrackEditorEngine engine) : base(
         "Editor de maquetes 2D/3D", "Editor basat en el motor geomètric compartit del domini. Les vistes només representen i tradueixen gestos a operacions.")
@@ -37,6 +44,9 @@ public sealed class LayoutEditorViewModel : PageViewModel
         ZoomOutCommand = new RelayCommand(() => Zoom(1d / 1.2));
         ResetZoomCommand = new RelayCommand(() => ZoomFactor = 1d);
         ExplainConnectionsCommand = new RelayCommand(() => _ = ExplainConnectionsAsync());
+        PlaceCataloguePieceCommand = new RelayCommand(BeginCataloguePlacement);
+        ToggleConnectModeCommand = new RelayCommand(ToggleConnectMode);
+        LoadCatalogue();
     }
 
     public TrackEditorEngine Engine => _engine;
@@ -49,6 +59,10 @@ public sealed class LayoutEditorViewModel : PageViewModel
     public double ZoomFactor { get => _zoomFactor; private set => SetProperty(ref _zoomFactor, Math.Clamp(value, 0.35, 3.5)); }
     public string Status { get => _status; private set => SetProperty(ref _status, value); }
     public IReadOnlyList<TrackLevel> Levels => [new TrackLevel(Guid.Empty, "Nivell base", 0m)];
+    public IReadOnlyList<CatalogueItem> CatalogueItems => _catalogueItems;
+    public CatalogueItem? SelectedCatalogueItem { get => _selectedCatalogueItem; set => SetProperty(ref _selectedCatalogueItem, value); }
+    public CatalogueItem? PlacementItem { get => _placementItem; private set => SetProperty(ref _placementItem, value); }
+    public bool ConnectMode { get => _connectMode; private set => SetProperty(ref _connectMode, value); }
 
     public ICommand UndoCommand { get; }
     public ICommand RedoCommand { get; }
@@ -63,6 +77,93 @@ public sealed class LayoutEditorViewModel : PageViewModel
     public ICommand ZoomOutCommand { get; }
     public ICommand ResetZoomCommand { get; }
     public ICommand ExplainConnectionsCommand { get; }
+    public ICommand PlaceCataloguePieceCommand { get; }
+    public ICommand ToggleConnectModeCommand { get; }
+
+    private void LoadCatalogue()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Assets", "catalogue-marklin-c.json");
+        if (!File.Exists(path))
+        {
+            Status = "Catàleg Märklin no trobat; pots dibuixar traçats geomètrics.";
+            return;
+        }
+        try
+        {
+            _catalogueItems = MarklinCCatalogue.Load(path).Items.ToArray();
+            Engine.SetCataloguePorts(_catalogueItems.SelectMany(item =>
+                item.Ports.Select(port => new TrackEditorPort(item.Ref, port.Id, port.X, port.Y, port.Accuracy))));
+            OnPropertyChanged(nameof(CatalogueItems));
+            Status = $"Catàleg carregat · {_catalogueItems.Length} referències · ports locals en mm.";
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or System.Text.Json.JsonException)
+        {
+            Status = "No s'ha pogut carregar el catàleg: " + ex.Message;
+        }
+    }
+
+    private void BeginCataloguePlacement()
+    {
+        if (SelectedCatalogueItem is null) { Status = "Selecciona una referència del catàleg."; return; }
+        PlacementItem = SelectedCatalogueItem;
+        ConnectMode = false;
+        Tool = TrackEditorTool.Select;
+        Status = $"Col·loca {PlacementItem.Ref} fent clic al canvas; geometria {PlacementItem.GeometryStatus}.";
+    }
+
+    public void PlaceCataloguePieceAt(double x, double y)
+    {
+        if (PlacementItem is null) return;
+        var point = Snap(x, y);
+        var item = PlacementItem;
+        Engine.AddPiece(item.Ref, (decimal)point.X, (decimal)point.Y, 0m, ActiveLevelId, item.GeometryStatus);
+        PlacementItem = null;
+        Status = $"Peça {item.Ref} col·locada · geometria {item.GeometryStatus}.";
+        OnEditorChanged();
+    }
+
+    private void ToggleConnectMode()
+    {
+        ConnectMode = !ConnectMode;
+        _pendingConnection = null;
+        PlacementItem = null;
+        Status = ConnectMode
+            ? "Connexió: selecciona dos ports reals del catàleg. Connexió lògica, no verificació física."
+            : "Mode de connexió desactivat.";
+    }
+
+    public void ConnectPortAt(double x, double y)
+    {
+        var point = Snap(x, y);
+        var hit = Engine.HitTestPort((decimal)point.X, (decimal)point.Y, ActiveLevelId);
+        if (hit is null) { Status = "No hi ha cap port del catàleg dins la tolerància de 22 mm."; return; }
+        if (!_pendingConnection.HasValue)
+        {
+            _pendingConnection = hit;
+            Status = $"Port {hit.Value.PortId} seleccionat. Tria el segon extrem.";
+            return;
+        }
+        if (Engine.TryConnect(_pendingConnection.Value.PieceId, _pendingConnection.Value.PortId,
+            hit.Value.PieceId, hit.Value.PortId, out _))
+        {
+            var sourceAccuracy = PortAccuracy(_pendingConnection.Value.PieceId, _pendingConnection.Value.PortId);
+            var targetAccuracy = PortAccuracy(hit.Value.PieceId, hit.Value.PortId);
+            Status = sourceAccuracy == "estimated" || targetAccuracy == "estimated"
+                ? "Connexió lògica creada; almenys un port és estimat i requereix verificació de plànol."
+                : "Connexió lògica creada amb ports derivats del catàleg; no certifica encaix físic.";
+            OnEditorChanged();
+        }
+        else Status = "Connexió no creada: mateix component, port invàlid o connexió duplicada.";
+        _pendingConnection = null;
+    }
+
+    private string? PortAccuracy(Guid pieceId, string portId)
+    {
+        var piece = Engine.Pieces.FirstOrDefault(x => x.Id == pieceId);
+        return piece is null ? null : Engine.CataloguePorts.FirstOrDefault(x =>
+            x.CatalogueCode.Equals(piece.CatalogueCode, StringComparison.OrdinalIgnoreCase) &&
+            x.Id.Equals(portId, StringComparison.OrdinalIgnoreCase))?.Accuracy;
+    }
 
     public void SetTool(TrackEditorTool tool)
     {
@@ -157,5 +258,5 @@ public sealed class LayoutEditorViewModel : PageViewModel
 
     private async Task ExplainConnectionsAsync() =>
         await _dialogs.ShowMessageAsync("Connexions de via",
-            "El motor del domini ja crea connexions lògiques per identificador de port i impedeix duplicats. La vista Avalonia encara no importa el catàleg Märklin ni exposa els ports reals; no s'ofereixen ports ficticis ni es marca cap connexió com a verificació física.");
+            "Les connexions utilitzen els ports i les coordenades locals del catàleg Märklin compartit. Són relacions lògiques i no constitueixen una verificació d'encaix físic.");
 }
