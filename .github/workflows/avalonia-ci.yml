@@ -21,9 +21,18 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - run: dotnet restore Platinum.sln
-      - run: dotnet build src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj -c Release --no-restore
-      - run: dotnet test tests/Platinum.Infrastructure.Tests/Platinum.Infrastructure.Tests.csproj -c Release
-      - run: dotnet test tests/Platinum.Presentation.Avalonia.Tests/Platinum.Presentation.Avalonia.Tests.csproj -c Release
+      - name: Build complete solution
+        run: dotnet build Platinum.sln -c Release --no-restore
+      - name: Run all tests
+        run: dotnet test Platinum.sln -c Release --no-build --logger "trx;LogFileName=avalonia-tests.trx"
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Avalonia-test-results-${{ matrix.os }}
+          path: "**/TestResults/*.trx"
+          if-no-files-found: ignore
+          retention-days: 14
   publish:
     needs: build-test
     strategy:
@@ -48,8 +57,63 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
+      - name: Determine package version
+        id: version
+        shell: pwsh
+        run: |
+          $version = "0.2.0"
+          if ("${{ github.ref_type }}" -eq "tag") { $version = "${{ github.ref_name }}".TrimStart('v') }
+          if ($version -notmatch '^\\d+\\.\\d+\\.\\d+(\\.\\d+)?
+      - name: Archive Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path artifacts/Platinum-${{ matrix.rid }}/* -DestinationPath artifacts/Platinum-${{ matrix.rid }}.zip
+      - name: Archive Unix
+        if: runner.os != 'Windows'
+        run: cd artifacts/Platinum-${{ matrix.rid }} && zip -qr ../Platinum-${{ matrix.rid }}.zip .
+      - name: Build Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install innosetup --yes --no-progress
+          & "${env:ProgramFiles(x86)}\\Inno Setup 6\\ISCC.exe" /DAppDir="$PWD\\artifacts\\Platinum-${{ matrix.rid }}" /DOutputDir="$PWD\\artifacts" packaging\\windows\\Platinum.iss
+      - name: Build Linux package
+        if: runner.os == 'Linux'
+        run: bash packaging/linux/build-deb.sh ${{ matrix.rid }} artifacts/Platinum-${{ matrix.rid }}
+      - name: Build macOS disk image
+        if: runner.os == 'macOS'
+        run: bash packaging/macos/build-dmg.sh ${{ matrix.rid }} artifacts/Platinum-${{ matrix.rid }}
+      - name: SHA256 manifests
+        shell: bash
+        run: |
+          cd artifacts
+          sha256sum Platinum-${{ matrix.rid }}.zip > Platinum-${{ matrix.rid }}.zip.sha256
+          for package in Quiral-Platinum-Setup-*; do [ -f "$package" ] && sha256sum "$package" > "$package.sha256" || true; done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Platinum-${{ matrix.rid }}
+          path: |
+            artifacts/Platinum-${{ matrix.rid }}*
+            artifacts/Quiral-Platinum-Setup-*
+          if-no-files-found: error
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+) { throw "Invalid version: $version" }
+          "version=$version" >> $env:GITHUB_OUTPUT
       - name: Publish self-contained
-        run: dotnet publish src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true -o artifacts/Platinum-${{ matrix.rid }}
+        run: dotnet publish src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=${{ steps.version.outputs.version }} -o artifacts/Platinum-${{ matrix.rid }}
       - name: Archive Windows
         if: runner.os == 'Windows'
         shell: pwsh
