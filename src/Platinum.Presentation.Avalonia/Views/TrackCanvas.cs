@@ -68,8 +68,10 @@ public sealed class TrackCanvas : Control
             var a = Engine.GetWorldPort(connection.FromPieceId, connection.FromPort);
             var b = Engine.GetWorldPort(connection.ToPieceId, connection.ToPort);
             if (fromPiece is null || toPiece is null || !a.HasValue || !b.HasValue) continue;
-            var pen = new Pen(new SolidColorBrush(connection.PhysicallyVerified ? Color.Parse("#72D69A") : Color.Parse("#F4A261")),
-                2.2, connection.PhysicallyVerified ? DashStyle.Solid : DashStyle.Dash);
+            var connectionBrush = new SolidColorBrush(connection.PhysicallyVerified ? Color.Parse("#72D69A") : Color.Parse("#F4A261"));
+            var pen = connection.PhysicallyVerified
+                ? new Pen(connectionBrush, 2.2)
+                : new Pen(connectionBrush, 2.2, DashStyle.Dash);
             context.DrawLine(pen, ToView(a.Value.X, a.Value.Y), ToView(b.Value.X, b.Value.Y));
         }
 
