@@ -34,10 +34,10 @@ jobs:
             ext: zip
           - os: ubuntu-latest
             rid: linux-x64
-            ext: tar.gz
+            ext: zip
           - os: macos-latest
             rid: osx-arm64
-            ext: tar.gz
+            ext: zip
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -57,7 +57,7 @@ jobs:
         shell: bash
         run: |
           cd artifacts
-          if [ "${{ runner.os }}" = "Windows" ]; then sha256sum Platinum-${{ matrix.rid }}.zip > Platinum-${{ matrix.rid }}.zip.sha256; else sha256sum Platinum-${{ matrix.rid }}.tar.gz > Platinum-${{ matrix.rid }}.tar.gz.sha256; fi
+          sha256sum Platinum-${{ matrix.rid }}.zip > Platinum-${{ matrix.rid }}.zip.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: Platinum-${{ matrix.rid }}
