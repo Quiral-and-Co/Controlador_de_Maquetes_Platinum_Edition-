@@ -12,7 +12,7 @@
 AppId={{B7E4A1C9-42A6-4E10-9D3A-7F1B4C8E6A20}
 AppName={#AppName}
 AppVersion={#AppVersion}
-DefaultDirName={autopf}\Platinum
+DefaultDirName={autopf}\Quiral Platinum
 DefaultGroupName=Quiral Platinum
 OutputDir={#OutputDir}
 OutputBaseFilename=Quiral-Platinum-Setup-win-x64-{#AppVersion}
@@ -23,7 +23,7 @@ PrivilegesRequired=admin
 [Files]
 Source: "{#AppDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
 [Icons]
-Name: "{group}\Platinum"; Filename: "{app}\Platinum.Presentation.Avalonia.exe"
-Name: "{autodesktop}\Platinum"; Filename: "{app}\Platinum.Presentation.Avalonia.exe"
+Name: "{group}\Quiral Platinum"; Filename: "{app}\Platinum.Presentation.Avalonia.exe"
+Name: "{autodesktop}\Quiral Platinum"; Filename: "{app}\Platinum.Presentation.Avalonia.exe"
 [Run]
 Filename: "{app}\Platinum.Presentation.Avalonia.exe"; Description: "Inicia Platinum"; Flags: postinstall nowait skipifsilent
