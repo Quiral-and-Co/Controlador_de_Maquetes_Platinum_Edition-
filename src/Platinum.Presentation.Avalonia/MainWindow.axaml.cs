@@ -85,7 +85,7 @@ public partial class MainWindow : Window
     private void LoadCatalogue()
     {
         try{var doc=MarklinCCatalogue.Load();
-            _catalogueItems=doc.Items;CatalogueList.ItemsSource=_catalogueItems.Select(x=>x.DisplayName).ToList();TrackPlan.SetCatalogue(_catalogueItems);TrackPlan3D.SetCatalogue(_catalogueItems);
+            _catalogueItems=doc.Items.ToList();CatalogueList.ItemsSource=_catalogueItems.Select(x=>x.DisplayName).ToList();TrackPlan.SetCatalogue(_catalogueItems);TrackPlan3D.SetCatalogue(_catalogueItems);
             CatalogueCount.Text=_catalogueItems.Count+" referències · "+doc.Brand+" "+doc.System+" · "+doc.Scale;}
         catch(Exception ex){CatalogueCount.Text="No s'ha pogut carregar el catàleg.";CatalogueDetails.Text=ex.Message;}
     }
