@@ -4,7 +4,6 @@ using Platinum.Application.Projects;
 using Platinum.Domain.Layout;
 using Platinum.Infrastructure.Projects;
 using Platinum.Presentation.Avalonia.Catalogue;
-using Platinum.Presentation.Avalonia.Updates;
 
 namespace Platinum.Presentation.Avalonia;
 
@@ -58,23 +57,6 @@ public partial class MainWindow : Window
         try{DispatcherPanel.SyncToLayout();await _projects.SaveAsync(_layout,path);_currentPath=path;ProjectStatus.Text=Path.GetFileName(path);StatusText.Text="Projecte desat correctament.";}
         catch(Exception ex){StatusText.Text="Error en desar el projecte: "+ex.Message;}
     }
-    private async void CheckUpdates_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        StatusText.Text="Comprovant versions oficials a GitHub...";
-        try
-        {
-            var release=await new GitHubReleaseService().GetLatestAsync();
-            if(release is null){StatusText.Text="No hi ha cap Release publicada.";return;}
-            var current=typeof(MainWindow).Assembly.GetName().Version??new Version(0,0);
-            var latest=GitHubReleaseService.ParseVersion(release.Tag);
-            if(latest<=current){StatusText.Text="Platinum està actualitzat · "+current;return;}
-            StatusText.Text="Nova versió "+release.Tag+" · obrint la pàgina oficial de GitHub.";
-            var top=TopLevel.GetTopLevel(this);
-            if(top is not null)await top.Launcher.LaunchUriAsync(release.Page);
-        }
-        catch(Exception ex){StatusText.Text="No s'ha pogut consultar GitHub: "+ex.Message;}
-    }
-
     private void LevelSelector_SelectionChanged(object? s,SelectionChangedEventArgs e)
     {
         if(TrackPlan is null||_layout.Levels.Count==0)return;
@@ -102,7 +84,7 @@ public partial class MainWindow : Window
 
     private void LoadCatalogue()
     {
-        try{var path=Path.Combine(AppContext.BaseDirectory,"Assets","catalogue-marklin-c.json");var doc=MarklinCCatalogue.Load(path);
+        try{var doc=MarklinCCatalogue.Load();
             _catalogueItems=doc.Items;CatalogueList.ItemsSource=_catalogueItems.Select(x=>x.DisplayName).ToList();TrackPlan.SetCatalogue(_catalogueItems);TrackPlan3D.SetCatalogue(_catalogueItems);
             CatalogueCount.Text=_catalogueItems.Count+" referències · "+doc.Brand+" "+doc.System+" · "+doc.Scale;}
         catch(Exception ex){CatalogueCount.Text="No s'ha pogut carregar el catàleg.";CatalogueDetails.Text=ex.Message;}
