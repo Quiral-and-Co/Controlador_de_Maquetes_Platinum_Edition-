@@ -96,7 +96,7 @@ public sealed class LayoutEditorViewModel : PageViewModel
             OnPropertyChanged(nameof(CatalogueItems));
             Status = $"Catàleg carregat · {_catalogueItems.Length} referències · ports locals en mm.";
         }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or System.Text.Json.JsonException)
+        catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException)
         {
             Status = "No s'ha pogut carregar el catàleg: " + ex.Message;
         }
