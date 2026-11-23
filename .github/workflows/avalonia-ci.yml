@@ -64,7 +64,7 @@ jobs:
         run: |
           $version = "0.2.0"
           if ("${{ github.ref_type }}" -eq "tag") { $version = "${{ github.ref_name }}".TrimStart('v') }
-          if ($version -notmatch '^\\d+\\.\\d+\\.\\d+(\\.\\d+)?$') { throw "Invalid version: $version" }
+          if ($version -notmatch '^\d+\.\d+\.\d+(\.\d+)?$') { throw "Invalid version: $version" }
           "version=$version" >> $env:GITHUB_OUTPUT
       - name: Publish self-contained
         run: dotnet publish src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=${{ steps.version.outputs.version }} -o artifacts/Platinum-${{ matrix.rid }}
