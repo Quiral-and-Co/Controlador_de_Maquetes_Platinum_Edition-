@@ -95,12 +95,14 @@ public partial class MainWindow : Window
     }
     private void CatalogueList_SelectionChanged(object? s,SelectionChangedEventArgs e)
     {
-        if(CatalogueList.SelectedItem is not string selected){PlaceCatalogueButton.IsEnabled=false;return;}\n        var item=_catalogueItems.FirstOrDefault(x=>x.DisplayName==selected);if(item is null){PlaceCatalogueButton.IsEnabled=false;return;}
+        if(CatalogueList.SelectedItem is not string selected){PlaceCatalogueButton.IsEnabled=false;return;}
+        var item=_catalogueItems.FirstOrDefault(x=>x.DisplayName==selected);if(item is null){PlaceCatalogueButton.IsEnabled=false;return;}
         PlaceCatalogueButton.IsEnabled=true;CatalogueDetails.Text=item.DisplayName+"\nCategoria: "+item.Category+"\nTipus: "+item.Type+"\nGeometria: "+item.GeometrySummary+"\nEstat: "+item.GeometryStatus+"\n"+item.Notes;
     }
     private void PlaceCatalogueButton_Click(object? s,global::Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if(CatalogueList.SelectedItem is not string selected)return;\n        var item=_catalogueItems.FirstOrDefault(x=>x.DisplayName==selected);if(item is null)return;
+        if(CatalogueList.SelectedItem is not string selected)return;
+        var item=_catalogueItems.FirstOrDefault(x=>x.DisplayName==selected);if(item is null)return;
         if(item.GeometryStatus.Equals("unverified",StringComparison.OrdinalIgnoreCase))StatusText.Text="Avís: geometria no verificada; marcador esquemàtic. ";
         TrackPlan.BeginCataloguePlacement(item);StatusText.Text+="Fes clic al plànol per col·locar "+item.Ref+".";
     }
