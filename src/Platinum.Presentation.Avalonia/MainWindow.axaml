@@ -2,6 +2,7 @@
     xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:editor="using:Platinum.Presentation.Avalonia.Editor"
     xmlns:dispatcher="using:Platinum.Presentation.Avalonia.Dispatcher"
+    xmlns:operations="using:Platinum.Presentation.Avalonia.Operations"
     Title="Quiral Platinum — Maquetisme ferroviari" Width="1500" Height="900" MinWidth="1100" MinHeight="680">
   <DockPanel>
     <Border DockPanel.Dock="Top" Background="#202833" Padding="14">
@@ -24,15 +25,15 @@
           <TextBlock Text="Nivell:" VerticalAlignment="Center" Margin="12,0,4,0"/><ComboBox x:Name="LevelSelector" Width="145" SelectionChanged="LevelSelector_SelectionChanged"/></WrapPanel>
         <TabControl Grid.Row="1" Margin="0,8,0,0">
           <TabItem Header="Editor 2D"><DockPanel><WrapPanel DockPanel.Dock="Top"><Button Content="Seleccionar" Click="SelectTool_Click"/><Button Content="Via recta" Click="StraightTool_Click"/><Button Content="Corba" Click="CurveTool_Click"/><Button Content="Desviament" Click="TurnoutTool_Click"/></WrapPanel><editor:TrackPlanView x:Name="TrackPlan"/></DockPanel></TabItem>
-          <TabItem Header="Editor 3D"><Border Background="#10171F" Padding="20"><StackPanel Spacing="8"><TextBlock Text="Vista isomètrica de la maqueta" FontSize="18" FontWeight="Bold"/><TextBlock Text="La vista 3D requereix un renderitzador específic d'Avalonia; les dades del model i els nivells es comparteixen amb l'editor 2D." TextWrapping="Wrap"/><TextBlock x:Name="ThreeDStatus" Text="Vista 3D pendent de migració." Foreground="#FFC65C"/></StackPanel></Border></TabItem>
-          <TabItem Header="Dispatcher"><dispatcher:DispatcherView/></TabItem>
-          <TabItem Header="Operacions"><ScrollViewer><StackPanel Margin="16" Spacing="10"><TextBlock Text="OPERACIONS I SIMULADORS" FontSize="19" FontWeight="Bold"/><TextBlock Text="Les funcions de simulació es mantenen locals. No s'envien ordres a locomotores, desviaments, senyals ni frens reals." TextWrapping="Wrap"/><TextBlock Text="Central digital: desconnectada · JMRI: desconnectat · DCC: bloquejat" Foreground="#FFC65C"/><TextBlock Text="Les integracions físiques continuen deshabilitades fins a completar proves de protocol, supervisió independent i validació de seguretat." TextWrapping="Wrap"/></StackPanel></ScrollViewer></TabItem>
+          <TabItem Header="Editor 3D"><DockPanel><WrapPanel DockPanel.Dock="Top"><Button Content="Superior" Click="ThreeDTop_Click"/><Button Content="Isomètrica" Click="ThreeDIso_Click"/><Button Content="Lateral" Click="ThreeDSide_Click"/></WrapPanel><editor:ThreeDTrackView x:Name="TrackPlan3D"/></DockPanel></TabItem>
+          <TabItem Header="Dispatcher"><dispatcher:DispatcherView x:Name="DispatcherPanel"/></TabItem>
+          <TabItem Header="Operacions"><operations:OperationsView/></TabItem>
         </TabControl>
       </Grid>
       <Border Grid.Column="2" Background="#1A222C" Padding="12"><StackPanel Spacing="8">
         <TextBlock Text="PROPIETATS I CATÀLEG" FontSize="15" FontWeight="Bold"/><TextBlock Text="MÄRKLIN C · H0" FontWeight="Bold" Foreground="#FFC65C"/>
         <TextBox x:Name="CatalogueSearch" Watermark="Cerca per referència o nom" TextChanged="CatalogueSearch_TextChanged"/>
-        <ListBox x:Name="CatalogueList" Height="280" SelectionChanged="CatalogueList_SelectionChanged"/>
+        <ListBox x:Name="CatalogueList" Height="280" SelectionChanged="CatalogueList_SelectionChanged"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding DisplayName}"/></DataTemplate></ListBox.ItemTemplate></ListBox>
         <Button x:Name="PlaceCatalogueButton" Content="Col·loca al nivell actiu" IsEnabled="False" Click="PlaceCatalogueButton_Click"/>
         <TextBlock x:Name="CatalogueDetails" Text="Selecciona una peça per consultar-ne les dades." TextWrapping="Wrap" Foreground="#B7C1CC"/>
         <TextBlock x:Name="CatalogueCount" Text="Catàleg no carregat" Foreground="#B7C1CC"/>
