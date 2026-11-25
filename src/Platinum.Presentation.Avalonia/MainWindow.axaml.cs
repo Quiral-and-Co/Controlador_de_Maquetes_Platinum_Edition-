@@ -64,10 +64,23 @@ public sealed partial class MainWindow : Window
         if (_synchronizing)
             return;
 
-        _currentLayout.Name = ProjectNameBox.Text?.Trim() ?? string.Empty;
-        _currentLayout.WidthMillimetres = WidthBox.Value ?? 0m;
-        _currentLayout.HeightMillimetres = HeightBox.Value ?? 0m;
-        _currentLayout.GridMillimetres = GridBox.Value ?? 0m;
+        var name = ProjectNameBox.Text?.Trim() ?? string.Empty;
+        var width = WidthBox.Value ?? 0m;
+        var height = HeightBox.Value ?? 0m;
+        var grid = GridBox.Value ?? 0m;
+
+        // Avalonia TextChanged is raised after rendering; compare values so a
+        // delayed notification from SynchronizeFields cannot mark a clean load dirty.
+        if (name == _currentLayout.Name &&
+            width == _currentLayout.WidthMillimetres &&
+            height == _currentLayout.HeightMillimetres &&
+            grid == _currentLayout.GridMillimetres)
+            return;
+
+        _currentLayout.Name = name;
+        _currentLayout.WidthMillimetres = width;
+        _currentLayout.HeightMillimetres = height;
+        _currentLayout.GridMillimetres = grid;
         _isDirty = true;
         DirtyText.Text = "CANVIS PENDENTS DE DESAR";
         Title = $"Quiral Platinum — {_currentLayout.Name} *";
