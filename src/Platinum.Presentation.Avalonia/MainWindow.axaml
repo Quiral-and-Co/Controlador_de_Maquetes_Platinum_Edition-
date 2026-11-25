@@ -1,0 +1,82 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Platinum.Presentation.Avalonia.MainWindow"
+        Title="Quiral Platinum — Simulador ferroviari"
+        Width="1500"
+        Height="900"
+        MinWidth="1050"
+        MinHeight="650"
+        Background="#111820">
+  <Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="250,*,300">
+    <Border Grid.Row="0" Grid.ColumnSpan="3" Background="#202833" Padding="16">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="3">
+          <TextBlock Text="QUIRAL PLATINUM" FontSize="21" FontWeight="Bold" Foreground="#FFC65C"/>
+          <TextBlock Text="Simulador ferroviari · C# · .NET 10 · Avalonia" Foreground="#B7C1CC"/>
+        </StackPanel>
+        <Border Grid.Column="1" Background="#293B32" CornerRadius="6" Padding="12,7" VerticalAlignment="Center">
+          <TextBlock Text="SIMULACIÓ · SORTIDES FÍSIQUES BLOQUEJADES" Foreground="#A7E0B5" FontWeight="SemiBold"/>
+        </Border>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1" Grid.Column="0" Background="#1A222C" Padding="12">
+      <StackPanel Spacing="10">
+        <TextBlock Text="PROJECTE" FontWeight="Bold" FontSize="15"/>
+        <Button Content="Projectes de maqueta" HorizontalAlignment="Stretch"/>
+        <Button Content="Editor de vies" HorizontalAlignment="Stretch"/>
+        <Button Content="Catàleg Märklin" HorizontalAlignment="Stretch"/>
+        <Button Content="Inventari físic" HorizontalAlignment="Stretch"/>
+        <Separator/>
+        <TextBlock Text="OPERACIONS" FontWeight="Bold" FontSize="15"/>
+        <Button Content="Trens i locomotores" HorizontalAlignment="Stretch"/>
+        <Button Content="Blocs i itineraris" HorizontalAlignment="Stretch"/>
+        <Button Content="Senyals i accessoris" HorizontalAlignment="Stretch"/>
+        <Button Content="Automatitzacions" HorizontalAlignment="Stretch"/>
+        <Separator/>
+        <TextBlock Text="SISTEMA" FontWeight="Bold" FontSize="15"/>
+        <Button Content="Alimentació i xarxes" HorizontalAlignment="Stretch"/>
+        <Button Content="Diagnosi i alarmes" HorizontalAlignment="Stretch"/>
+        <Button Content="Configuració i seguretat" HorizontalAlignment="Stretch"/>
+      </StackPanel>
+    </Border>
+
+    <Grid Grid.Row="1" Grid.Column="1" Margin="12" RowDefinitions="Auto,*">
+      <WrapPanel Margin="0,0,0,10">
+        <Button Content="Nou projecte" Margin="0,0,8,0"/>
+        <Button Content="Obrir…" Margin="0,0,8,0"/>
+        <Button Content="Desar" Margin="0,0,8,0"/>
+        <Button Content="Validar projecte"/>
+      </WrapPanel>
+      <Border Grid.Row="1" Background="#18212B" BorderBrush="#394654" BorderThickness="1" CornerRadius="6" Padding="24">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+          <TextBlock Text="ENTORN DE TREBALL" FontSize="13" FontWeight="Bold" Foreground="#B7C1CC" HorizontalAlignment="Center"/>
+          <TextBlock Text="Editor de maqueta" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+          <TextBlock Text="La interfície Avalonia està preparada. Els editors i serveis existents s'aniran migrant sobre el domini compartit." TextWrapping="Wrap" MaxWidth="560" TextAlignment="Center" Foreground="#B7C1CC"/>
+          <TextBlock Text="Cap dispositiu real connectat · Cap ordre física habilitada" Foreground="#FFC65C" HorizontalAlignment="Center"/>
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="1" Grid.Column="2" Background="#1A222C" Padding="14">
+      <StackPanel Spacing="10">
+        <TextBlock Text="ESTAT DEL PROJECTE" FontSize="15" FontWeight="Bold"/>
+        <TextBlock Text="Projecte: no carregat" Foreground="#B7C1CC"/>
+        <TextBlock Text="Central: virtual" Foreground="#B7C1CC"/>
+        <TextBlock Text="Comunicació: desconnectada" Foreground="#B7C1CC"/>
+        <TextBlock Text="Ocupació: desconeguda" Foreground="#B7C1CC"/>
+        <Separator/>
+        <TextBlock Text="SEGURETAT" FontWeight="Bold"/>
+        <TextBlock Text="Mode real: bloquejat" Foreground="#FFC65C"/>
+        <TextBlock Text="Ordres pendents: cap" Foreground="#B7C1CC"/>
+        <TextBlock Text="Parada d'emergència física: no verificada" TextWrapping="Wrap" Foreground="#FFC65C"/>
+        <Separator/>
+        <TextBlock Text="Les dades desconegudes no es tracten com a lliures, zero ni confirmades." TextWrapping="Wrap" Foreground="#B7C1CC"/>
+      </StackPanel>
+    </Border>
+
+    <Border Grid.Row="2" Grid.ColumnSpan="3" Background="#202833" Padding="10">
+      <TextBlock Text="Preparat · Aplicació multiplataforma · Motor i dispositius reals encara no habilitats des d'aquesta interfície." Foreground="#B7C1CC"/>
+    </Border>
+  </Grid>
+</Window>
