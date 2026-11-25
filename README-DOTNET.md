@@ -1,35 +1,38 @@
-# Quiral Platinum — migració nativa .NET 10
+# Quiral Platinum — .NET 10 i Avalonia UI
 
-Aquesta branca inicia una reconstrucció nativa Windows amb C# i WPF. No utilitza Electron, HTML, JavaScript ni JSON v3 com a arquitectura o format de persistència.
+Aquesta branca incorpora una nova capa d'escriptori multiplataforma amb C# i Avalonia UI 12 sobre .NET 10.
 
-## Arquitectura
+## Arquitectura compartida
 
 - **Platinum.Domain**: model de domini sense dependències de UI ni infraestructura.
 - **Platinum.Application**: casos d'ús i contractes de serveis.
-- **Platinum.Infrastructure**: persistència, integracions i adaptadors externs.
-- **Platinum.Presentation.Wpf**: interfície nativa WPF/XAML.
+- **Platinum.Infrastructure**: persistència, integracions i adaptadors.
+- **Platinum.Presentation.Avalonia**: nova interfície multiplataforma.
+- **Platinum.Presentation.Wpf**: interfície Windows existent, conservada temporalment durant la migració.
+- **Platinum.Infrastructure.Tests**: proves de persistència, serveis i protocols.
 
-## Format de projecte nou
+La interfície Avalonia reutilitza els projectes Domain, Application i Infrastructure. No duplica la lògica ferroviària dins dels ViewModels.
 
-L'extensió és `.platinum`. És un paquet ZIP versionat amb:
-- `manifest.xml`: identificació i versió del format.
-- `layout.xml`: model estructurat de la maqueta.
-- `assets/`: espai reservat per a recursos adjunts en versions posteriors.
+## Plataformes
 
-El format té versió pròpia, validació de referències, límit de mida de les entrades i desament atòmic. No és JSON v3 ni una simple exportació d'aquest.
+Avalonia s'utilitza per preparar versions d'escriptori Windows, Linux i macOS. La disponibilitat i el nivell de suport de cada sistema operatiu s'han de verificar a la matriu oficial d'Avalonia i a la CI de cada release.
 
-## Compilar
+## Format de projecte
 
-Requereix Windows i .NET 10 SDK:
+L'extensió nativa continua sent `.platinum`: paquet ZIP versionat amb `manifest.xml` i `layout.xml`. La migració a Avalonia no canvia el format ni invalida els projectes existents.
 
-```powershell
-dotnet restore Platinum.sln
-dotnet build Platinum.sln -c Release
-dotnet run --project src/Platinum.Presentation.Wpf
+## Compilar i executar Avalonia
+
+Requereix el .NET 10 SDK.
+
+```bash
+dotnet restore src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj
+dotnet build src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj -c Release
+dotnet run --project src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj
 ```
 
-## Estat
+## Estat de la migració
 
-Aquesta primera entrega estableix la solució, el model base, el contracte de persistència, el paquet natiu i l'esquelet WPF. Els panells funcionals s'han de migrar per fases; la presència d'un panell al menú no significa que la seva lògica estigui implementada.
+La finestra Avalonia inicial i la seva estructura de projecte estan incorporades. Els editors WPF, el Dispatcher i les vistes operatives s'han de migrar progressivament amb proves de paritat. WPF no s'elimina fins que les funcionalitats equivalents d'Avalonia estiguin implementades i verificades.
 
-Totes les ordres físiques romanen bloquejades per defecte. Les simulacions, lectures de JMRI i validacions de software no equivalen a una prova física ni a un sistema ferroviari certificat.
+Totes les ordres físiques romanen bloquejades per defecte. La interfície, les simulacions i les dades declaratives no equivalen a una prova física ni a un sistema ferroviari certificat.
