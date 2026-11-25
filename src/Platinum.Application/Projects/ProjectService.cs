@@ -41,7 +41,7 @@ public sealed class ProjectService(IProjectStore store)
                 Array.Empty<string>());
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException
-                                          or InvalidDataException or IOException
+                                          or IOException
                                           or UnauthorizedAccessException)
         {
             return new ProjectValidationResult(false, exception.Message, [exception.Message]);
