@@ -1,0 +1,36 @@
+name: Avalonia .NET 10 build
+
+on:
+  push:
+    branches: [ main, "feature/**" ]
+    paths:
+      - "src/Platinum.Presentation.Avalonia/**"
+      - "src/Platinum.Domain/**"
+      - "src/Platinum.Application/**"
+      - "src/Platinum.Infrastructure/**"
+      - ".github/workflows/avalonia-build.yml"
+  pull_request:
+    paths:
+      - "src/Platinum.Presentation.Avalonia/**"
+      - "src/Platinum.Domain/**"
+      - "src/Platinum.Application/**"
+      - "src/Platinum.Infrastructure/**"
+      - ".github/workflows/avalonia-build.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj
+      - name: Build
+        run: dotnet build src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj --configuration Release --no-restore
