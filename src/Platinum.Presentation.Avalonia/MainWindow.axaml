@@ -1,0 +1,91 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Platinum.Presentation.Avalonia.MainWindow"
+        Title="Quiral Platinum — Gestió de projectes"
+        Width="980" Height="700" MinWidth="760" MinHeight="560">
+  <Grid RowDefinitions="Auto,*,Auto" Margin="22">
+    <StackPanel Grid.Row="0" Spacing="5" Margin="0,0,0,18">
+      <TextBlock Text="QUIRAL PLATINUM" FontSize="22" FontWeight="Bold" />
+      <TextBlock Text="Gestió de projectes de maqueta · Format natiu .platinum"
+                 Opacity="0.72" />
+    </StackPanel>
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,300" ColumnSpacing="18">
+      <Border Grid.Column="0" Padding="18" CornerRadius="8"
+              BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+              BorderThickness="1">
+        <StackPanel Spacing="14">
+          <TextBlock Text="Projecte actual" FontSize="18" FontWeight="SemiBold" />
+          <StackPanel Spacing="5">
+            <TextBlock Text="Nom del projecte" />
+            <TextBox x:Name="ProjectNameBox" Watermark="Nom de la maqueta"
+                     TextChanged="ProjectField_Changed" />
+          </StackPanel>
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+            <StackPanel Grid.Column="0" Spacing="5">
+              <TextBlock Text="Amplada (mm)" />
+              <NumericUpDown x:Name="WidthBox" Minimum="1" Maximum="100000"
+                             Increment="100" Value="3000"
+                             ValueChanged="ProjectNumber_Changed" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="5">
+              <TextBlock Text="Alçada (mm)" />
+              <NumericUpDown x:Name="HeightBox" Minimum="1" Maximum="100000"
+                             Increment="100" Value="1800"
+                             ValueChanged="ProjectNumber_Changed" />
+            </StackPanel>
+          </Grid>
+          <StackPanel Spacing="5">
+            <TextBlock Text="Mida de la graella (mm)" />
+            <NumericUpDown x:Name="GridBox" Minimum="1" Maximum="1000"
+                           Increment="1" Value="10"
+                           ValueChanged="ProjectNumber_Changed" />
+          </StackPanel>
+          <Separator Margin="0,6" />
+          <TextBlock Text="Contingut del paquet" FontWeight="SemiBold" />
+          <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto"
+                ColumnSpacing="12" RowSpacing="8">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Nivells" />
+            <TextBlock x:Name="LevelsValue" Grid.Row="0" Grid.Column="1" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Peces de via" />
+            <TextBlock x:Name="PiecesValue" Grid.Row="1" Grid.Column="1" />
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Itineraris" />
+            <TextBlock x:Name="RoutesValue" Grid.Row="2" Grid.Column="1" />
+          </Grid>
+          <TextBlock x:Name="FilePathText" Text="Cap fitxer obert"
+                     TextWrapping="Wrap" Opacity="0.7" />
+          <TextBlock x:Name="DirtyText" Text="Projecte nou"
+                     Foreground="#FFFFC65C" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="1" Padding="16" CornerRadius="8"
+              BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+              BorderThickness="1">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Operacions" FontSize="18" FontWeight="SemiBold"
+                     Margin="0,0,0,6" />
+          <Button Content="Nou projecte" Click="NewProject_Click" />
+          <Button Content="Obrir projecte…" Click="OpenProject_Click" />
+          <Button Content="Desar" Click="SaveProject_Click" />
+          <Button Content="Desar com…" Click="SaveAsProject_Click" />
+          <Separator Margin="0,6" />
+          <Button Content="Validar projecte" Click="ValidateProject_Click" />
+          <TextBlock Text="La validació utilitza el mateix servei i el mateix format ZIP/XML que el desament real."
+                     TextWrapping="Wrap" Opacity="0.72" FontSize="12" />
+          <Separator Margin="0,6" />
+          <TextBlock Text="Format" FontWeight="SemiBold" />
+          <TextBlock Text=".platinum · ZIP + manifest.xml + layout.xml"
+                     TextWrapping="Wrap" />
+          <TextBlock Text="No s'envien ordres a centrals ni a equips físics des d'aquesta pantalla."
+                     TextWrapping="Wrap" Opacity="0.72" FontSize="12" />
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="2" Margin="0,16,0,0" Padding="10" CornerRadius="6"
+            Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+      <TextBlock x:Name="StatusText" Text="Preparat." TextWrapping="Wrap" />
+    </Border>
+  </Grid>
+</Window>
