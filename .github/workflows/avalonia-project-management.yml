@@ -1,0 +1,29 @@
+name: Avalonia project management
+
+on:
+  push:
+    branches:
+      - feature/avalonia-project-management
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore Avalonia project
+        run: dotnet restore src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj
+      - name: Build Avalonia project
+        run: dotnet build src/Platinum.Presentation.Avalonia/Platinum.Presentation.Avalonia.csproj --configuration Release --no-restore
+      - name: Run project package tests
+        run: dotnet test tests/Platinum.Infrastructure.Tests/Platinum.Infrastructure.Tests.csproj --configuration Release
